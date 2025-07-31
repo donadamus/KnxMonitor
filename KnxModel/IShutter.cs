@@ -54,11 +54,11 @@ namespace KnxModel
         Task RestoreSavedStateAsync();
 
         /// <summary>
-        /// Move shutter to absolute position (0-100%)
+        /// Move shutter to absolute position (0.0-100.0%)
         /// </summary>
-        /// <param name="position">Target position percentage (0-100)</param>
+        /// <param name="position">Target position percentage (0.0-100.0)</param>
         /// <param name="timeout">Timeout for the operation</param>
-        Task SetPositionAsync(int position, TimeSpan? timeout = null);
+        Task SetPositionAsync(float position, TimeSpan? timeout = null);
 
         /// <summary>
         /// Move shutter up or down
@@ -81,7 +81,7 @@ namespace KnxModel
         /// <summary>
         /// Read current position from KNX bus
         /// </summary>
-        Task<int> ReadPositionAsync();
+        Task<float> ReadPositionAsync();
 
         /// <summary>
         /// Read current lock state from KNX bus
@@ -96,10 +96,10 @@ namespace KnxModel
         /// <summary>
         /// Wait for shutter to reach target position
         /// </summary>
-        /// <param name="targetPosition">Target position to wait for (0-100)</param>
+        /// <param name="targetPosition">Target position to wait for (0.0-100.0)</param>
         /// <param name="tolerance">Allowed deviation in percentage points</param>
         /// <param name="timeout">Maximum time to wait</param>
-        Task<bool> WaitForPositionAsync(int targetPosition, double tolerance = 2.0, TimeSpan? timeout = null);
+        Task<bool> WaitForPositionAsync(float targetPosition, double tolerance = 2.0, TimeSpan? timeout = null);
 
         /// <summary>
         /// Wait for shutter movement to stop
@@ -126,7 +126,7 @@ namespace KnxModel
     /// Current state of a shutter
     /// </summary>
     public record ShutterState(
-        int Position,
+        float Position,
         bool IsLocked,
         ShutterMovementState MovementState,
         DateTime LastUpdated

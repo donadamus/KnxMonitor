@@ -34,22 +34,21 @@ namespace KnxModel
             SubGroup = subGroup ?? throw new ArgumentNullException(nameof(subGroup));
             _knxService = knxService ?? throw new ArgumentNullException(nameof(knxService));
 
-            // Calculate KNX addresses based on sub-group
-            var feedbackSubGroup = (int.Parse(subGroup) + 100).ToString();
+            // Calculate KNX addresses based on sub-group using centralized configuration
             Addresses = new ShutterAddresses(
-                MovementControl: $"4/0/{subGroup}",
-                MovementFeedback: $"4/0/{feedbackSubGroup}",
-                PositionControl: $"4/2/{subGroup}",
-                PositionFeedback: $"4/2/{feedbackSubGroup}",
-                LockControl: $"4/3/{subGroup}",
-                LockFeedback: $"4/3/{feedbackSubGroup}",
-                StopControl: $"4/1/{subGroup}",
-                MovementStatusFeedback: $"4/1/{feedbackSubGroup}"
+                MovementControl: KnxAddressConfiguration.CreateShutterMovementAddress(subGroup),
+                MovementFeedback: KnxAddressConfiguration.CreateShutterMovementFeedbackAddress(subGroup),
+                PositionControl: KnxAddressConfiguration.CreateShutterPositionAddress(subGroup),
+                PositionFeedback: KnxAddressConfiguration.CreateShutterPositionFeedbackAddress(subGroup),
+                LockControl: KnxAddressConfiguration.CreateShutterLockAddress(subGroup),
+                LockFeedback: KnxAddressConfiguration.CreateShutterLockFeedbackAddress(subGroup),
+                StopControl: KnxAddressConfiguration.CreateShutterStopAddress(subGroup),
+                MovementStatusFeedback: KnxAddressConfiguration.CreateShutterMovementStatusFeedbackAddress(subGroup)
             );
 
             // Initialize with default state
             CurrentState = new ShutterState(
-                Position: 0,
+                Position: 0.0f,
                 IsLocked: false,
                 MovementState: ShutterMovementState.Unknown,
                 LastUpdated: DateTime.Now
@@ -131,11 +130,11 @@ namespace KnxModel
             }
         }
 
-        public Task SetPositionAsync(int position, TimeSpan? timeout = null)
+        public Task SetPositionAsync(float position, TimeSpan? timeout = null)
         {
-            if (position < 0 || position > 100)
+            if (position < 0.0f || position > 100.0f)
             {
-                throw new ArgumentOutOfRangeException(nameof(position), "Position must be between 0 and 100.");
+                throw new ArgumentOutOfRangeException(nameof(position), "Position must be between 0.0 and 100.0.");
             }
             
             var effectiveTimeout = timeout ?? _defaultTimeout;
@@ -187,11 +186,11 @@ namespace KnxModel
             // Don't actively refresh - wait for feedback events
         }
 
-        public async Task<int> ReadPositionAsync()
+        public async Task<float> ReadPositionAsync()
         {
             try
             {
-                return await _knxService.RequestGroupValue<int>(Addresses.PositionFeedback);
+                return await _knxService.RequestGroupValue<float>(Addresses.PositionFeedback);
             }
             catch (Exception ex)
             {
@@ -230,11 +229,11 @@ namespace KnxModel
             }
         }
 
-        public async Task<bool> WaitForPositionAsync(int targetPosition, double tolerance = 2.0, TimeSpan? timeout = null)
+        public async Task<bool> WaitForPositionAsync(float targetPosition, double tolerance = 2.0, TimeSpan? timeout = null)
         {
-            if (targetPosition < 0 || targetPosition > 100)
+            if (targetPosition < 0.0f || targetPosition > 100.0f)
             {
-                throw new ArgumentOutOfRangeException(nameof(targetPosition), "Target position must be between 0 and 100.");
+                throw new ArgumentOutOfRangeException(nameof(targetPosition), "Target position must be between 0.0 and 100.0.");
             }
             
             var effectiveTimeout = timeout ?? _defaultTimeout;

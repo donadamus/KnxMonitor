@@ -11,6 +11,7 @@ namespace KnxModel
         void WriteGroupValue(KnxGroupAddress address, bool value);
         void WriteGroupValue(string address, bool value);
         void WriteGroupValue(string address, int percentage);
+        void WriteGroupValue(string address, float percentage);
         Task<T> RequestGroupValue<T>(string address);
     }
 

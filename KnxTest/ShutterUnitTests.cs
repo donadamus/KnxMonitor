@@ -52,8 +52,8 @@ namespace KnxTest
         public async Task InitializeAsync_ReadsAllStatesFromKnx()
         {
             // Arrange
-            var expectedPosition = 45;
-            _mockKnxService.Setup(s => s.RequestGroupValue<int>("4/2/101"))
+            var expectedPosition = 45.0f;
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>("4/2/101"))
                           .ReturnsAsync(expectedPosition);
             _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
                           .ReturnsAsync(true); // locked
@@ -74,8 +74,8 @@ namespace KnxTest
         public async Task SaveCurrentStateAsync_SavesCurrentState()
         {
             // Arrange
-            var expectedPosition = 75;
-            _mockKnxService.Setup(s => s.RequestGroupValue<int>("4/2/101"))
+            var expectedPosition = 75.0f;
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>("4/2/101"))
                           .ReturnsAsync(expectedPosition);
             _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
                           .ReturnsAsync(false); // unlocked
@@ -103,10 +103,10 @@ namespace KnxTest
         public async Task SetPositionAsync_CallsKnxServiceWithCorrectAddress()
         {
             // Arrange
-            var targetPosition = 60;
+            var targetPosition = 60.0f;
             
             // Setup for RefreshCurrentStateAsync calls
-            _mockKnxService.Setup(s => s.RequestGroupValue<int>("4/2/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>("4/2/101"))
                           .ReturnsAsync(targetPosition);
             _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
                           .ReturnsAsync(false);
@@ -124,8 +124,8 @@ namespace KnxTest
         public async Task MoveAsync_CallsKnxServiceWithCorrectValues()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.RequestGroupValue<int>("4/2/101"))
-                          .ReturnsAsync(50);
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>("4/2/101"))
+                          .ReturnsAsync(50.0f);
             _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
                           .ReturnsAsync(false);
             _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/1/101"))
@@ -148,8 +148,8 @@ namespace KnxTest
         public async Task MoveAsync_WithDuration_CallsStopAfterDelay()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.RequestGroupValue<int>("4/2/101"))
-                          .ReturnsAsync(50);
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>("4/2/101"))
+                          .ReturnsAsync(50.0f);
             _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
                           .ReturnsAsync(false);
             _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/1/101"))
@@ -167,8 +167,8 @@ namespace KnxTest
         public async Task StopAsync_CallsKnxServiceWithStopCommand()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.RequestGroupValue<int>("4/2/101"))
-                          .ReturnsAsync(50);
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>("4/2/101"))
+                          .ReturnsAsync(50.0f);
             _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
                           .ReturnsAsync(false);
             _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/1/101"))
@@ -185,8 +185,8 @@ namespace KnxTest
         public async Task SetLockAsync_CallsKnxServiceWithCorrectValues()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.RequestGroupValue<int>("4/2/101"))
-                          .ReturnsAsync(50);
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>("4/2/101"))
+                          .ReturnsAsync(50.0f);
             _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
                           .ReturnsAsync(true);
             _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/1/101"))
@@ -241,8 +241,8 @@ namespace KnxTest
         public async Task WaitForPositionAsync_ReturnsTrueWhenPositionReached()
         {
             // Arrange
-            var targetPosition = 50;
-            _mockKnxService.Setup(s => s.RequestGroupValue<int>("4/2/101"))
+            var targetPosition = 50.0f;
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>("4/2/101"))
                           .ReturnsAsync(targetPosition);
             _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
                           .ReturnsAsync(false);
@@ -263,8 +263,8 @@ namespace KnxTest
         public async Task WaitForMovementStopAsync_ReturnsTrueWhenStopped()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.RequestGroupValue<int>("4/2/101"))
-                          .ReturnsAsync(50);
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>("4/2/101"))
+                          .ReturnsAsync(50.0f);
             _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
                           .ReturnsAsync(false);
             _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/1/101"))

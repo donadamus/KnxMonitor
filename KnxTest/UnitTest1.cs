@@ -11,19 +11,6 @@ namespace KnxTest
     {
         private IKnxService _knxService { get; }
 
-        // KNX Address Constants
-        private const string LIGHTS_MAIN_GROUP = "1";
-        private const string LIGHTS_MIDDLE_GROUP = "1";
-        
-        private const string SHUTTERS_MAIN_GROUP = "4";
-        private const string SHUTTERS_MOVEMENT_MIDDLE_GROUP = "0";
-        private const string SHUTTERS_POSITION_MIDDLE_GROUP = "2";
-        private const string SHUTTERS_LOCK_MIDDLE_GROUP = "3";
-        private const string SHUTTERS_STOP_MIDDLE_GROUP = "1";
-        
-        // Feedback offset for shutters (add 100 to control sub group)
-        private const int SHUTTER_FEEDBACK_OFFSET = 100;
-
         public UnitTest1(KnxServiceFixture fixture)
         {
             _knxService = fixture.KnxService;
@@ -49,8 +36,8 @@ namespace KnxTest
         {
             
             // Arrange
-            var controlAddress = $"{LIGHTS_MAIN_GROUP}/{LIGHTS_MIDDLE_GROUP}/{subGroupControl}";
-            var feedbackAddress = $"{LIGHTS_MAIN_GROUP}/{LIGHTS_MIDDLE_GROUP}/{subGroupReceived}";
+            var controlAddress = KnxAddressConfiguration.CreateLightControlAddress(subGroupControl);
+            var feedbackAddress = KnxAddressConfiguration.CreateLightFeedbackAddress(subGroupReceived);
 
             var initialValue = await _knxService.RequestGroupValue<bool>(feedbackAddress);
 
@@ -123,7 +110,7 @@ namespace KnxTest
 
             // Arrange
 
-            var expectedDestination = $"{LIGHTS_MAIN_GROUP}/{LIGHTS_MIDDLE_GROUP}/{subGroup}";
+            var expectedDestination = KnxAddressConfiguration.CreateLightFeedbackAddress(subGroup);
 
             var taskCompletionSource = new TaskCompletionSource<KnxGroupEventArgs>();
 
@@ -140,7 +127,7 @@ namespace KnxTest
 
             try
             {
-                var feedbackAddress = $"{LIGHTS_MAIN_GROUP}/{LIGHTS_MIDDLE_GROUP}/{subGroup}";
+                var feedbackAddress = KnxAddressConfiguration.CreateLightFeedbackAddress(subGroup);
                 var currentValue = await _knxService.RequestGroupValue<bool>(feedbackAddress);
 
                 var expectedValues = new[] { "0", "1" };
@@ -179,15 +166,15 @@ namespace KnxTest
         public async Task CanSetShutterAbsolutePositionAndReadFeedback(string controlSubGroup)
         {
             // Arrange
-            var feedbackSubGroup = (int.Parse(controlSubGroup) + SHUTTER_FEEDBACK_OFFSET).ToString();
-            var controlAddress = $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_POSITION_MIDDLE_GROUP}/{controlSubGroup}";
-            var feedbackAddress = $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_POSITION_MIDDLE_GROUP}/{feedbackSubGroup}";
+            var feedbackSubGroup = (int.Parse(controlSubGroup) + KnxAddressConfiguration.SHUTTER_FEEDBACK_OFFSET).ToString();
+            var controlAddress = KnxAddressConfiguration.CreateShutterPositionAddress(controlSubGroup);
+            var feedbackAddress = KnxAddressConfiguration.CreateShutterPositionFeedbackAddress(controlSubGroup);
 
             // Get initial position
-            int? initialPosition = null;
+            float? initialPosition = null;
             try
             {
-                initialPosition = await _knxService.RequestGroupValue<int>(feedbackAddress);
+                initialPosition = await _knxService.RequestGroupValue<float>(feedbackAddress);
             }
             catch (Exception ex)
             {
@@ -264,10 +251,10 @@ namespace KnxTest
                 await Task.Delay(1500);
 
                 // Get final position
-                int? finalPosition = null;
+                float? finalPosition = null;
                 try
                 {
-                    finalPosition = await _knxService.RequestGroupValue<int>(feedbackAddress);
+                    finalPosition = await _knxService.RequestGroupValue<float>(feedbackAddress);
                     var finalRaw = (byte)(finalPosition.Value * 2.55);
                     Console.WriteLine($"Final position: {finalPosition.Value}%, Raw: {finalRaw}");
                 }
@@ -351,22 +338,22 @@ namespace KnxTest
         public async Task CanMoveShutterUpAndDown(string controlSubGroup)
         {
             // Arrange
-            var feedbackSubGroup = (int.Parse(controlSubGroup) + SHUTTER_FEEDBACK_OFFSET).ToString();
-            var controlAddress = $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_MOVEMENT_MIDDLE_GROUP}/{controlSubGroup}"; // 4/0/18 - UP/DOWN control
-            var feedbackAddress = $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_MOVEMENT_MIDDLE_GROUP}/{feedbackSubGroup}"; // 4/0/118 - UP/DOWN feedback
-            var positionFeedbackAddress = $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_POSITION_MIDDLE_GROUP}/{feedbackSubGroup}"; // 4/2/118 - position feedback
-            var movementStatusAddress = $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_STOP_MIDDLE_GROUP}/{feedbackSubGroup}"; // 4/1/118 - movement status
-            var stopAddress = $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_STOP_MIDDLE_GROUP}/{controlSubGroup}"; // 4/1/18 - STOP/STEP control
+            var feedbackSubGroup = (int.Parse(controlSubGroup) + KnxAddressConfiguration.SHUTTER_FEEDBACK_OFFSET).ToString();
+            var controlAddress = KnxAddressConfiguration.CreateShutterMovementAddress(controlSubGroup); // 4/0/18 - UP/DOWN control
+            var feedbackAddress = KnxAddressConfiguration.CreateShutterMovementFeedbackAddress(controlSubGroup); // 4/0/118 - UP/DOWN feedback
+            var positionFeedbackAddress = KnxAddressConfiguration.CreateShutterPositionFeedbackAddress(controlSubGroup); // 4/2/118 - position feedback
+            var movementStatusAddress = KnxAddressConfiguration.CreateShutterMovementStatusFeedbackAddress(controlSubGroup); // 4/1/118 - movement status
+            var stopAddress = KnxAddressConfiguration.CreateShutterStopAddress(controlSubGroup); // 4/1/18 - STOP/STEP control
 
             Console.WriteLine($"Control: {controlAddress}, Feedback: {feedbackAddress}");
             Console.WriteLine($"Position feedback: {positionFeedbackAddress}, Movement status: {movementStatusAddress}");
             Console.WriteLine($"STOP/STEP control: {stopAddress}");
 
             // Get initial position
-            int? initialPosition = null;
+            float? initialPosition = null;
             try
             {
-                initialPosition = await _knxService.RequestGroupValue<int>(positionFeedbackAddress);
+                initialPosition = await _knxService.RequestGroupValue<float>(positionFeedbackAddress);
                 Console.WriteLine($"Initial position: {initialPosition.Value}%");
             }
             catch (Exception ex)
@@ -411,7 +398,7 @@ namespace KnxTest
 
                 // Return to original position
                 Console.WriteLine($"\nReturning to original position: {initialPercent:F1}%");
-                await ReturnToOriginalPosition(controlAddress, positionFeedbackAddress, stopAddress, initialPosition.Value, SHUTTERS_POSITION_MIDDLE_GROUP, controlSubGroup);
+                await ReturnToOriginalPosition(controlAddress, positionFeedbackAddress, stopAddress, initialPosition.Value, KnxAddressConfiguration.SHUTTERS_POSITION_MIDDLE_GROUP, controlSubGroup);
             }
             catch (Exception ex)
             {
@@ -421,7 +408,7 @@ namespace KnxTest
                 try
                 {
                     Console.WriteLine($"Attempting to return to original position after failure...");
-                    await ReturnToOriginalPosition(controlAddress, positionFeedbackAddress, stopAddress, initialPosition.Value, SHUTTERS_POSITION_MIDDLE_GROUP, controlSubGroup);
+                    await ReturnToOriginalPosition(controlAddress, positionFeedbackAddress, stopAddress, initialPosition.Value, KnxAddressConfiguration.SHUTTERS_POSITION_MIDDLE_GROUP, controlSubGroup);
                 }
                 catch (Exception returnEx)
                 {
@@ -573,12 +560,12 @@ namespace KnxTest
         }
 
         private async Task ReturnToOriginalPosition(string controlAddress, string positionFeedbackAddress, 
-            string stopAddress, int originalPosition, string positionMiddleGroup, string controlSubGroup)
+            string stopAddress, float originalPosition, string positionMiddleGroup, string controlSubGroup)
         {
             try
             {
                 // Get current position
-                var currentPosition = await _knxService.RequestGroupValue<int>(positionFeedbackAddress);
+                var currentPosition = await _knxService.RequestGroupValue<float>(positionFeedbackAddress);
                 var currentPercent = currentPosition;
                 var originalPercent = originalPosition;
                 
@@ -593,7 +580,7 @@ namespace KnxTest
                 Console.WriteLine($"Moving from {currentPercent:F1}% back to {originalPercent:F1}%");
                 
                 // Use absolute positioning to return to original position
-                var absolutePositionAddress = $"{SHUTTERS_MAIN_GROUP}/{positionMiddleGroup}/{controlSubGroup}";
+                var absolutePositionAddress = $"{KnxAddressConfiguration.SHUTTERS_MAIN_GROUP}/{positionMiddleGroup}/{controlSubGroup}";
                 Console.WriteLine($"Using absolute position control: {absolutePositionAddress}");
                 _knxService.WriteGroupValue(absolutePositionAddress, originalPosition);
                 
@@ -601,7 +588,7 @@ namespace KnxTest
                 await Task.Delay(5000);
                 
                 // Verify final position
-                var finalPosition = await _knxService.RequestGroupValue<int>(positionFeedbackAddress);
+                var finalPosition = await _knxService.RequestGroupValue<float>(positionFeedbackAddress);
                 Console.WriteLine($"Final position: {finalPosition:F1}% (target was {originalPercent:F1}%)");
             }
             catch (Exception ex)
@@ -632,9 +619,9 @@ namespace KnxTest
         public async Task CanToggleShutterLock(string controlSubGroup)
         {
             // Arrange
-            var feedbackSubGroup = (int.Parse(controlSubGroup) + SHUTTER_FEEDBACK_OFFSET).ToString();
-            var controlAddress = $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_LOCK_MIDDLE_GROUP}/{controlSubGroup}";
-            var feedbackAddress = $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_LOCK_MIDDLE_GROUP}/{feedbackSubGroup}";
+            var feedbackSubGroup = (int.Parse(controlSubGroup) + KnxAddressConfiguration.SHUTTER_FEEDBACK_OFFSET).ToString();
+            var controlAddress = KnxAddressConfiguration.CreateShutterLockAddress(controlSubGroup);
+            var feedbackAddress = KnxAddressConfiguration.CreateShutterLockFeedbackAddress(controlSubGroup);
 
             // Get initial lock state
             var initialLockState = await _knxService.RequestGroupValue<bool>(feedbackAddress);
@@ -695,12 +682,12 @@ namespace KnxTest
         public async Task ShutterDoesNotMoveWhenLocked(string controlSubGroup)
         {
             // Arrange
-            var feedbackSubGroup = (int.Parse(controlSubGroup) + SHUTTER_FEEDBACK_OFFSET).ToString();
-            var lockControlAddress = $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_LOCK_MIDDLE_GROUP}/{controlSubGroup}"; // 4/3/18 - lock control
-            var lockFeedbackAddress = $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_LOCK_MIDDLE_GROUP}/{feedbackSubGroup}"; // 4/3/118 - lock feedback
-            var movementControlAddress = $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_MOVEMENT_MIDDLE_GROUP}/{controlSubGroup}"; // 4/0/18 - UP/DOWN control
-            var movementFeedbackAddress = $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_MOVEMENT_MIDDLE_GROUP}/{feedbackSubGroup}"; // 4/0/118 - UP/DOWN feedback
-            var positionFeedbackAddress = $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_POSITION_MIDDLE_GROUP}/{feedbackSubGroup}"; // 4/2/118 - position feedback
+            var feedbackSubGroup = (int.Parse(controlSubGroup) + KnxAddressConfiguration.SHUTTER_FEEDBACK_OFFSET).ToString();
+            var lockControlAddress = KnxAddressConfiguration.CreateShutterLockAddress(controlSubGroup); // 4/3/18 - lock control
+            var lockFeedbackAddress = KnxAddressConfiguration.CreateShutterLockFeedbackAddress(controlSubGroup); // 4/3/118 - lock feedback
+            var movementControlAddress = KnxAddressConfiguration.CreateShutterMovementAddress(controlSubGroup); // 4/0/18 - UP/DOWN control
+            var movementFeedbackAddress = KnxAddressConfiguration.CreateShutterMovementFeedbackAddress(controlSubGroup); // 4/0/118 - UP/DOWN feedback
+            var positionFeedbackAddress = KnxAddressConfiguration.CreateShutterPositionFeedbackAddress(controlSubGroup); // 4/2/118 - position feedback
 
             Console.WriteLine($"Lock control: {lockControlAddress}, feedback: {lockFeedbackAddress}");
             Console.WriteLine($"Movement control: {movementControlAddress}, feedback: {movementFeedbackAddress}");
@@ -710,10 +697,10 @@ namespace KnxTest
             var initialLockState = await _knxService.RequestGroupValue<bool>(lockFeedbackAddress);
             Console.WriteLine($"Initial lock state: {initialLockState}");
 
-            int? initialPosition = null;
+            float? initialPosition = null;
             try
             {
-                initialPosition = await _knxService.RequestGroupValue<int>(positionFeedbackAddress);
+                initialPosition = await _knxService.RequestGroupValue<float>(positionFeedbackAddress);
                 Console.WriteLine($"Initial position: {initialPosition.Value:F1}%");
             }
             catch (Exception ex)
@@ -848,7 +835,7 @@ namespace KnxTest
                     await Task.Delay(1000); // Very brief movement
                     
                     // Stop movement
-                    var stopAddress = $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_STOP_MIDDLE_GROUP}/{controlSubGroup}"; // 4/1/18 - STOP
+                    var stopAddress = KnxAddressConfiguration.CreateShutterStopAddress(controlSubGroup); // 4/1/18 - STOP
                     _knxService.WriteGroupValue(stopAddress, true);
                     await Task.Delay(1000);
                     
@@ -875,7 +862,7 @@ namespace KnxTest
                 // Step 5: Return to original position
                 Console.WriteLine("\n=== Step 5: Returning to original position ===");
                 await ReturnToOriginalPosition(movementControlAddress, positionFeedbackAddress, 
-                    $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_STOP_MIDDLE_GROUP}/{controlSubGroup}", initialPosition.Value, SHUTTERS_POSITION_MIDDLE_GROUP, controlSubGroup);
+                    KnxAddressConfiguration.CreateShutterStopAddress(controlSubGroup), initialPosition.Value, KnxAddressConfiguration.SHUTTERS_POSITION_MIDDLE_GROUP, controlSubGroup);
             }
             finally
             {

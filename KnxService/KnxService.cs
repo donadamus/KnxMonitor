@@ -165,6 +165,25 @@ namespace KnxService
             _knxBus.WriteGroupValue(groupAddress, groupValue);
         }
 
+        public void WriteGroupValue(string address, float percentage)
+        {
+            if (percentage < 0.0f || percentage > 100.0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(percentage), "Percentage must be between 0.0 and 100.0.");
+            }
+            
+            var groupAddress = new GroupAddress(address);
+            // For KNX DPT 5.004 (2-byte percentage), convert to 2-byte array
+            var knxRawValue = (ushort)(percentage * 655.35f); // Convert 0.0-100.0% to 0-65535 range
+            var bytes = BitConverter.GetBytes(knxRawValue);
+            if (BitConverter.IsLittleEndian)
+            {
+                Array.Reverse(bytes); // KNX uses big-endian
+            }
+            var groupValue = new GroupValue(bytes);
+            _knxBus.WriteGroupValue(groupAddress, groupValue);
+        }
+
         public void WriteGroupValue(KnxGroupAddress address, bool value)
         {
             WriteGroupValue(address.Address, value);
