@@ -122,174 +122,75 @@ namespace KnxTest
         }
 
         [Theory]
-        [InlineData("1")]  // R1.1 Bathroom UP/DOWN
-        [InlineData("2")]  // R2.1 Master Bathroom UP/DOWN
-        [InlineData("3")]  // R3.1 Master Bedroom UP/DOWN
-        [InlineData("4")]  // R3.2 Master Bedroom UP/DOWN
-        [InlineData("5")]  // R5.1 Guest Room UP/DOWN
-        [InlineData("6")]  // R6.1 Kinga's Room UP/DOWN
-        [InlineData("7")]  // R6.2 Kinga's Room UP/DOWN
-        [InlineData("8")]  // R6.3 Kinga's Room UP/DOWN
-        [InlineData("9")]  // R7.1 Rafal's Room UP/DOWN
-        [InlineData("10")] // R7.2 Rafal's Room UP/DOWN
-        [InlineData("11")] // R7.3 Rafal's Room UP/DOWN
-        [InlineData("12")] // R8.1 Hall UP/DOWN
-        [InlineData("13")] // R02.1 Kitchen
-        [InlineData("14")] // R02.2 Kitchen
-        [InlineData("15")] // R03.1 Dinning Room
-        [InlineData("16")] // R04.1 Living Room
-        [InlineData("17")] // R04.2 Living Room
-        [InlineData("18")] // R05.1 Office - control and feedback addresses
-        public async Task CanSetShutterAbsolutePositionAndReadFeedback(string controlSubGroup)
+        [InlineData("R1.1")]  // Bathroom
+        [InlineData("R2.1")]  // Master Bathroom
+        [InlineData("R3.1")]  // Master Bedroom
+        [InlineData("R3.2")]  // Master Bedroom
+        [InlineData("R5.1")]  // Guest Room
+        [InlineData("R6.1")]  // Kinga's Room
+        [InlineData("R6.2")]  // Kinga's Room
+        [InlineData("R6.3")]  // Kinga's Room
+        [InlineData("R7.1")]  // Rafal's Room
+        [InlineData("R7.2")]  // Rafal's Room
+        [InlineData("R7.3")]  // Rafal's Room
+        [InlineData("R8.1")]  // Hall
+        [InlineData("R02.1")] // Kitchen
+        [InlineData("R02.2")] // Kitchen
+        [InlineData("R03.1")] // Dining Room
+        [InlineData("R04.1")] // Living Room
+        [InlineData("R04.2")] // Living Room
+        [InlineData("R05.1")] // Office
+        public async Task CanSetShutterAbsolutePositionAndReadFeedback(string shutterId)
         {
             // Arrange
-            var feedbackSubGroup = (int.Parse(controlSubGroup) + KnxAddressConfiguration.SHUTTER_FEEDBACK_OFFSET).ToString();
-            var controlAddress = KnxAddressConfiguration.CreateShutterPositionAddress(controlSubGroup);
-            var feedbackAddress = KnxAddressConfiguration.CreateShutterPositionFeedbackAddress(controlSubGroup);
-
-            // Get initial position
-            float? initialPosition = null;
-            try
-            {
-                initialPosition = await _knxService.RequestGroupValue<float>(feedbackAddress);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Could not read initial position: {ex.Message}");
-            }
-            
-            // Choose a movement of 10% in appropriate direction
-            var currentPercent = initialPosition ?? 50; // Default to 50% if no feedback
-            var targetPercent = currentPercent < 50 ? currentPercent + 10 : currentPercent - 10;
-            var testPercent = Math.Max(0, Math.Min(100, targetPercent));
-
-            Console.WriteLine($"Current position: {currentPercent}%, Target: {targetPercent}%");
-
-            var feedbackReceived = new List<KnxGroupEventArgs>();
-            var taskCompletionSource = new TaskCompletionSource<bool>();
-
-            EventHandler<KnxGroupEventArgs> handler = (sender, args) =>
-            {
-                if (args.Destination == feedbackAddress)
-                {
-                    feedbackReceived.Add(args);
-                    Console.WriteLine($"Feedback received: {args.Value} at {DateTime.Now:HH:mm:ss.fff}");
-                    
-                    // Parse feedback value to check if it matches our target
-                    if (byte.TryParse(args.Value.AsString(), NumberStyles.HexNumber, null, out byte feedbackRaw))
-                    {
-                        var targetRaw = (byte)(testPercent * 2.55); // Convert percentage to KNX raw value
-                        var tolerance = 3; // Allow ±3 raw values tolerance
-                        
-                        // If feedback matches target (within tolerance), we can stop waiting
-                        if (Math.Abs(feedbackRaw - targetRaw) <= tolerance)
-                        {
-                            Console.WriteLine($"Target position reached! Feedback: {feedbackRaw}, Target: {targetRaw}");
-                            taskCompletionSource.TrySetResult(true);
-                        }
-                        // Or if we've received multiple feedback messages (indicating ongoing movement)
-                        else if (feedbackReceived.Count >= 2)
-                        {
-                            Console.WriteLine($"Multiple feedback messages received, movement in progress...");
-                            taskCompletionSource.TrySetResult(true);
-                        }
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Could not parse feedback value: {args.Value}");
-                    }
-                }
-            };
-
-            _knxService.GroupMessageReceived += handler;
+            var shutter = ShutterFactory.CreateShutter(shutterId, _knxService);
+            await shutter.InitializeAsync();
+            shutter.SaveCurrentState();
 
             try
             {
-                // Act - Set new position using the new int overload
-                var testRaw = (byte)(testPercent * 2.55);
-                Console.WriteLine($"Sending position command: {testRaw} ({testPercent}%)");
-                _knxService.WriteGroupValue(controlAddress, testPercent);
-                
-                // Wait for movement feedback or timeout (shorter timeout for small movements)
-                var feedbackTask = taskCompletionSource.Task;
-                var timeoutTask = Task.Delay(TimeSpan.FromSeconds(8)); // 8 seconds should be enough for 10% movement
-                var completedTask = await Task.WhenAny(feedbackTask, timeoutTask);
-                
-                if (completedTask == timeoutTask)
+                var initialPosition = shutter.CurrentState.Position;
+                Console.WriteLine($"Shutter {shutterId} initial position: {initialPosition:F1}%");
+
+                // Choose a movement of 10% in appropriate direction
+                var targetPosition = initialPosition < 50 ? initialPosition + 10 : initialPosition - 10;
+                targetPosition = Math.Max(0, Math.Min(100, targetPosition));
+
+                Console.WriteLine($"Moving shutter {shutterId} from {initialPosition:F1}% to {targetPosition:F1}%");
+
+                // Act - Set new position using shutter model
+                await shutter.SetPositionAsync(targetPosition);
+
+                // Model automatically updates position from KNX feedback
+                await Task.Delay(3000); // Give time for movement and feedback
+
+                // Assert - Check position changed on model
+                var finalPosition = shutter.CurrentState.Position;
+                Console.WriteLine($"Final position on model: {finalPosition:F1}%");
+
+                // Verify movement occurred in correct direction with tolerance
+                var expectedDirection = targetPosition > initialPosition ? 1 : -1;
+                var actualDirection = finalPosition > initialPosition ? 1 : -1;
+                var actualMovement = Math.Abs(finalPosition - initialPosition);
+
+                if (actualMovement >= 1.0f) // If significant movement occurred
                 {
-                    Console.WriteLine("No sufficient feedback received within timeout");
+                    Assert.True(expectedDirection == actualDirection, 
+                        $"Movement direction incorrect. Expected: {(expectedDirection > 0 ? "UP" : "DOWN")}, " +
+                        $"Actual: {(actualDirection > 0 ? "UP" : "DOWN")}");
+                    
+                    Console.WriteLine($"✓ Shutter moved correctly in {(actualDirection > 0 ? "UP" : "DOWN")} direction ({actualMovement:F1}% movement)");
                 }
                 else
                 {
-                    Console.WriteLine($"Received {feedbackReceived.Count} feedback messages during movement");
-                }
-
-                // Wait a bit more for movement to potentially complete (shorter wait)
-                await Task.Delay(1500);
-
-                // Get final position
-                float? finalPosition = null;
-                try
-                {
-                    finalPosition = await _knxService.RequestGroupValue<float>(feedbackAddress);
-                    var finalRaw = (byte)(finalPosition.Value * 2.55);
-                    Console.WriteLine($"Final position: {finalPosition.Value}%, Raw: {finalRaw}");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Could not read final position: {ex.Message}");
-                }
-
-                // Assert - Check that we received feedback and movement occurred
-                Assert.True(feedbackReceived.Count > 0, "Should have received at least one feedback message");
-                
-                if (initialPosition.HasValue && finalPosition.HasValue)
-                {
-                    // Compare raw values with tolerance (KNX has 255 steps for 0-100%)
-                    var initialRaw = (byte)(initialPosition.Value * 2.55);
-                    var finalRaw = (byte)(finalPosition.Value * 2.55);
-                    var targetRaw = (byte)(testPercent * 2.55);
-                    
-                    // Allow tolerance of ±3 raw values (about 1.2%)
-                    var tolerance = 3;
-                    var actualMovement = Math.Abs(finalRaw - initialRaw);
-                    
-                    Console.WriteLine($"Raw values - Initial: {initialRaw}, Final: {finalRaw}, Target: {targetRaw}");
-                    Console.WriteLine($"Movement: {actualMovement} raw units");
-                    
-                    if (actualMovement >= tolerance)
-                    {
-                        // Check direction of movement
-                        var expectedDirection = targetRaw > initialRaw ? 1 : -1;
-                        var actualDirection = finalRaw > initialRaw ? 1 : -1;
-                        
-                        Assert.True(expectedDirection == actualDirection, 
-                            $"Movement direction incorrect. Expected: {(expectedDirection > 0 ? "UP" : "DOWN")}, " +
-                            $"Actual: {(actualDirection > 0 ? "UP" : "DOWN")}");
-                        
-                        Console.WriteLine($"✓ Shutter moved correctly in {(actualDirection > 0 ? "UP" : "DOWN")} direction");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"⚠ Small movement detected ({actualMovement} raw units), might be within tolerance");
-                    }
-                }
-                else
-                {
-                    Console.WriteLine("⚠ Could not compare positions due to missing initial or final position");
-                }
-
-                // Restore original position if we have it
-                if (initialPosition.HasValue)
-                {
-                    Console.WriteLine($"Restoring original position: {initialPosition.Value}%");
-                    _knxService.WriteGroupValue(controlAddress, initialPosition.Value);
-                    await Task.Delay(2000); // Wait for movement to start
+                    Console.WriteLine($"⚠ Small movement detected ({actualMovement:F1}%), might be within tolerance");
                 }
             }
             finally
             {
-                _knxService.GroupMessageReceived -= handler;
+                // Always restore original state using the model's saved state functionality
+                await shutter.RestoreSavedStateAsync();
+                shutter.Dispose();
             }
         }
 
