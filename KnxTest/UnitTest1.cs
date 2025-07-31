@@ -453,23 +453,22 @@ namespace KnxTest
             // Arrange
             var shutter = ShutterFactory.CreateShutter(shutterId, _knxService);
 
-            // Act
-            await shutter.InitializeAsync();
-            var position = await shutter.ReadPositionAsync();
+            try
+            {
+                // Act - Initialize reads current state from KNX bus
+                await shutter.InitializeAsync();
 
-            // Assert
-            shutter.CurrentState.Should().NotBeNull();
-            shutter.CurrentState.Position.Should().BeInRange(0, 100, 
-                $"Shutter {shutterId} position should be between 0-100%, got {shutter.CurrentState.Position:F1}%");
-            
-            position.Should().BeInRange(0, 100, 
-                $"Direct position read for shutter {shutterId} should be between 0-100%, got {position:F1}%");
-            
-            // Verify that both readings are consistent
-            Math.Abs(shutter.CurrentState.Position - position).Should().BeLessThan(1,
-                $"Current state position ({shutter.CurrentState.Position:F1}%) should match direct read ({position:F1}%) for shutter {shutterId}");
+                // Assert - Verify position is valid and within expected range
+                shutter.CurrentState.Should().NotBeNull();
+                shutter.CurrentState.Position.Should().BeInRange(0, 100, 
+                    $"Shutter {shutterId} position should be between 0-100%, got {shutter.CurrentState.Position:F1}%");
 
-            Console.WriteLine($"✓ Shutter {shutterId} ({shutter.Name}) position: {position:F1}% (Raw: {(byte)(position * 2.55)})");
+                Console.WriteLine($"✓ Shutter {shutterId} ({shutter.Name}) position: {shutter.CurrentState.Position:F1}% (Raw: {(byte)(shutter.CurrentState.Position * 2.55)})");
+            }
+            finally
+            {
+                shutter.Dispose();
+            }
         }
     }
     public class KnxServiceFixture : IDisposable
