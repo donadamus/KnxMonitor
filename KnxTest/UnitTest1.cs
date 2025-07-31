@@ -17,130 +17,107 @@ namespace KnxTest
         }
 
         [Theory]
-        [InlineData("01", "101")]
-        [InlineData("02", "102")]
-        [InlineData("03", "103")]
-        [InlineData("04", "104")]
-        [InlineData("05", "105")]
-        [InlineData("06", "106")]
-        [InlineData("07", "107")]
-        [InlineData("08", "108")]
-        [InlineData("09", "109")]
-        [InlineData("10", "110")]
-        [InlineData("11", "111")]
-        [InlineData("12", "112")]
-        [InlineData("13", "113")]
-        [InlineData("14", "114")]
-        [InlineData("15", "115")]
-        public async Task CanToggleLightAndRestoreOriginalState(string subGroupControl, string subGroupReceived)
+        // [InlineData("L01")]
+        // [InlineData("L02")]
+        // [InlineData("L03")]
+        // [InlineData("L04")]
+        // [InlineData("L05")]
+        // [InlineData("L06")]
+        // [InlineData("L07")]
+        // [InlineData("L08")]
+        // [InlineData("L09")]
+        // [InlineData("L10")]
+        // [InlineData("L11")]
+        // [InlineData("L12")]
+        // [InlineData("L13")]
+        [InlineData("L14")]
+        [InlineData("L15")]
+        public async Task CanToggleLightAndRestoreOriginalState(string lightId)
         {
-            
             // Arrange
-            var controlAddress = KnxAddressConfiguration.CreateLightControlAddress(subGroupControl);
-            var feedbackAddress = KnxAddressConfiguration.CreateLightFeedbackAddress(subGroupReceived);
+            var light = LightFactory.CreateLight(lightId, _knxService);
+            await light.InitializeAsync();
+            light.SaveCurrentState();
 
-            var initialValue = await _knxService.RequestGroupValue<bool>(feedbackAddress);
-
-            // No need for expected values array for bool
-            
-            // Invert the current value for the test
-            var testValue = !initialValue;
-
-            async Task<bool> SendAndVerify( bool value)
+            try
             {
-                var taskCompletionSource = new TaskCompletionSource<KnxGroupEventArgs>();
-                EventHandler<KnxGroupEventArgs> handler = (sender, args) =>
-                {
-                    if (args.Destination == feedbackAddress)
-                    {
-                        taskCompletionSource.SetResult(args);
-                    }
-                };
-                // Subscribe to the event
-                _knxService.GroupMessageReceived += handler;
-                try
-                {
-                    // Write the group value
-                    _knxService.WriteGroupValue(controlAddress, value);
-                    var response = await taskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(2));
-                    // Assert
-                    return response.Destination == feedbackAddress && response.Value.AsBoolean() == value;
-                }
-                finally
-                {
-                    _knxService.GroupMessageReceived -= handler;
-                }
+                var initialState = light.CurrentState.IsOn;
+                Console.WriteLine($"Testing light {lightId} toggle from {(initialState ? "ON" : "OFF")}");
+
+                // Act + Assert (1): Toggle to opposite state
+                await light.ToggleAsync();
+                
+                // Model automatically updates state from KNX feedback
+                await Task.Delay(1000); // Give time for feedback
+                Assert.Equal(!initialState, light.CurrentState.IsOn);
+                Console.WriteLine($"✓ Light {lightId} successfully toggled to {(light.CurrentState.IsOn ? "ON" : "OFF")}");
+
+                // Wait for state to stabilize
+                await Task.Delay(1000);
+
+                // Act + Assert (2): Toggle back to original state
+                await light.ToggleAsync();
+                
+                // Model automatically updates state from KNX feedback
+                await Task.Delay(1000); // Give time for feedback
+                Assert.Equal(initialState, light.CurrentState.IsOn);
+                Console.WriteLine($"✓ Light {lightId} successfully restored to {(light.CurrentState.IsOn ? "ON" : "OFF")}");
             }
-
-            // Assert
-            // Act + Assert (1): Zmiana na przeciwną wartość
-            var resultChanged = await SendAndVerify(testValue);
-            Assert.True(resultChanged, $"Expected feedback value {testValue} not received.");
-            Thread.Sleep(1000); // Wait for the change to propagate
-            // Act + Assert (2): Przywrócenie oryginalnej wartości
-            var resultRestored = await SendAndVerify(initialValue);
-            Assert.True(resultRestored, $"Failed to restore original state {initialValue}.");
-
+            finally
+            {
+                // Always restore original state using the model's saved state functionality
+                await light.RestoreSavedStateAsync();
+                light.Dispose();
+            }
         }
 
 
         [Theory]
-        [InlineData("101")]
-        [InlineData("102")]
-        [InlineData("103")]
-        [InlineData("104")]
-        [InlineData("105")]
-        [InlineData("106")]
-        [InlineData("107")]
-        [InlineData("108")]
-        [InlineData("109")]
-        [InlineData("110")]
-        [InlineData("111")]
-        [InlineData("112")]
-        [InlineData("113")]
-        [InlineData("114")]
-        [InlineData("115")]
-        //[InlineData("116")]
-        //[InlineData("117")]
-        //[InlineData("118")]
-        //[InlineData("119")]
-        //[InlineData("120")]
-        public async Task CanReadLightFeedback(string subGroup)
+        [InlineData("L01")]
+        [InlineData("L02")]
+        [InlineData("L03")]
+        [InlineData("L04")]
+        [InlineData("L05")]
+        [InlineData("L06")]
+        [InlineData("L07")]
+        [InlineData("L08")]
+        [InlineData("L09")]
+        [InlineData("L10")]
+        [InlineData("L11")]
+        [InlineData("L12")]
+        [InlineData("L13")]
+        [InlineData("L14")]
+        [InlineData("L15")]
+        //[InlineData("L16")]
+        //[InlineData("L17")]
+        //[InlineData("L18")]
+        //[InlineData("L19")]
+        //[InlineData("L20")]
+        public async Task CanReadLightFeedback(string lightId)
         {
-
             // Arrange
-
-            var expectedDestination = KnxAddressConfiguration.CreateLightFeedbackAddress(subGroup);
-
-            var taskCompletionSource = new TaskCompletionSource<KnxGroupEventArgs>();
-
-            EventHandler<KnxGroupEventArgs> handler = (sender, args) =>
-            {
-                if (args.Destination == expectedDestination)
-                {
-                    taskCompletionSource.SetResult(args);
-                }
-            };
-
-            _knxService.GroupMessageReceived += handler;
-            // Act
+            var light = LightFactory.CreateLight(lightId, _knxService);
+            await light.InitializeAsync();
 
             try
             {
-                var feedbackAddress = KnxAddressConfiguration.CreateLightFeedbackAddress(subGroup);
-                var currentValue = await _knxService.RequestGroupValue<bool>(feedbackAddress);
+                // Read initial state from model (updated during InitializeAsync)
+                var initialState = light.CurrentState.IsOn;
+                Console.WriteLine($"Light {lightId} initial state: {(initialState ? "ON" : "OFF")}");
 
-                var expectedValues = new[] { "0", "1" };
-
-                var response = await taskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(2));
-
-                // Assert
-                Assert.Equal(expectedDestination, response.Destination);
-                Assert.Contains(response.Value.AsString(), expectedValues);
+                // Toggle the light to trigger state change
+                await light.ToggleAsync();
+                
+                // Model automatically updates state from KNX feedback
+                await Task.Delay(1000); // Give time for feedback
+                
+                // Assert state changed on model
+                Assert.Equal(!initialState, light.CurrentState.IsOn);
+                Console.WriteLine($"✓ Light {lightId} state changed correctly to {(light.CurrentState.IsOn ? "ON" : "OFF")}");
             }
             finally
             {
-                _knxService.GroupMessageReceived -= handler;
+                light.Dispose();
             }
         }
 

@@ -46,7 +46,7 @@ namespace KnxModel
         /// <summary>
         /// Save current state for later restoration
         /// </summary>
-        Task SaveCurrentStateAsync();
+        void SaveCurrentState();
 
         /// <summary>
         /// Restore previously saved state
@@ -106,6 +106,34 @@ namespace KnxModel
         /// </summary>
         /// <param name="timeout">Maximum time to wait</param>
         Task<bool> WaitForMovementStopAsync(TimeSpan? timeout = null);
+
+        /// <summary>
+        /// Wait for shutter to reach target lock state
+        /// </summary>
+        /// <param name="targetLockState">Target lock state to wait for</param>
+        /// <param name="timeout">Maximum time to wait</param>
+        /// <returns>True if lock state reached, false on timeout</returns>
+        Task<bool> WaitForLockStateAsync(bool targetLockState, TimeSpan? timeout = null);
+
+        /// <summary>
+        /// Open shutter completely (0% position)
+        /// </summary>
+        /// <param name="timeout">Maximum time to wait</param>
+        Task OpenAsync(TimeSpan? timeout = null);
+
+        /// <summary>
+        /// Close shutter completely (100% position)
+        /// </summary>
+        /// <param name="timeout">Maximum time to wait</param>
+        Task CloseAsync(TimeSpan? timeout = null);
+
+        /// <summary>
+        /// Move shutter to a preset position
+        /// </summary>
+        /// <param name="presetName">Name of the preset for logging</param>
+        /// <param name="position">Position percentage (0-100)</param>
+        /// <param name="timeout">Maximum time to wait</param>
+        Task MoveToPresetAsync(string presetName, float position, TimeSpan? timeout = null);
     }
 
     /// <summary>

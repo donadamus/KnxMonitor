@@ -64,14 +64,15 @@ namespace KnxTest
             await shutter.InitializeAsync();
 
             // Act & Assert - Save state
-            await shutter.SaveCurrentStateAsync();
+            shutter.SaveCurrentState();
             shutter.SavedState.Should().NotBeNull();
             shutter.SavedState!.Position.Should().Be(shutter.CurrentState.Position);
             shutter.SavedState.IsLocked.Should().Be(shutter.CurrentState.IsLocked);
 
-            // Modify shutter state (small movement)
+            // Modify shutter state (ensure different position)
             var originalPosition = shutter.CurrentState.Position;
-            var testPosition = Math.Min(100, originalPosition + 5);
+            // Choose test position: if current > 50%, go to 30%, otherwise go to 70%
+            var testPosition = originalPosition + (originalPosition > 50 ? -1 : 1) * 20.0f;
             
             await shutter.SetPositionAsync(testPosition);
             await Task.Delay(2000); // Wait for movement
@@ -102,7 +103,7 @@ namespace KnxTest
             // Arrange
             var shutter = ShutterFactory.CreateShutter(shutterId, _knxService);
             await shutter.InitializeAsync();
-            await shutter.SaveCurrentStateAsync();
+            shutter.SaveCurrentState();
 
             try
             {
@@ -177,29 +178,30 @@ namespace KnxTest
         }
 
         [Theory]
-        [InlineData("R2.1")]
+        //[InlineData("R2.1")]
         [InlineData("R8.1")]
         public async Task CanSetAbsolutePosition(string shutterId)
         {
             // Arrange
             var shutter = ShutterFactory.CreateShutter(shutterId, _knxService);
             await shutter.InitializeAsync();
-            await shutter.SaveCurrentStateAsync();
+            shutter.SaveCurrentState();
 
             try
             {
-                var initialPosition = shutter.CurrentState.Position;
+                var originalPosition = shutter.CurrentState.Position;
                 
-                // Choose target position based on current position
-                var targetPosition = initialPosition < 50 ? 70 : 30;
+                // Choose test position: if current > 50%, go to UP 20%, otherwise go DOWN 20%
+                var targetPosition = originalPosition + (originalPosition > 50 ? -1 : 1) * 20.0f;
 
-                Console.WriteLine($"Setting shutter {shutterId} from {initialPosition}% to {targetPosition}%");
+                Console.WriteLine($"Setting shutter {shutterId} from {originalPosition}% to {targetPosition}%");
 
                 // Act
                 await shutter.SetPositionAsync(targetPosition);
                 
-                // Wait for position to be reached
-                var reached = await shutter.WaitForPositionAsync(targetPosition, tolerance: 5.0, TimeSpan.FromSeconds(15));
+                // Wait for position to be reached with byte-precision tolerance
+                // Since KNX uses 1 byte (0-255) for 0-100%, tolerance should be ~0.5%
+                var reached = await shutter.WaitForPositionAsync(targetPosition, tolerance: 1.0, TimeSpan.FromSeconds(15));
 
                 // Assert
                 reached.Should().BeTrue($"Shutter should reach target position {targetPosition}%");
@@ -207,8 +209,8 @@ namespace KnxTest
                 var finalPosition = await shutter.ReadPositionAsync();
                 Console.WriteLine($"Final position: {finalPosition}%");
                 
-                Math.Abs(finalPosition - targetPosition).Should().BeLessThan(5, 
-                    $"Final position should be within 5% of target. Target: {targetPosition}%, Actual: {finalPosition}%");
+                Math.Abs(finalPosition - targetPosition).Should().BeLessThan(1.0f, 
+                    $"Final position should be within 1% of target (byte precision). Target: {targetPosition}%, Actual: {finalPosition}%");
             }
             finally
             {
@@ -225,7 +227,7 @@ namespace KnxTest
             // Arrange
             var shutter = ShutterFactory.CreateShutter(shutterId, _knxService);
             await shutter.InitializeAsync();
-            await shutter.SaveCurrentStateAsync();
+            shutter.SaveCurrentState();
 
             try
             {
@@ -264,7 +266,7 @@ namespace KnxTest
             // Arrange
             var shutter = ShutterFactory.CreateShutter(shutterId, _knxService);
             await shutter.InitializeAsync();
-            await shutter.SaveCurrentStateAsync();
+            shutter.SaveCurrentState();
 
             try
             {

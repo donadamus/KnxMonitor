@@ -42,31 +42,14 @@ namespace KnxService
             {
                 try
                 {
-                    // Extract basic information from Falcon's event args
+                    // Extract information directly from Falcon's event args - no reflection needed!
                     var destination = args.DestinationAddress.ToString();
+                    var source = args.SourceAddress.ToString();
+                    var messageType = args.EventType.ToString();
+                    var priority = args.MessagePriority.ToString();
                     
                     // Create KnxValue from Falcon's value
                     var knxValue = CreateKnxValue(args.Value, destination);
-                    
-                    // Try to get additional properties if they exist
-                    string? source = null;
-                    string? messageType = null;
-                    string? priority = null;
-                    
-                    // Use reflection to safely extract additional properties
-                    var argsType = args.GetType();
-                    
-                    // Try to get Source/SourceAddress
-                    var sourceProp = argsType.GetProperty("SourceAddress") ?? argsType.GetProperty("Source");
-                    source = sourceProp?.GetValue(args)?.ToString();
-                    
-                    // Try to get MessageType
-                    var typeProp = argsType.GetProperty("MessageType") ?? argsType.GetProperty("Type");
-                    messageType = typeProp?.GetValue(args)?.ToString();
-                    
-                    // Try to get Priority
-                    var priorityProp = argsType.GetProperty("Priority");
-                    priority = priorityProp?.GetValue(args)?.ToString();
 
                     var knxGroupEventArgs = new KnxGroupEventArgs(
                         Destination: destination,
@@ -104,37 +87,19 @@ namespace KnxService
         {
             try
             {
-                // Extract raw data if possible
-                byte[]? rawData = null;
-                
-                // Try to get raw bytes from Falcon's GroupValue
-                if (falconValue != null)
+                // Cast to GroupValue directly - no reflection needed!
+                if (falconValue is Knx.Falcon.GroupValue groupValue)
                 {
-                    var valueType = falconValue.GetType();
+                    var typedValue = groupValue.TypedValue;
+                    var rawData = groupValue.Value; // This is byte[]
                     
-                    // Try to get Data property (common in KNX libraries)
-                    var dataProp = valueType.GetProperty("Data") ?? valueType.GetProperty("RawData");
-                    if (dataProp?.GetValue(falconValue) is byte[] data)
-                    {
-                        rawData = data;
-                    }
-                    
-                    // Try to get TypedValue for better type handling
-                    var typedValueProp = valueType.GetProperty("TypedValue");
-                    if (typedValueProp != null)
-                    {
-                        var typedValue = typedValueProp.GetValue(falconValue);
-                        if (typedValue != null)
-                        {
-                            var knxValue = new KnxValue(typedValue, rawData);
-                            Console.WriteLine($"KNX {address} ({KnxAddressTypeConfig.GetAddressDescription(address)}): {knxValue.GetTypedValue(address)}");
-                            return knxValue;
-                        }
-                    }
+                    var knxValue = new KnxValue(typedValue, rawData);
+                    Console.WriteLine($"KNX {address} ({KnxAddressTypeConfig.GetAddressDescription(address)}): {knxValue.GetTypedValue(address)}");
+                    return knxValue;
                 }
                 
-                // Fallback to the original value
-                var fallbackValue = new KnxValue(falconValue ?? "Unknown", rawData);
+                // Fallback for unknown types
+                var fallbackValue = new KnxValue(falconValue ?? "Unknown");
                 Console.WriteLine($"KNX {address} (fallback): {fallbackValue.GetTypedValue(address)}");
                 return fallbackValue;
             }
@@ -173,14 +138,9 @@ namespace KnxService
             }
             
             var groupAddress = new GroupAddress(address);
-            // For KNX DPT 5.004 (2-byte percentage), convert to 2-byte array
-            var knxRawValue = (ushort)(percentage * 655.35f); // Convert 0.0-100.0% to 0-65535 range
-            var bytes = BitConverter.GetBytes(knxRawValue);
-            if (BitConverter.IsLittleEndian)
-            {
-                Array.Reverse(bytes); // KNX uses big-endian
-            }
-            var groupValue = new GroupValue(bytes);
+            // Use 1-byte percentage like int version - most KNX devices expect this format
+            var knxRawValue = (byte)(percentage * 2.55f); // Convert 0.0-100.0% to 0-255 KNX range
+            var groupValue = new GroupValue(knxRawValue);
             _knxBus.WriteGroupValue(groupAddress, groupValue);
         }
 
@@ -203,23 +163,57 @@ namespace KnxService
             {
                 var result = await _knxBus.ReadGroupValueAsync(groupAddress, TimeSpan.FromSeconds(2), MessagePriority.Low);
 
-                if (result?.TypedValue is T typedValue)
+                Console.WriteLine($"RequestGroupValue<{typeof(T).Name}>({address}): {result?.TypedValue?.GetType().Name} = {result?.TypedValue}");
+
+                // First, try direct cast to requested type
+                if (result?.TypedValue is T directValue)
                 {
-                    return typedValue;
+                    return directValue;
                 }
-                if (result?.TypedValue is byte byteValue)
+
+                // Handle specific type conversions
+                if (result?.TypedValue != null)
                 {
-                    if (typeof(T) == typeof(int))
+                    var targetType = typeof(T);
+
+                    // Boolean conversions
+                    if (targetType == typeof(bool))
                     {
-                        // Convert KNX byte (0-255) to percentage (0-100)
-                        var percentage = (int)(byteValue / 2.55);
-                        return (T)(object)percentage;
+                        if (result.TypedValue is bool boolVal)
+                            return (T)(object)boolVal;
+                        if (result.TypedValue is byte byteVal)
+                            return (T)(object)(byteVal != 0); // 0 = false, anything else = true
+                        if (result.TypedValue is int intVal)
+                            return (T)(object)(intVal != 0);
+                    }
+
+                    // Float/percentage conversions
+                    if (targetType == typeof(float))
+                    {
+                        if (result.TypedValue is byte byteVal)
+                            return (T)(object)(byteVal / 2.55f); // Convert KNX byte (0-255) to percentage (0-100)
+                        if (result.TypedValue is ushort ushortVal)
+                            return (T)(object)(ushortVal / 655.35f); // Convert 2-byte (0-65535) to percentage (0-100)
+                        if (result.TypedValue is int intVal)
+                            return (T)(object)(float)intVal;
+                        if (result.TypedValue is double doubleVal)
+                            return (T)(object)(float)doubleVal;
+                    }
+
+                    // Int conversions
+                    if (targetType == typeof(int))
+                    {
+                        if (result.TypedValue is byte byteVal)
+                            return (T)(object)(int)(byteVal / 2.55f); // Convert KNX byte (0-255) to percentage (0-100)
+                        if (result.TypedValue is ushort ushortVal)
+                            return (T)(object)(int)ushortVal;
+                        if (result.TypedValue is float floatVal)
+                            return (T)(object)(int)floatVal;
                     }
                 }
-                
-                // Log what we got instead
-                Console.WriteLine($"RequestGroupValue<{typeof(T).Name}>({address}): result.TypedValue = {result?.TypedValue?.GetType().Name ?? "null"}, value = {result?.TypedValue}");
-                
+
+                // Log failure and return default
+                Console.WriteLine($"FAILED to convert {result?.TypedValue?.GetType().Name ?? "null"} to {typeof(T).Name}");
                 return default(T)!;
             }
             catch (Exception ex)

@@ -138,26 +138,13 @@ namespace KnxModel
         }
 
         /// <summary>
-        /// Determines the most likely type based on data length and address pattern
+        /// Determines the most likely type based on data length
+        /// Models specify exact types via RequestGroupValue<T>
         /// </summary>
         public object GetTypedValue(string? address = null)
         {
-            // Use address-based configuration if available
-            if (!string.IsNullOrEmpty(address))
-            {
-                var expectedType = KnxAddressTypeConfig.GetExpectedType(address);
-                
-                return expectedType switch
-                {
-                    KnxDataType.Boolean => AsBoolean(),
-                    KnxDataType.Percent => AsPercent(),
-                    KnxDataType.Byte => AsByte(),
-                    KnxDataType.TwoByteUnsigned => AsInt(),
-                    KnxDataType.Temperature => AsInt(), // TODO: Implement temperature conversion
-                    _ => GetTypedValueByDataLength()
-                };
-            }
-
+            // Always use data length for automatic type detection
+            // Models specify expected types explicitly via RequestGroupValue<T>
             return GetTypedValueByDataLength();
         }
 
