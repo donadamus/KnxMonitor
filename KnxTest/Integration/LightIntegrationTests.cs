@@ -5,14 +5,14 @@ using System;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace KnxTest
+namespace KnxTest.Integration
 {
     [Collection("KnxService collection")]
-    public class LightModelTests
+    public class LightIntegrationTests
     {
         private readonly IKnxService _knxService;
 
-        public LightModelTests(KnxServiceFixture fixture)
+        public LightIntegrationTests(KnxServiceFixture fixture)
         {
             _knxService = fixture.KnxService;
         }

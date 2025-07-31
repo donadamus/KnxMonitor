@@ -6,14 +6,14 @@ using System.Globalization;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace KnxTest
+namespace KnxTest.Integration
 {
     [Collection("KnxService collection")]
-    public class UnitTest1
+    public class SystemIntegrationTests
     {
         private IKnxService _knxService { get; }
 
-        public UnitTest1(KnxServiceFixture fixture)
+        public SystemIntegrationTests(KnxServiceFixture fixture)
         {
             _knxService = fixture.KnxService;
         }

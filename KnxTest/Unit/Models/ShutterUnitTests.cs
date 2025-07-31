@@ -6,7 +6,7 @@ using System;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace KnxTest
+namespace KnxTest.Unit.Models
 {
     public class ShutterUnitTests
     {

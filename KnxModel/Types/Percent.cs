@@ -1,10 +1,7 @@
-﻿namespace KnxModel
-{
-    public record KnxGroupAddress (string MainGroup, string MiddleGroup, string SubGroup)
-    {
-        public string Address => $"{MainGroup}/{MiddleGroup}/{SubGroup}";
-    }
+using System;
 
+namespace KnxModel
+{
     public readonly record struct Percent(byte KnxRawValue)
     {
         public double Value => KnxRawValue / 2.55; // Convert 0-255 to 0-100%
@@ -18,5 +15,4 @@
             return new Percent((byte)(percentage * 2.55));
         }
     }
-
 }

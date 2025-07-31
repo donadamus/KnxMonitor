@@ -3,7 +3,7 @@ using Xunit;
 using FluentAssertions;
 using KnxModel;
 
-namespace KnxTest
+namespace KnxTest.Unit.Models
 {
     public class KnxValueTests
     {
