@@ -10,7 +10,7 @@ namespace KnxModel
     {
         private readonly IKnxService _knxService;
         private readonly TimeSpan _defaultTimeout = TimeSpan.FromSeconds(30);
-        private readonly TimeSpan _defaultMoveTimeout = TimeSpan.FromSeconds(10);
+        private readonly TimeSpan _defaultMoveTimeout = TimeSpan.FromSeconds(30);
         private bool _isListeningToFeedback = false;
 
         public string Id { get; }
@@ -49,7 +49,7 @@ namespace KnxModel
 
             // Initialize with default state
             CurrentState = new ShutterState(
-                Position: Percent.FromPercantage(0),
+                Position: 0,
                 IsLocked: false,
                 MovementState: ShutterMovementState.Unknown,
                 LastUpdated: DateTime.Now
@@ -75,7 +75,7 @@ namespace KnxModel
                     LastUpdated: DateTime.Now
                 );
 
-                Console.WriteLine($"Shutter {Id} ({Name}) initialized - Position: {position.Value:F1}%, Locked: {isLocked}, Movement: {movementState}");
+                Console.WriteLine($"Shutter {Id} ({Name}) initialized - Position: {position}%, Locked: {isLocked}, Movement: {movementState}");
             }
             catch (Exception ex)
             {
@@ -88,7 +88,7 @@ namespace KnxModel
         {
             await RefreshCurrentStateAsync();
             SavedState = CurrentState;
-            Console.WriteLine($"Shutter {Id} state saved - Position: {SavedState.Position.Value:F1}%, Locked: {SavedState.IsLocked}");
+            Console.WriteLine($"Shutter {Id} state saved - Position: {SavedState.Position}%, Locked: {SavedState.IsLocked}");
         }
 
         public async Task RestoreSavedStateAsync()
@@ -98,7 +98,7 @@ namespace KnxModel
                 throw new InvalidOperationException($"No saved state available for shutter {Id}. Call SaveCurrentStateAsync() first.");
             }
 
-            Console.WriteLine($"Restoring shutter {Id} to saved state - Position: {SavedState.Position.Value:F1}%, Locked: {SavedState.IsLocked}");
+            Console.WriteLine($"Restoring shutter {Id} to saved state - Position: {SavedState.Position}%, Locked: {SavedState.IsLocked}");
 
             try
             {
@@ -110,7 +110,7 @@ namespace KnxModel
                 }
 
                 // Restore position
-                if (Math.Abs(CurrentState.Position.Value - SavedState.Position.Value) > 1.0)
+                if (Math.Abs(CurrentState.Position - SavedState.Position) > 1.0)
                 {
                     await SetPositionAsync(SavedState.Position);
                     await WaitForPositionAsync(SavedState.Position, tolerance: 3.0);
@@ -131,10 +131,15 @@ namespace KnxModel
             }
         }
 
-        public Task SetPositionAsync(Percent position, TimeSpan? timeout = null)
+        public Task SetPositionAsync(int position, TimeSpan? timeout = null)
         {
+            if (position < 0 || position > 100)
+            {
+                throw new ArgumentOutOfRangeException(nameof(position), "Position must be between 0 and 100.");
+            }
+            
             var effectiveTimeout = timeout ?? _defaultTimeout;
-            Console.WriteLine($"Setting shutter {Id} position to {position.Value:F1}%");
+            Console.WriteLine($"Setting shutter {Id} position to {position}%");
 
             _knxService.WriteGroupValue(Addresses.PositionControl, position);
             
@@ -151,11 +156,15 @@ namespace KnxModel
 
             if (duration.HasValue)
             {
+                // Określony czas - czekaj i stop
                 await Task.Delay(duration.Value);
                 await StopAsync();
             }
-
-            // Don't actively refresh - wait for feedback events
+            else
+            {
+                // Brak duration - czekaj aż ruch się zatrzyma automatycznie
+                await WaitForMovementStopAsync();
+            }
         }
 
         public Task StopAsync()
@@ -178,11 +187,11 @@ namespace KnxModel
             // Don't actively refresh - wait for feedback events
         }
 
-        public async Task<Percent> ReadPositionAsync()
+        public async Task<int> ReadPositionAsync()
         {
             try
             {
-                return await _knxService.RequestGroupValue<Percent>(Addresses.PositionFeedback);
+                return await _knxService.RequestGroupValue<int>(Addresses.PositionFeedback);
             }
             catch (Exception ex)
             {
@@ -195,8 +204,7 @@ namespace KnxModel
         {
             try
             {
-                var result = await _knxService.RequestGroupValue(Addresses.LockFeedback);
-                return result == "1";
+                return await _knxService.RequestGroupValue<bool>(Addresses.LockFeedback);
             }
             catch (Exception ex)
             {
@@ -209,14 +217,11 @@ namespace KnxModel
         {
             try
             {
-                var result = await _knxService.RequestGroupValue(Addresses.MovementStatusFeedback);
-                return result switch
-                {
-                    "0" => ShutterMovementState.Stopped,
-                    "1" => ShutterMovementState.MovingUp, // Assuming 1 = moving up
-                    "2" => ShutterMovementState.MovingDown, // Assuming 2 = moving down
-                    _ => ShutterMovementState.Unknown
-                };
+                var isActive = await _knxService.RequestGroupValue<bool>(Addresses.MovementStatusFeedback);
+                
+                return isActive ? ShutterMovementState.MovingUp : ShutterMovementState.Stopped;
+                // Note: We can't distinguish UP/DOWN from this feedback alone
+                // Would need additional feedback or state tracking for direction
             }
             catch (Exception ex)
             {
@@ -225,115 +230,89 @@ namespace KnxModel
             }
         }
 
-        public async Task<bool> WaitForPositionAsync(Percent targetPosition, double tolerance = 2.0, TimeSpan? timeout = null)
+        public async Task<bool> WaitForPositionAsync(int targetPosition, double tolerance = 2.0, TimeSpan? timeout = null)
         {
-            var effectiveTimeout = timeout ?? _defaultTimeout;
-            var startTime = DateTime.Now;
-            var targetValue = targetPosition.Value;
-
-            Console.WriteLine($"Waiting for shutter {Id} to reach {targetValue:F1}% (tolerance: ±{tolerance:F1}%)");
-
-            while (DateTime.Now - startTime < effectiveTimeout)
+            if (targetPosition < 0 || targetPosition > 100)
             {
-                try
-                {
-                    var currentPosition = await ReadPositionAsync();
-                    var difference = Math.Abs(currentPosition.Value - targetValue);
+                throw new ArgumentOutOfRangeException(nameof(targetPosition), "Target position must be between 0 and 100.");
+            }
+            
+            var effectiveTimeout = timeout ?? _defaultTimeout;
+            Console.WriteLine($"Waiting for shutter {Id} to reach {targetPosition}% (tolerance: ±{tolerance:F1}%)");
 
+            // Create a task that completes when target position is reached
+            var waitTask = Task.Run(async () =>
+            {
+                while (true)
+                {
+                    // Check if we're close enough to target position using CurrentState (updated via feedback)
+                    var difference = Math.Abs(CurrentState.Position - targetPosition);
                     if (difference <= tolerance)
                     {
-                        Console.WriteLine($"Shutter {Id} reached target position: {currentPosition.Value:F1}%");
-                        await RefreshCurrentStateAsync();
+                        Console.WriteLine($"Shutter {Id} reached target position: {CurrentState.Position}% (target: {targetPosition}%)");
+                        await RefreshCurrentStateAsync(); // Final state update
                         return true;
                     }
 
-                    await Task.Delay(1000); // Check every second
+                    await Task.Delay(200); // Check every 200ms
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error while waiting for position: {ex.Message}");
-                    await Task.Delay(1000);
-                }
-            }
+            });
 
-            Console.WriteLine($"Timeout waiting for shutter {Id} to reach position {targetValue:F1}%");
-            return false;
+            // Create timeout task
+            var timeoutTask = Task.Delay(effectiveTimeout);
+
+            // Wait for either position to be reached or timeout
+            var completedTask = await Task.WhenAny(waitTask, timeoutTask);
+
+            if (completedTask == waitTask)
+            {
+                return await waitTask; // Position reached
+            }
+            else
+            {
+                // Timeout occurred
+                Console.WriteLine($"⚠️ WARNING: Shutter {Id} position timeout - target {targetPosition}%, current {CurrentState.Position}%");
+                Console.WriteLine($"This may indicate: slow movement, missing position feedback, or hardware issue");
+                return false;
+            }
         }
 
         public async Task<bool> WaitForMovementStopAsync(TimeSpan? timeout = null)
         {
             var effectiveTimeout = timeout ?? _defaultMoveTimeout;
-            var startTime = DateTime.Now;
-
             Console.WriteLine($"Waiting for shutter {Id} movement to stop");
 
-            while (DateTime.Now - startTime < effectiveTimeout)
+            // Create a task that completes when movement stops
+            var waitTask = Task.Run(async () =>
             {
-                try
+                while (CurrentState.MovementState != ShutterMovementState.Stopped)
                 {
-                    var movementState = await ReadMovementStateAsync();
-                    if (movementState == ShutterMovementState.Stopped)
-                    {
-                        Console.WriteLine($"Shutter {Id} movement stopped");
-                        await RefreshCurrentStateAsync();
-                        return true;
-                    }
+                    await Task.Delay(200); // Check internal state every 200ms
+                }
+                Console.WriteLine($"Shutter {Id} movement stopped via feedback");
+                return true;
+            });
 
-                    await Task.Delay(500); // Check every half second
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error while waiting for movement stop: {ex.Message}");
-                    await Task.Delay(500);
-                }
+            // Create timeout task
+            var timeoutTask = Task.Delay(effectiveTimeout);
+
+            // Wait for either movement to stop or timeout
+            var completedTask = await Task.WhenAny(waitTask, timeoutTask);
+
+            if (completedTask == waitTask)
+            {
+                return await waitTask; // Movement stopped
             }
-
-            Console.WriteLine($"Timeout waiting for shutter {Id} movement to stop");
-            return false;
-        }
-
-        public async Task<bool> TestLockFunctionalityAsync(TimeSpan? testDuration = null)
-        {
-            var duration = testDuration ?? TimeSpan.FromSeconds(5);
-            Console.WriteLine($"Testing lock functionality for shutter {Id}");
-
-            // Save current state
-            var initialPosition = await ReadPositionAsync();
-            var initialLockState = await ReadLockStateAsync();
-
-            try
+            else
             {
-                // Ensure shutter is locked
-                if (!initialLockState)
-                {
-                    await SetLockAsync(true);
-                }
-
-                // Try to move the shutter
-                Console.WriteLine($"Attempting to move locked shutter {Id}");
-                await MoveAsync(ShutterDirection.Up, duration);
+                // Timeout occurred - indicates a problem!
+                Console.WriteLine($"⚠️ WARNING: Shutter {Id} movement timeout - NO FEEDBACK RECEIVED!");
+                Console.WriteLine($"This may indicate: missing feedback configuration, hardware issue, or communication problem");
                 
-                // Check if position changed
-                var positionAfterMove = await ReadPositionAsync();
-                var positionDifference = Math.Abs(positionAfterMove.Value - initialPosition.Value);
-
-                var lockEffective = positionDifference < 1.0; // Less than 1% movement means lock is effective
-
-                if (lockEffective)
-                {
-                    Console.WriteLine($"✓ Lock test passed for shutter {Id} - no movement detected ({positionDifference:F1}% change)");
-                }
-                else
-                {
-                    Console.WriteLine($"✗ Lock test failed for shutter {Id} - movement detected ({positionDifference:F1}% change)");
-                }
-
-                return lockEffective;
-            }
-            finally
-            {
-                // Restore original lock state
-                await SetLockAsync(initialLockState);
+                // Optionally: throw exception to make the problem explicit
+                // throw new TimeoutException($"Shutter {Id} feedback timeout - possible installation issue");
+                
+                return false;
             }
         }
 
@@ -417,15 +396,15 @@ namespace KnxModel
         {
             try
             {
-                var percent = value.AsPercent();
+                var positionPercent = value.AsPercentageValue();
                 var updatedState = new ShutterState(
-                    Position: percent,
+                    Position: positionPercent,
                     IsLocked: CurrentState.IsLocked,
                     MovementState: CurrentState.MovementState,
                     LastUpdated: DateTime.Now
                 );
                 CurrentState = updatedState;
-                Console.WriteLine($"Shutter {Id} position updated via feedback: {percent.Value:F1}%");
+                Console.WriteLine($"Shutter {Id} position updated via feedback: {positionPercent}%");
             }
             catch (Exception ex)
             {
@@ -471,14 +450,9 @@ namespace KnxModel
         {
             try
             {
-                var rawValue = value.AsByte();
-                var movementState = rawValue switch
-                {
-                    0 => ShutterMovementState.Stopped,
-                    1 => ShutterMovementState.MovingUp,
-                    2 => ShutterMovementState.MovingDown,
-                    _ => ShutterMovementState.Unknown
-                };
+                var isActive = value.AsBoolean(); // DataType 1.011: Inactive/Active
+                var movementState = isActive ? ShutterMovementState.MovingUp : ShutterMovementState.Stopped;
+                // Note: We can't distinguish UP/DOWN from this feedback alone
 
                 var updatedState = new ShutterState(
                     Position: CurrentState.Position,
@@ -487,7 +461,7 @@ namespace KnxModel
                     LastUpdated: DateTime.Now
                 );
                 CurrentState = updatedState;
-                Console.WriteLine($"Shutter {Id} movement state updated via feedback: {movementState}");
+                Console.WriteLine($"Shutter {Id} movement state updated via feedback: {(isActive ? "Active" : "Inactive")} -> {movementState}");
             }
             catch (Exception ex)
             {
@@ -497,7 +471,7 @@ namespace KnxModel
 
         public override string ToString()
         {
-            return $"Shutter {Id} ({Name}) - Position: {CurrentState.Position.Value:F1}%, Locked: {CurrentState.IsLocked}, Movement: {CurrentState.MovementState}";
+            return $"Shutter {Id} ({Name}) - Position: {CurrentState.Position}%, Locked: {CurrentState.IsLocked}, Movement: {CurrentState.MovementState}";
         }
 
         public void Dispose()

@@ -145,12 +145,6 @@ namespace KnxService
             }
         }
 
-
-        public void WriteGroupValue(string mainGroup, string middleGroup, string subGroup, bool value)
-        {
-            var address = new KnxGroupAddress(mainGroup, middleGroup, subGroup);
-            WriteGroupValue(address, value);
-        }
         public void WriteGroupValue(string address, bool value)
         {
             var groupAddress = new GroupAddress(address);
@@ -158,18 +152,18 @@ namespace KnxService
             _knxBus.WriteGroupValue(groupAddress, groupValue);
         }
 
-        public void WriteGroupValue(string address, Percent value)
+        public void WriteGroupValue(string address, int percentage)
         {
+            if (percentage < 0 || percentage > 100)
+            {
+                throw new ArgumentOutOfRangeException(nameof(percentage), "Percentage must be between 0 and 100.");
+            }
+            
             var groupAddress = new GroupAddress(address);
-            var groupValue = new GroupValue(value.KnxRawValue);
+            var knxRawValue = (byte)(percentage * 2.55); // Convert 0-100% to 0-255 KNX range
+            var groupValue = new GroupValue(knxRawValue);
             _knxBus.WriteGroupValue(groupAddress, groupValue);
         }
-
-        //public void ReceiveGroupAddress(string mainGroup, string middleGroup, string subGroup)
-        //{
-        //    var address = new KnxGroupAddress(mainGroup, middleGroup, subGroup);
-        //    Receive(address);
-        //}
 
         public void WriteGroupValue(KnxGroupAddress address, bool value)
         {
@@ -178,43 +172,11 @@ namespace KnxService
 
         public event EventHandler<KnxGroupEventArgs> GroupMessageReceived;
 
-
-        //public void Receive(KnxGroupAddress address)
-        //{
-        //    if (!_isConnected)
-        //    {
-        //        Connect();
-        //    }
-        //    // Here you would implement the logic to receive messages from the specified group address.
-        //    // This is a placeholder for demonstration purposes.
-        //    Console.WriteLine($"Receiving messages from {address.MainGroup}/{address.MiddleGroup}/{address.SubGroup}");
-
-            
-        //}
-
         public void Dispose()
         {
             _knxBus.Dispose();
         }
-
-        public async Task<string> RequestGroupValue(string mainGroup, string middleGroup, string subGroup)
-        {
-            var address = new KnxGroupAddress(mainGroup, middleGroup, subGroup);
-            return await RequestGroupValue(address);
-        }
-
-        public async Task<string> RequestGroupValue(KnxGroupAddress address)
-        {
-            return await RequestGroupValue(address.Address);
-        }
-        public async Task<string> RequestGroupValue(string address)
-        {
-            var groupAddress = new GroupAddress(address);
-            var result = await _knxBus.ReadGroupValueAsync(groupAddress, TimeSpan.FromSeconds(2), MessagePriority.Alarm);
-
-            return result.TypedValue.ToString() == "1" ? "1" : "0";
-        }
-
+               
         public async Task<T> RequestGroupValue<T>(string address)
         {
             var groupAddress = new GroupAddress(address);
@@ -228,9 +190,11 @@ namespace KnxService
                 }
                 if (result?.TypedValue is byte byteValue)
                 {
-                    if (typeof(T) == typeof(Percent))
+                    if (typeof(T) == typeof(int))
                     {
-                        return (T)(object)new Percent(byteValue);
+                        // Convert KNX byte (0-255) to percentage (0-100)
+                        var percentage = (int)(byteValue / 2.55);
+                        return (T)(object)percentage;
                     }
                 }
                 

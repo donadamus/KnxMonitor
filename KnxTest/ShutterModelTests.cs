@@ -47,7 +47,7 @@ namespace KnxTest
             // Assert
             shutter.Id.Should().Be(shutterId);
             shutter.CurrentState.Should().NotBeNull();
-            shutter.CurrentState.Position.Value.Should().BeInRange(0, 100);
+            shutter.CurrentState.Position.Should().BeInRange(0, 100);
             shutter.CurrentState.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromMinutes(1));
             
             Console.WriteLine($"Shutter {shutterId} initialized: {shutter}");
@@ -71,7 +71,7 @@ namespace KnxTest
 
             // Modify shutter state (small movement)
             var originalPosition = shutter.CurrentState.Position;
-            var testPosition = Percent.FromPercantage(Math.Min(100, originalPosition.Value + 5));
+            var testPosition = Math.Min(100, originalPosition + 5);
             
             await shutter.SetPositionAsync(testPosition);
             await Task.Delay(2000); // Wait for movement
@@ -79,7 +79,7 @@ namespace KnxTest
             // Verify state changed
             await shutter.InitializeAsync(); // Refresh current state
             var currentPosition = shutter.CurrentState.Position;
-            Math.Abs(currentPosition.Value - originalPosition.Value).Should().BeGreaterThan(1);
+            Math.Abs(currentPosition - originalPosition).Should().BeGreaterThan(1);
 
             // Restore original state
             await shutter.RestoreSavedStateAsync();
@@ -88,10 +88,10 @@ namespace KnxTest
             // Verify restoration
             await shutter.InitializeAsync(); // Refresh current state
             var restoredPosition = shutter.CurrentState.Position;
-            Math.Abs(restoredPosition.Value - originalPosition.Value).Should().BeLessThan(3); // Allow 3% tolerance
+            Math.Abs(restoredPosition - originalPosition).Should().BeLessThan(3); // Allow 3% tolerance
             
-            Console.WriteLine($"Shutter {shutterId} - Original: {originalPosition.Value:F1}%, " +
-                            $"Modified: {currentPosition.Value:F1}%, Restored: {restoredPosition.Value:F1}%");
+            Console.WriteLine($"Shutter {shutterId} - Original: {originalPosition}%, " +
+                            $"Modified: {currentPosition}%, Restored: {restoredPosition}%");
         }
 
         [Theory]
@@ -107,10 +107,10 @@ namespace KnxTest
             try
             {
                 var initialPosition = shutter.CurrentState.Position;
-                Console.WriteLine($"Testing shutter {shutterId} movement from {initialPosition.Value:F1}%");
+                Console.WriteLine($"Testing shutter {shutterId} movement from {initialPosition}%");
 
                 // Test movement based on initial position
-                bool testUpFirst = initialPosition.Value > 50; // If down, test UP first
+                bool testUpFirst = initialPosition > 50; // If down, test UP first
 
                 if (testUpFirst)
                 {
@@ -120,11 +120,11 @@ namespace KnxTest
                     await shutter.StopAsync();
                     
                     var upPosition = await shutter.ReadPositionAsync();
-                    Console.WriteLine($"After UP movement: {upPosition.Value:F1}%");
+                    Console.WriteLine($"After UP movement: {upPosition}%");
                     
                     // UP should decrease percentage (toward 0%)
-                    (upPosition.Value < initialPosition.Value).Should().BeTrue(
-                        $"UP movement should decrease position. Initial: {initialPosition.Value:F1}%, After UP: {upPosition.Value:F1}%");
+                    (upPosition < initialPosition).Should().BeTrue(
+                        $"UP movement should decrease position. Initial: {initialPosition}%, After UP: {upPosition}%");
 
                     await Task.Delay(1000);
 
@@ -134,11 +134,11 @@ namespace KnxTest
                     await shutter.StopAsync();
                     
                     var downPosition = await shutter.ReadPositionAsync();
-                    Console.WriteLine($"After DOWN movement: {downPosition.Value:F1}%");
+                    Console.WriteLine($"After DOWN movement: {downPosition}%");
                     
                     // DOWN should increase percentage (toward 100%)
-                    (downPosition.Value > upPosition.Value).Should().BeTrue(
-                        $"DOWN movement should increase position. After UP: {upPosition.Value:F1}%, After DOWN: {downPosition.Value:F1}%");
+                    (downPosition > upPosition).Should().BeTrue(
+                        $"DOWN movement should increase position. After UP: {upPosition}%, After DOWN: {downPosition}%");
                 }
                 else
                 {
@@ -148,11 +148,11 @@ namespace KnxTest
                     await shutter.StopAsync();
                     
                     var downPosition = await shutter.ReadPositionAsync();
-                    Console.WriteLine($"After DOWN movement: {downPosition.Value:F1}%");
+                    Console.WriteLine($"After DOWN movement: {downPosition}%");
                     
                     // DOWN should increase percentage (toward 100%)
-                    (downPosition.Value > initialPosition.Value).Should().BeTrue(
-                        $"DOWN movement should increase position. Initial: {initialPosition.Value:F1}%, After DOWN: {downPosition.Value:F1}%");
+                    (downPosition > initialPosition).Should().BeTrue(
+                        $"DOWN movement should increase position. Initial: {initialPosition}%, After DOWN: {downPosition}%");
 
                     await Task.Delay(1000);
 
@@ -162,11 +162,11 @@ namespace KnxTest
                     await shutter.StopAsync();
                     
                     var upPosition = await shutter.ReadPositionAsync();
-                    Console.WriteLine($"After UP movement: {upPosition.Value:F1}%");
+                    Console.WriteLine($"After UP movement: {upPosition}%");
                     
                     // UP should decrease percentage (toward 0%)
-                    (upPosition.Value < downPosition.Value).Should().BeTrue(
-                        $"UP movement should decrease position. After DOWN: {downPosition.Value:F1}%, After UP: {upPosition.Value:F1}%");
+                    (upPosition < downPosition).Should().BeTrue(
+                        $"UP movement should decrease position. After DOWN: {downPosition}%, After UP: {upPosition}%");
                 }
             }
             finally
@@ -191,10 +191,9 @@ namespace KnxTest
                 var initialPosition = shutter.CurrentState.Position;
                 
                 // Choose target position based on current position
-                var targetPercent = initialPosition.Value < 50 ? 70.0 : 30.0;
-                var targetPosition = Percent.FromPercantage(targetPercent);
+                var targetPosition = initialPosition < 50 ? 70 : 30;
 
-                Console.WriteLine($"Setting shutter {shutterId} from {initialPosition.Value:F1}% to {targetPercent:F1}%");
+                Console.WriteLine($"Setting shutter {shutterId} from {initialPosition}% to {targetPosition}%");
 
                 // Act
                 await shutter.SetPositionAsync(targetPosition);
@@ -203,13 +202,13 @@ namespace KnxTest
                 var reached = await shutter.WaitForPositionAsync(targetPosition, tolerance: 5.0, TimeSpan.FromSeconds(15));
 
                 // Assert
-                reached.Should().BeTrue($"Shutter should reach target position {targetPercent:F1}%");
+                reached.Should().BeTrue($"Shutter should reach target position {targetPosition}%");
                 
                 var finalPosition = await shutter.ReadPositionAsync();
-                Console.WriteLine($"Final position: {finalPosition.Value:F1}%");
+                Console.WriteLine($"Final position: {finalPosition}%");
                 
-                Math.Abs(finalPosition.Value - targetPercent).Should().BeLessThan(5.0, 
-                    $"Final position should be within 5% of target. Target: {targetPercent:F1}%, Actual: {finalPosition.Value:F1}%");
+                Math.Abs(finalPosition - targetPosition).Should().BeLessThan(5, 
+                    $"Final position should be within 5% of target. Target: {targetPosition}%, Actual: {finalPosition}%");
             }
             finally
             {
@@ -269,9 +268,25 @@ namespace KnxTest
 
             try
             {
-                // Act & Assert
-                var lockEffective = await shutter.TestLockFunctionalityAsync(TimeSpan.FromSeconds(4));
+                // Act & Assert - Manual test implementation (moved from model)
+                var initialPosition = await shutter.ReadPositionAsync();
+                var initialLockState = await shutter.ReadLockStateAsync();
+
+                // Ensure shutter is locked
+                if (!initialLockState)
+                {
+                    await shutter.SetLockAsync(true);
+                }
+
+                // Try to move the shutter
+                Console.WriteLine($"Attempting to move locked shutter {shutterId}");
+                await shutter.MoveAsync(ShutterDirection.Up, TimeSpan.FromSeconds(4));
                 
+                // Check if position changed
+                var positionAfterMove = await shutter.ReadPositionAsync();
+                var positionDifference = Math.Abs(positionAfterMove - initialPosition);
+                var lockEffective = positionDifference < 1.0; // Less than 1% movement means lock is effective
+
                 lockEffective.Should().BeTrue($"Lock should prevent movement for shutter {shutterId}");
                 
                 Console.WriteLine($"✓ Lock functionality test passed for shutter {shutterId}");

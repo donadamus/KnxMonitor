@@ -52,14 +52,12 @@ namespace KnxTest
             var controlAddress = $"{LIGHTS_MAIN_GROUP}/{LIGHTS_MIDDLE_GROUP}/{subGroupControl}";
             var feedbackAddress = $"{LIGHTS_MAIN_GROUP}/{LIGHTS_MIDDLE_GROUP}/{subGroupReceived}";
 
-            var initialValue = await _knxService.RequestGroupValue(LIGHTS_MAIN_GROUP, LIGHTS_MIDDLE_GROUP, subGroupReceived);
+            var initialValue = await _knxService.RequestGroupValue<bool>(feedbackAddress);
 
-            var expectedValues = new[] { "0", "1" };
-            Assert.Contains(initialValue, expectedValues);
-
+            // No need for expected values array for bool
+            
             // Invert the current value for the test
-            var initialBool = (initialValue == "1");
-            var testValue = !initialBool;
+            var testValue = !initialValue;
 
             async Task<bool> SendAndVerify( bool value)
             {
@@ -90,11 +88,11 @@ namespace KnxTest
             // Assert
             // Act + Assert (1): Zmiana na przeciwną wartość
             var resultChanged = await SendAndVerify(testValue);
-            Assert.True(resultChanged, $"Expected feedback value {(testValue ? "1" : "0")} not received.");
+            Assert.True(resultChanged, $"Expected feedback value {testValue} not received.");
             Thread.Sleep(1000); // Wait for the change to propagate
             // Act + Assert (2): Przywrócenie oryginalnej wartości
-            var resultRestored = await SendAndVerify(initialBool);
-            Assert.True(resultRestored, $"Failed to restore original state {(initialBool ? "1" : "0")}.");
+            var resultRestored = await SendAndVerify(initialValue);
+            Assert.True(resultRestored, $"Failed to restore original state {initialValue}.");
 
         }
 
@@ -142,7 +140,8 @@ namespace KnxTest
 
             try
             {
-                var currentValue = await _knxService.RequestGroupValue(LIGHTS_MAIN_GROUP, LIGHTS_MIDDLE_GROUP, subGroup);
+                var feedbackAddress = $"{LIGHTS_MAIN_GROUP}/{LIGHTS_MIDDLE_GROUP}/{subGroup}";
+                var currentValue = await _knxService.RequestGroupValue<bool>(feedbackAddress);
 
                 var expectedValues = new[] { "0", "1" };
 
@@ -185,10 +184,10 @@ namespace KnxTest
             var feedbackAddress = $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_POSITION_MIDDLE_GROUP}/{feedbackSubGroup}";
 
             // Get initial position
-            Percent? initialPosition = null;
+            int? initialPosition = null;
             try
             {
-                initialPosition = await _knxService.RequestGroupValue<Percent>(feedbackAddress);
+                initialPosition = await _knxService.RequestGroupValue<int>(feedbackAddress);
             }
             catch (Exception ex)
             {
@@ -196,11 +195,11 @@ namespace KnxTest
             }
             
             // Choose a movement of 10% in appropriate direction
-            var currentPercent = initialPosition?.Value ?? 50; // Default to 50% if no feedback
+            var currentPercent = initialPosition ?? 50; // Default to 50% if no feedback
             var targetPercent = currentPercent < 50 ? currentPercent + 10 : currentPercent - 10;
-            var testPercent = Percent.FromPercantage(Math.Max(0, Math.Min(100, targetPercent)));
+            var testPercent = Math.Max(0, Math.Min(100, targetPercent));
 
-            Console.WriteLine($"Current position: {currentPercent}%, Target: {targetPercent}%, Raw: {testPercent.KnxRawValue}");
+            Console.WriteLine($"Current position: {currentPercent}%, Target: {targetPercent}%");
 
             var feedbackReceived = new List<KnxGroupEventArgs>();
             var taskCompletionSource = new TaskCompletionSource<bool>();
@@ -215,7 +214,7 @@ namespace KnxTest
                     // Parse feedback value to check if it matches our target
                     if (byte.TryParse(args.Value.AsString(), NumberStyles.HexNumber, null, out byte feedbackRaw))
                     {
-                        var targetRaw = testPercent.KnxRawValue;
+                        var targetRaw = (byte)(testPercent * 2.55); // Convert percentage to KNX raw value
                         var tolerance = 3; // Allow ±3 raw values tolerance
                         
                         // If feedback matches target (within tolerance), we can stop waiting
@@ -242,8 +241,9 @@ namespace KnxTest
 
             try
             {
-                // Act - Set new position using the new Percent overload
-                Console.WriteLine($"Sending position command: {testPercent.KnxRawValue} ({testPercent.Value:F1}%)");
+                // Act - Set new position using the new int overload
+                var testRaw = (byte)(testPercent * 2.55);
+                Console.WriteLine($"Sending position command: {testRaw} ({testPercent}%)");
                 _knxService.WriteGroupValue(controlAddress, testPercent);
                 
                 // Wait for movement feedback or timeout (shorter timeout for small movements)
@@ -264,11 +264,12 @@ namespace KnxTest
                 await Task.Delay(1500);
 
                 // Get final position
-                Percent? finalPosition = null;
+                int? finalPosition = null;
                 try
                 {
-                    finalPosition = await _knxService.RequestGroupValue<Percent>(feedbackAddress);
-                    Console.WriteLine($"Final position: {finalPosition.Value.Value}%, Raw: {finalPosition.Value.KnxRawValue}");
+                    finalPosition = await _knxService.RequestGroupValue<int>(feedbackAddress);
+                    var finalRaw = (byte)(finalPosition.Value * 2.55);
+                    Console.WriteLine($"Final position: {finalPosition.Value}%, Raw: {finalRaw}");
                 }
                 catch (Exception ex)
                 {
@@ -281,9 +282,9 @@ namespace KnxTest
                 if (initialPosition.HasValue && finalPosition.HasValue)
                 {
                     // Compare raw values with tolerance (KNX has 255 steps for 0-100%)
-                    var initialRaw = initialPosition.Value.KnxRawValue;
-                    var finalRaw = finalPosition.Value.KnxRawValue;
-                    var targetRaw = testPercent.KnxRawValue;
+                    var initialRaw = (byte)(initialPosition.Value * 2.55);
+                    var finalRaw = (byte)(finalPosition.Value * 2.55);
+                    var targetRaw = (byte)(testPercent * 2.55);
                     
                     // Allow tolerance of ±3 raw values (about 1.2%)
                     var tolerance = 3;
@@ -317,7 +318,7 @@ namespace KnxTest
                 // Restore original position if we have it
                 if (initialPosition.HasValue)
                 {
-                    Console.WriteLine($"Restoring original position: {initialPosition.Value.Value:F1}%");
+                    Console.WriteLine($"Restoring original position: {initialPosition.Value}%");
                     _knxService.WriteGroupValue(controlAddress, initialPosition.Value);
                     await Task.Delay(2000); // Wait for movement to start
                 }
@@ -362,11 +363,11 @@ namespace KnxTest
             Console.WriteLine($"STOP/STEP control: {stopAddress}");
 
             // Get initial position
-            Percent? initialPosition = null;
+            int? initialPosition = null;
             try
             {
-                initialPosition = await _knxService.RequestGroupValue<Percent>(positionFeedbackAddress);
-                Console.WriteLine($"Initial position: {initialPosition.Value.Value}%");
+                initialPosition = await _knxService.RequestGroupValue<int>(positionFeedbackAddress);
+                Console.WriteLine($"Initial position: {initialPosition.Value}%");
             }
             catch (Exception ex)
             {
@@ -374,7 +375,7 @@ namespace KnxTest
                 return; // Can't test without knowing initial position
             }
 
-            var initialPercent = initialPosition.Value.Value;
+            var initialPercent = initialPosition.Value;
             
             // Decide test order based on initial position
             // If shutter is down (>50% closed), test UP first, then DOWN
@@ -572,14 +573,14 @@ namespace KnxTest
         }
 
         private async Task ReturnToOriginalPosition(string controlAddress, string positionFeedbackAddress, 
-            string stopAddress, Percent originalPosition, string positionMiddleGroup, string controlSubGroup)
+            string stopAddress, int originalPosition, string positionMiddleGroup, string controlSubGroup)
         {
             try
             {
                 // Get current position
-                var currentPosition = await _knxService.RequestGroupValue<Percent>(positionFeedbackAddress);
-                var currentPercent = currentPosition.Value;
-                var originalPercent = originalPosition.Value;
+                var currentPosition = await _knxService.RequestGroupValue<int>(positionFeedbackAddress);
+                var currentPercent = currentPosition;
+                var originalPercent = originalPosition;
                 
                 var difference = Math.Abs(currentPercent - originalPercent);
                 
@@ -600,8 +601,8 @@ namespace KnxTest
                 await Task.Delay(5000);
                 
                 // Verify final position
-                var finalPosition = await _knxService.RequestGroupValue<Percent>(positionFeedbackAddress);
-                Console.WriteLine($"Final position: {finalPosition.Value:F1}% (target was {originalPercent:F1}%)");
+                var finalPosition = await _knxService.RequestGroupValue<int>(positionFeedbackAddress);
+                Console.WriteLine($"Final position: {finalPosition:F1}% (target was {originalPercent:F1}%)");
             }
             catch (Exception ex)
             {
@@ -636,8 +637,8 @@ namespace KnxTest
             var feedbackAddress = $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_LOCK_MIDDLE_GROUP}/{feedbackSubGroup}";
 
             // Get initial lock state
-            var initialLockState = await _knxService.RequestGroupValue(feedbackAddress);
-            var testLockState = initialLockState == "1" ? false : true; // Toggle the lock
+            var initialLockState = await _knxService.RequestGroupValue<bool>(feedbackAddress);
+            var testLockState = !initialLockState; // Toggle the lock
 
             var taskCompletionSource = new TaskCompletionSource<KnxGroupEventArgs>();
             EventHandler<KnxGroupEventArgs> handler = (sender, args) =>
@@ -664,7 +665,7 @@ namespace KnxTest
                 
                 // Restore original lock state
                 await Task.Delay(500);
-                _knxService.WriteGroupValue(controlAddress, initialLockState == "1");
+                _knxService.WriteGroupValue(controlAddress, initialLockState);
             }
             finally
             {
@@ -706,14 +707,14 @@ namespace KnxTest
             Console.WriteLine($"Position feedback: {positionFeedbackAddress}");
 
             // Get initial states
-            var initialLockState = await _knxService.RequestGroupValue(lockFeedbackAddress);
+            var initialLockState = await _knxService.RequestGroupValue<bool>(lockFeedbackAddress);
             Console.WriteLine($"Initial lock state: {initialLockState}");
 
-            Percent? initialPosition = null;
+            int? initialPosition = null;
             try
             {
-                initialPosition = await _knxService.RequestGroupValue<Percent>(positionFeedbackAddress);
-                Console.WriteLine($"Initial position: {initialPosition.Value.Value:F1}%");
+                initialPosition = await _knxService.RequestGroupValue<int>(positionFeedbackAddress);
+                Console.WriteLine($"Initial position: {initialPosition.Value:F1}%");
             }
             catch (Exception ex)
             {
@@ -754,12 +755,12 @@ namespace KnxTest
                 await Task.Delay(1000); // Wait for lock to engage
                 
                 // Verify lock is engaged
-                var lockState = await _knxService.RequestGroupValue(lockFeedbackAddress);
-                Assert.Equal("1", lockState);
+                var lockState = await _knxService.RequestGroupValue<bool>(lockFeedbackAddress);
+                Assert.True(lockState);
                 Console.WriteLine("✓ Lock successfully engaged");
 
                 // Determine test order based on current position (intelligent testing)
-                var currentPercent = initialPosition.Value.Value;
+                var currentPercent = initialPosition.Value;
                 bool testUpFirst = currentPercent > 50; // If down (>50%), test UP first
                 
                 Console.WriteLine($"Current position: {currentPercent:F1}% - Testing {(testUpFirst ? "UP first, then DOWN" : "DOWN first, then UP")} while locked");
@@ -825,16 +826,16 @@ namespace KnxTest
                 Console.WriteLine("\n=== Step 4: Disengaging lock and testing movement ===");
                 
                 // Restore original lock state
-                _knxService.WriteGroupValue(lockControlAddress, initialLockState == "1");
+                _knxService.WriteGroupValue(lockControlAddress, initialLockState);
                 await Task.Delay(1000); // Wait for lock to disengage
                 
                 // Verify lock is disengaged
-                var finalLockState = await _knxService.RequestGroupValue(lockFeedbackAddress);
+                var finalLockState = await _knxService.RequestGroupValue<bool>(lockFeedbackAddress);
                 Assert.Equal(initialLockState, finalLockState);
                 Console.WriteLine($"✓ Lock restored to original state: {finalLockState}");
 
                 // Test that movement works when unlocked (brief test)
-                if (initialLockState == "0") // Only test if originally unlocked
+                if (!initialLockState) // Only test if originally unlocked
                 {
                     Console.WriteLine("Testing brief movement while unlocked...");
                     feedbackReceived.Clear();
@@ -883,7 +884,7 @@ namespace KnxTest
                 // Ensure we restore the original lock state
                 try
                 {
-                    _knxService.WriteGroupValue(lockControlAddress, initialLockState == "1");
+                    _knxService.WriteGroupValue(lockControlAddress, initialLockState);
                     await Task.Delay(500);
                     Console.WriteLine("Lock state restored in finally block");
                 }
@@ -924,17 +925,17 @@ namespace KnxTest
 
             // Assert
             shutter.CurrentState.Should().NotBeNull();
-            shutter.CurrentState.Position.Value.Should().BeInRange(0, 100, 
-                $"Shutter {shutterId} position should be between 0-100%, got {shutter.CurrentState.Position.Value:F1}%");
+            shutter.CurrentState.Position.Should().BeInRange(0, 100, 
+                $"Shutter {shutterId} position should be between 0-100%, got {shutter.CurrentState.Position:F1}%");
             
-            position.Value.Should().BeInRange(0, 100, 
-                $"Direct position read for shutter {shutterId} should be between 0-100%, got {position.Value:F1}%");
+            position.Should().BeInRange(0, 100, 
+                $"Direct position read for shutter {shutterId} should be between 0-100%, got {position:F1}%");
             
             // Verify that both readings are consistent
-            Math.Abs(shutter.CurrentState.Position.Value - position.Value).Should().BeLessThan(1.0,
-                $"Current state position ({shutter.CurrentState.Position.Value:F1}%) should match direct read ({position.Value:F1}%) for shutter {shutterId}");
+            Math.Abs(shutter.CurrentState.Position - position).Should().BeLessThan(1,
+                $"Current state position ({shutter.CurrentState.Position:F1}%) should match direct read ({position:F1}%) for shutter {shutterId}");
 
-            Console.WriteLine($"✓ Shutter {shutterId} ({shutter.Name}) position: {position.Value:F1}% (Raw: {position.KnxRawValue})");
+            Console.WriteLine($"✓ Shutter {shutterId} ({shutter.Name}) position: {position:F1}% (Raw: {(byte)(position * 2.55)})");
         }
     }
     public class KnxServiceFixture : IDisposable

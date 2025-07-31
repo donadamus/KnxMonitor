@@ -24,7 +24,7 @@ service.GroupMessageReceived += (sender, args) =>
     Console.WriteLine($"Received Group Address: {args.Destination}, Value: {args.Value}");
 };
 
-service.WriteGroupValue("1", "1", "14", true); // Example usage
+service.WriteGroupValue("1/1/14", true); // Example usage
 
 //var device = bus.OpenConnection(new Knx.Falcon.IndividualAddress("1.1.16"));
 

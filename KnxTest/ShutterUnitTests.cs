@@ -52,13 +52,13 @@ namespace KnxTest
         public async Task InitializeAsync_ReadsAllStatesFromKnx()
         {
             // Arrange
-            var expectedPosition = Percent.FromPercantage(45.0);
-            _mockKnxService.Setup(s => s.RequestGroupValue<Percent>("4/2/101"))
+            var expectedPosition = 45;
+            _mockKnxService.Setup(s => s.RequestGroupValue<int>("4/2/101"))
                           .ReturnsAsync(expectedPosition);
-            _mockKnxService.Setup(s => s.RequestGroupValue("4/3/101"))
-                          .ReturnsAsync("1"); // locked
-            _mockKnxService.Setup(s => s.RequestGroupValue("4/1/101"))
-                          .ReturnsAsync("0"); // stopped
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
+                          .ReturnsAsync(true); // locked
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/1/101"))
+                          .ReturnsAsync(false); // stopped
 
             // Act
             await _shutter.InitializeAsync();
@@ -74,13 +74,13 @@ namespace KnxTest
         public async Task SaveCurrentStateAsync_SavesCurrentState()
         {
             // Arrange
-            var expectedPosition = Percent.FromPercantage(75.0);
-            _mockKnxService.Setup(s => s.RequestGroupValue<Percent>("4/2/101"))
+            var expectedPosition = 75;
+            _mockKnxService.Setup(s => s.RequestGroupValue<int>("4/2/101"))
                           .ReturnsAsync(expectedPosition);
-            _mockKnxService.Setup(s => s.RequestGroupValue("4/3/101"))
-                          .ReturnsAsync("0"); // unlocked
-            _mockKnxService.Setup(s => s.RequestGroupValue("4/1/101"))
-                          .ReturnsAsync("0"); // stopped
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
+                          .ReturnsAsync(false); // unlocked
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/1/101"))
+                          .ReturnsAsync(false); // stopped
 
             // Act
             await _shutter.SaveCurrentStateAsync();
@@ -103,15 +103,15 @@ namespace KnxTest
         public async Task SetPositionAsync_CallsKnxServiceWithCorrectAddress()
         {
             // Arrange
-            var targetPosition = Percent.FromPercantage(60.0);
+            var targetPosition = 60;
             
             // Setup for RefreshCurrentStateAsync calls
-            _mockKnxService.Setup(s => s.RequestGroupValue<Percent>("4/2/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<int>("4/2/101"))
                           .ReturnsAsync(targetPosition);
-            _mockKnxService.Setup(s => s.RequestGroupValue("4/3/101"))
-                          .ReturnsAsync("0");
-            _mockKnxService.Setup(s => s.RequestGroupValue("4/1/101"))
-                          .ReturnsAsync("0");
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
+                          .ReturnsAsync(false);
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/1/101"))
+                          .ReturnsAsync(false);
 
             // Act
             await _shutter.SetPositionAsync(targetPosition);
@@ -124,12 +124,12 @@ namespace KnxTest
         public async Task MoveAsync_CallsKnxServiceWithCorrectValues()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.RequestGroupValue<Percent>("4/2/101"))
-                          .ReturnsAsync(Percent.FromPercantage(50.0));
-            _mockKnxService.Setup(s => s.RequestGroupValue("4/3/101"))
-                          .ReturnsAsync("0");
-            _mockKnxService.Setup(s => s.RequestGroupValue("4/1/101"))
-                          .ReturnsAsync("0");
+            _mockKnxService.Setup(s => s.RequestGroupValue<int>("4/2/101"))
+                          .ReturnsAsync(50);
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
+                          .ReturnsAsync(false);
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/1/101"))
+                          .ReturnsAsync(false);
 
             // Act - Test UP direction
             await _shutter.MoveAsync(ShutterDirection.Up);
@@ -148,12 +148,12 @@ namespace KnxTest
         public async Task MoveAsync_WithDuration_CallsStopAfterDelay()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.RequestGroupValue<Percent>("4/2/101"))
-                          .ReturnsAsync(Percent.FromPercantage(50.0));
-            _mockKnxService.Setup(s => s.RequestGroupValue("4/3/101"))
-                          .ReturnsAsync("0");
-            _mockKnxService.Setup(s => s.RequestGroupValue("4/1/101"))
-                          .ReturnsAsync("0");
+            _mockKnxService.Setup(s => s.RequestGroupValue<int>("4/2/101"))
+                          .ReturnsAsync(50);
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
+                          .ReturnsAsync(false);
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/1/101"))
+                          .ReturnsAsync(false);
 
             // Act
             await _shutter.MoveAsync(ShutterDirection.Up, TimeSpan.FromMilliseconds(100));
@@ -167,12 +167,12 @@ namespace KnxTest
         public async Task StopAsync_CallsKnxServiceWithStopCommand()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.RequestGroupValue<Percent>("4/2/101"))
-                          .ReturnsAsync(Percent.FromPercantage(50.0));
-            _mockKnxService.Setup(s => s.RequestGroupValue("4/3/101"))
-                          .ReturnsAsync("0");
-            _mockKnxService.Setup(s => s.RequestGroupValue("4/1/101"))
-                          .ReturnsAsync("0");
+            _mockKnxService.Setup(s => s.RequestGroupValue<int>("4/2/101"))
+                          .ReturnsAsync(50);
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
+                          .ReturnsAsync(false);
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/1/101"))
+                          .ReturnsAsync(false);
 
             // Act
             await _shutter.StopAsync();
@@ -185,12 +185,12 @@ namespace KnxTest
         public async Task SetLockAsync_CallsKnxServiceWithCorrectValues()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.RequestGroupValue<Percent>("4/2/101"))
-                          .ReturnsAsync(Percent.FromPercantage(50.0));
-            _mockKnxService.Setup(s => s.RequestGroupValue("4/3/101"))
-                          .ReturnsAsync("1");
-            _mockKnxService.Setup(s => s.RequestGroupValue("4/1/101"))
-                          .ReturnsAsync("0");
+            _mockKnxService.Setup(s => s.RequestGroupValue<int>("4/2/101"))
+                          .ReturnsAsync(50);
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
+                          .ReturnsAsync(true);
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/1/101"))
+                          .ReturnsAsync(false);
 
             // Act - Lock
             await _shutter.SetLockAsync(true);
@@ -206,14 +206,12 @@ namespace KnxTest
         }
 
         [Theory]
-        [InlineData("0", ShutterMovementState.Stopped)]
-        [InlineData("1", ShutterMovementState.MovingUp)]
-        [InlineData("2", ShutterMovementState.MovingDown)]
-        [InlineData("3", ShutterMovementState.Unknown)]
-        public async Task ReadMovementStateAsync_ReturnsCorrectState(string knxValue, ShutterMovementState expectedState)
+        [InlineData(false, ShutterMovementState.Stopped)]    // Inactive = Stopped
+        [InlineData(true, ShutterMovementState.MovingUp)]   // Active = Moving (can't distinguish direction)
+        public async Task ReadMovementStateAsync_ReturnsCorrectState(bool knxValue, ShutterMovementState expectedState)
         {
             // Arrange
-            _mockKnxService.Setup(s => s.RequestGroupValue("4/1/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/1/101"))
                           .ReturnsAsync(knxValue);
 
             // Act
@@ -227,14 +225,14 @@ namespace KnxTest
         public async Task ReadLockStateAsync_ReturnsCorrectBooleanValue()
         {
             // Arrange & Act & Assert - Locked
-            _mockKnxService.Setup(s => s.RequestGroupValue("4/3/101"))
-                          .ReturnsAsync("1");
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
+                          .ReturnsAsync(true);
             var lockedResult = await _shutter.ReadLockStateAsync();
             lockedResult.Should().BeTrue();
 
             // Arrange & Act & Assert - Unlocked
-            _mockKnxService.Setup(s => s.RequestGroupValue("4/3/101"))
-                          .ReturnsAsync("0");
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
+                          .ReturnsAsync(false);
             var unlockedResult = await _shutter.ReadLockStateAsync();
             unlockedResult.Should().BeFalse();
         }
@@ -243,9 +241,16 @@ namespace KnxTest
         public async Task WaitForPositionAsync_ReturnsTrueWhenPositionReached()
         {
             // Arrange
-            var targetPosition = Percent.FromPercantage(50.0);
-            _mockKnxService.Setup(s => s.RequestGroupValue<Percent>("4/2/101"))
+            var targetPosition = 50;
+            _mockKnxService.Setup(s => s.RequestGroupValue<int>("4/2/101"))
                           .ReturnsAsync(targetPosition);
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
+                          .ReturnsAsync(false);
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/1/101"))
+                          .ReturnsAsync(false);
+
+            // Initialize the shutter state to match target position
+            await _shutter.InitializeAsync();
 
             // Act
             var result = await _shutter.WaitForPositionAsync(targetPosition, tolerance: 1.0, TimeSpan.FromSeconds(1));
@@ -258,8 +263,15 @@ namespace KnxTest
         public async Task WaitForMovementStopAsync_ReturnsTrueWhenStopped()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.RequestGroupValue("4/1/101"))
-                          .ReturnsAsync("0"); // stopped
+            _mockKnxService.Setup(s => s.RequestGroupValue<int>("4/2/101"))
+                          .ReturnsAsync(50);
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
+                          .ReturnsAsync(false);
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/1/101"))
+                          .ReturnsAsync(false); // stopped
+
+            // Initialize the shutter state to stopped
+            await _shutter.InitializeAsync();
 
             // Act
             var result = await _shutter.WaitForMovementStopAsync(TimeSpan.FromSeconds(1));

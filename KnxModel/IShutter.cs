@@ -56,9 +56,9 @@ namespace KnxModel
         /// <summary>
         /// Move shutter to absolute position (0-100%)
         /// </summary>
-        /// <param name="position">Target position percentage</param>
+        /// <param name="position">Target position percentage (0-100)</param>
         /// <param name="timeout">Timeout for the operation</param>
-        Task SetPositionAsync(Percent position, TimeSpan? timeout = null);
+        Task SetPositionAsync(int position, TimeSpan? timeout = null);
 
         /// <summary>
         /// Move shutter up or down
@@ -81,7 +81,7 @@ namespace KnxModel
         /// <summary>
         /// Read current position from KNX bus
         /// </summary>
-        Task<Percent> ReadPositionAsync();
+        Task<int> ReadPositionAsync();
 
         /// <summary>
         /// Read current lock state from KNX bus
@@ -96,22 +96,16 @@ namespace KnxModel
         /// <summary>
         /// Wait for shutter to reach target position
         /// </summary>
-        /// <param name="targetPosition">Target position to wait for</param>
+        /// <param name="targetPosition">Target position to wait for (0-100)</param>
         /// <param name="tolerance">Allowed deviation in percentage points</param>
         /// <param name="timeout">Maximum time to wait</param>
-        Task<bool> WaitForPositionAsync(Percent targetPosition, double tolerance = 2.0, TimeSpan? timeout = null);
+        Task<bool> WaitForPositionAsync(int targetPosition, double tolerance = 2.0, TimeSpan? timeout = null);
 
         /// <summary>
         /// Wait for shutter movement to stop
         /// </summary>
         /// <param name="timeout">Maximum time to wait</param>
         Task<bool> WaitForMovementStopAsync(TimeSpan? timeout = null);
-
-        /// <summary>
-        /// Test that shutter is properly locked and does not respond to movement commands
-        /// </summary>
-        /// <param name="testDuration">How long to test movement commands</param>
-        Task<bool> TestLockFunctionalityAsync(TimeSpan? testDuration = null);
     }
 
     /// <summary>
@@ -132,7 +126,7 @@ namespace KnxModel
     /// Current state of a shutter
     /// </summary>
     public record ShutterState(
-        Percent Position,
+        int Position,
         bool IsLocked,
         ShutterMovementState MovementState,
         DateTime LastUpdated
