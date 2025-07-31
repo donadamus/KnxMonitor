@@ -281,65 +281,58 @@ namespace KnxTest
         }
 
         [Theory]
-        [InlineData("1")]  // R1.1 Bathroom - Lock test
-        [InlineData("2")]  // R2.1 Master Bathroom
-        [InlineData("3")]  // R3.1 Master Bedroom
-        [InlineData("4")]  // R3.2 Master Bedroom
-        [InlineData("5")]  // R5.1 Guest Room
-        [InlineData("6")]  // R6.1 Kinga's Room
-        [InlineData("7")]  // R6.2 Kinga's Room
-        [InlineData("8")]  // R6.3 Kinga's Room
-        [InlineData("9")]  // R7.1 Rafal's Room
-        [InlineData("10")] // R7.2 Rafal's Room
-        [InlineData("11")] // R7.3 Rafal's Room
-        [InlineData("12")] // R8.1 Hall
-        [InlineData("13")] // R02.1 Kitchen
-        [InlineData("14")] // R02.2 Kitchen
-        [InlineData("15")] // R03.1 Dinning Room
-        [InlineData("16")] // R04.1 Living Room
-        [InlineData("17")] // R04.2 Living Room
-        [InlineData("18")] // R05.1 Office - Lock test
-        public async Task CanToggleShutterLock(string controlSubGroup)
+        [InlineData("R1.1")]  // Bathroom
+        [InlineData("R2.1")]  // Master Bathroom
+        [InlineData("R3.1")]  // Master Bedroom
+        [InlineData("R3.2")]  // Master Bedroom
+        [InlineData("R5.1")]  // Guest Room
+        [InlineData("R6.1")]  // Kinga's Room
+        [InlineData("R6.2")]  // Kinga's Room
+        [InlineData("R6.3")]  // Kinga's Room
+        [InlineData("R7.1")]  // Rafal's Room
+        [InlineData("R7.2")]  // Rafal's Room
+        [InlineData("R7.3")]  // Rafal's Room
+        [InlineData("R8.1")]  // Hall
+        [InlineData("R02.1")] // Kitchen
+        [InlineData("R02.2")] // Kitchen
+        [InlineData("R03.1")] // Dining Room
+        [InlineData("R04.1")] // Living Room
+        [InlineData("R04.2")] // Living Room
+        [InlineData("R05.1")] // Office
+        public async Task CanToggleShutterLock(string shutterId)
         {
             // Arrange
-            var feedbackSubGroup = (int.Parse(controlSubGroup) + KnxAddressConfiguration.SHUTTER_FEEDBACK_OFFSET).ToString();
-            var controlAddress = KnxAddressConfiguration.CreateShutterLockAddress(controlSubGroup);
-            var feedbackAddress = KnxAddressConfiguration.CreateShutterLockFeedbackAddress(controlSubGroup);
-
-            // Get initial lock state
-            var initialLockState = await _knxService.RequestGroupValue<bool>(feedbackAddress);
-            var testLockState = !initialLockState; // Toggle the lock
-
-            var taskCompletionSource = new TaskCompletionSource<KnxGroupEventArgs>();
-            EventHandler<KnxGroupEventArgs> handler = (sender, args) =>
-            {
-                if (args.Destination == feedbackAddress)
-                {
-                    taskCompletionSource.SetResult(args);
-                }
-            };
-
-            _knxService.GroupMessageReceived += handler;
+            var shutter = ShutterFactory.CreateShutter(shutterId, _knxService);
+            await shutter.InitializeAsync();
+            shutter.SaveCurrentState();
 
             try
             {
-                // Act - Toggle lock
-                _knxService.WriteGroupValue(controlAddress, testLockState);
+                var initialLockState = shutter.CurrentState.IsLocked;
+                Console.WriteLine($"Shutter {shutterId} initial lock state: {(initialLockState ? "LOCKED" : "UNLOCKED")}");
+
+                // Act - Toggle lock state
+                await shutter.SetLockAsync(!initialLockState);
                 
-                // Wait for feedback
-                var response = await taskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(3));
+                // Model automatically updates lock state from KNX feedback
+                await Task.Delay(1000); // Give time for feedback
                 
-                // Assert
-                Assert.Equal(feedbackAddress, response.Destination);
-                Assert.Equal(testLockState ? "1" : "0", response.Value.AsString());
+                // Assert - Check lock state changed on model
+                Assert.Equal(!initialLockState, shutter.CurrentState.IsLocked);
+                Console.WriteLine($"✓ Shutter {shutterId} lock successfully toggled to {(shutter.CurrentState.IsLocked ? "LOCKED" : "UNLOCKED")}");
+
+                // Toggle back to original state
+                await shutter.SetLockAsync(initialLockState);
+                await Task.Delay(1000); // Give time for feedback
                 
-                // Restore original lock state
-                await Task.Delay(500);
-                _knxService.WriteGroupValue(controlAddress, initialLockState);
+                Assert.Equal(initialLockState, shutter.CurrentState.IsLocked);
+                Console.WriteLine($"✓ Shutter {shutterId} lock successfully restored to {(shutter.CurrentState.IsLocked ? "LOCKED" : "UNLOCKED")}");
             }
             finally
             {
-                _knxService.GroupMessageReceived -= handler;
+                // Always restore original state using the model's saved state functionality
+                await shutter.RestoreSavedStateAsync();
+                shutter.Dispose();
             }
         }
 
