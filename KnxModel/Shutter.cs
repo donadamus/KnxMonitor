@@ -289,7 +289,6 @@ namespace KnxModel
                     {
                         var precision = Math.Abs(CurrentState.Position - targetPosition);
                         Console.WriteLine($"✅ Shutter {Id} reached target position: {CurrentState.Position}% (target: {targetPosition}%, precision: ±{precision:F2}%)");
-                        await RefreshCurrentStateAsync(); // Final state update
                         return true;
                     }
 

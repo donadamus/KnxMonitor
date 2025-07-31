@@ -71,7 +71,7 @@ namespace KnxTest
         }
 
         [Fact]
-        public void SaveCurrentState_SavesCurrentState()
+        public async Task SaveCurrentState_SavesCurrentState()
         {
             // Arrange
             var expectedPosition = 75.0f;
@@ -83,6 +83,7 @@ namespace KnxTest
                           .ReturnsAsync(false); // stopped
 
             // Act
+            await _shutter.InitializeAsync(); // Ensure current state is set
             _shutter.SaveCurrentState();
 
             // Assert
