@@ -6,22 +6,8 @@ namespace KnxModel
     /// <summary>
     /// Interface representing a KNX shutter with all its operations and state management
     /// </summary>
-    public interface IShutter : IDisposable
+    public interface IShutter : IKnxDevice
     {
-        /// <summary>
-        /// Unique identifier for the shutter (e.g., "R1.1", "R6.2")
-        /// </summary>
-        string Id { get; }
-
-        /// <summary>
-        /// Human-readable name of the shutter (e.g., "Bathroom", "Kinga's Room")
-        /// </summary>
-        string Name { get; }
-
-        /// <summary>
-        /// The sub-group number used for KNX addresses (1-18)
-        /// </summary>
-        string SubGroup { get; }
 
         /// <summary>
         /// KNX addresses for shutter control and feedback
@@ -37,21 +23,6 @@ namespace KnxModel
         /// Saved state for restoration after tests
         /// </summary>
         ShutterState? SavedState { get; }
-
-        /// <summary>
-        /// Initialize the shutter and read current state from KNX bus
-        /// </summary>
-        Task InitializeAsync();
-
-        /// <summary>
-        /// Save current state for later restoration
-        /// </summary>
-        void SaveCurrentState();
-
-        /// <summary>
-        /// Restore previously saved state
-        /// </summary>
-        Task RestoreSavedStateAsync();
 
         /// <summary>
         /// Move shutter to absolute position (0.0-100.0%)

@@ -6,23 +6,8 @@ namespace KnxModel
     /// <summary>
     /// Interface representing a KNX light with all its operations and state management
     /// </summary>
-    public interface ILight : IDisposable
+    public interface ILight : IKnxDevice
     {
-        /// <summary>
-        /// Unique identifier for the light (e.g., "L1.1", "L6.2")
-        /// </summary>
-        string Id { get; }
-
-        /// <summary>
-        /// Human-readable name of the light (e.g., "Bathroom", "Kinga's Room")
-        /// </summary>
-        string Name { get; }
-
-        /// <summary>
-        /// The sub-group number used for KNX addresses
-        /// </summary>
-        string SubGroup { get; }
-
         /// <summary>
         /// KNX addresses for light control and feedback
         /// </summary>
@@ -37,21 +22,6 @@ namespace KnxModel
         /// Saved state for restoration after tests
         /// </summary>
         LightState? SavedState { get; }
-
-        /// <summary>
-        /// Initialize the light and read current state from KNX bus
-        /// </summary>
-        Task InitializeAsync();
-
-        /// <summary>
-        /// Save current state for later restoration
-        /// </summary>
-        void SaveCurrentState();
-
-        /// <summary>
-        /// Restore previously saved state
-        /// </summary>
-        Task RestoreSavedStateAsync();
 
         /// <summary>
         /// Turn light on or off

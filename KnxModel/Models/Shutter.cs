@@ -6,20 +6,9 @@ namespace KnxModel
     /// <summary>
     /// Implementation of IShutter that manages a KNX shutter device
     /// </summary>
-    public class Shutter : IShutter
+    public class Shutter : KnxDevice<ShutterState, ShutterAddresses>, IShutter
     {
-        private readonly IKnxService _knxService;
-        private readonly TimeSpan _defaultTimeout = TimeSpan.FromSeconds(30);
         private readonly TimeSpan _defaultMoveTimeout = TimeSpan.FromSeconds(30);
-        private const int _pollingIntervalMs = 50; // Polling interval for wait operations
-        private bool _isListeningToFeedback = false;
-
-        public string Id { get; }
-        public string Name { get; }
-        public string SubGroup { get; }
-        public ShutterAddresses Addresses { get; }
-        public ShutterState CurrentState { get; private set; }
-        public ShutterState? SavedState { get; private set; }
 
         /// <summary>
         /// Creates a new Shutter instance
@@ -29,26 +18,29 @@ namespace KnxModel
         /// <param name="subGroup">KNX sub-group number (1-18)</param>
         /// <param name="knxService">KNX service for communication</param>
         public Shutter(string id, string name, string subGroup, IKnxService knxService)
+            : base(id, name, subGroup, knxService, TimeSpan.FromSeconds(30))
         {
-            Id = id ?? throw new ArgumentNullException(nameof(id));
-            Name = name ?? throw new ArgumentNullException(nameof(name));
-            SubGroup = subGroup ?? throw new ArgumentNullException(nameof(subGroup));
-            _knxService = knxService ?? throw new ArgumentNullException(nameof(knxService));
+        }
 
+        protected override ShutterAddresses CreateAddresses()
+        {
             // Calculate KNX addresses based on sub-group using centralized configuration
-            Addresses = new ShutterAddresses(
-                MovementControl: KnxAddressConfiguration.CreateShutterMovementAddress(subGroup),
-                MovementFeedback: KnxAddressConfiguration.CreateShutterMovementFeedbackAddress(subGroup),
-                PositionControl: KnxAddressConfiguration.CreateShutterPositionAddress(subGroup),
-                PositionFeedback: KnxAddressConfiguration.CreateShutterPositionFeedbackAddress(subGroup),
-                LockControl: KnxAddressConfiguration.CreateShutterLockAddress(subGroup),
-                LockFeedback: KnxAddressConfiguration.CreateShutterLockFeedbackAddress(subGroup),
-                StopControl: KnxAddressConfiguration.CreateShutterStopAddress(subGroup),
-                MovementStatusFeedback: KnxAddressConfiguration.CreateShutterMovementStatusFeedbackAddress(subGroup)
+            return new ShutterAddresses(
+                MovementControl: KnxAddressConfiguration.CreateShutterMovementAddress(SubGroup),
+                MovementFeedback: KnxAddressConfiguration.CreateShutterMovementFeedbackAddress(SubGroup),
+                PositionControl: KnxAddressConfiguration.CreateShutterPositionAddress(SubGroup),
+                PositionFeedback: KnxAddressConfiguration.CreateShutterPositionFeedbackAddress(SubGroup),
+                LockControl: KnxAddressConfiguration.CreateShutterLockAddress(SubGroup),
+                LockFeedback: KnxAddressConfiguration.CreateShutterLockFeedbackAddress(SubGroup),
+                StopControl: KnxAddressConfiguration.CreateShutterStopAddress(SubGroup),
+                MovementStatusFeedback: KnxAddressConfiguration.CreateShutterMovementStatusFeedbackAddress(SubGroup)
             );
+        }
 
+        protected override ShutterState CreateDefaultState()
+        {
             // Initialize with default state
-            CurrentState = new ShutterState(
+            return new ShutterState(
                 Position: 0.0f,
                 IsLocked: false,
                 MovementState: ShutterMovementState.Unknown,
@@ -56,41 +48,51 @@ namespace KnxModel
             );
         }
 
-        public async Task InitializeAsync()
+        protected override async Task<ShutterState> ReadCurrentStateAsync()
         {
-            try
+            var position = await ReadPositionAsync();
+            var isLocked = await ReadLockStateAsync();
+            var movementState = await ReadMovementStateAsync();
+
+            return new ShutterState(
+                Position: position,
+                IsLocked: isLocked,
+                MovementState: movementState,
+                LastUpdated: DateTime.Now
+            );
+        }
+
+        protected override void ProcessKnxMessage(KnxGroupEventArgs e)
+        {
+            // Check if this message is relevant to our shutter and update state accordingly
+            if (e.Destination == Addresses.PositionFeedback)
             {
-                // Start listening to feedback events
-                StartListeningToFeedback();
-
-                // Read initial state from KNX bus
-                var position = await ReadPositionAsync();
-                var isLocked = await ReadLockStateAsync();
-                var movementState = await ReadMovementStateAsync();
-
-                CurrentState = new ShutterState(
-                    Position: position,
-                    IsLocked: isLocked,
-                    MovementState: movementState,
-                    LastUpdated: DateTime.Now
-                );
-
-                Console.WriteLine($"Shutter {Id} ({Name}) initialized - Position: {position}%, Locked: {isLocked}, Movement: {movementState}");
+                var positionPercent = e.Value.AsPercentageValue();
+                CurrentState = CurrentState with { Position = positionPercent, LastUpdated = DateTime.Now };
+                Console.WriteLine($"Shutter {Id} position updated via feedback: {positionPercent}%");
             }
-            catch (Exception ex)
+            else if (e.Destination == Addresses.LockFeedback)
             {
-                Console.WriteLine($"Failed to initialize shutter {Id}: {ex.Message}");
-                throw;
+                var isLocked = e.Value.AsBoolean();
+                CurrentState = CurrentState with { IsLocked = isLocked, LastUpdated = DateTime.Now };
+                Console.WriteLine($"Shutter {Id} lock state updated via feedback: {(isLocked ? "Locked" : "Unlocked")}");
+            }
+            else if (e.Destination == Addresses.MovementFeedback)
+            {
+                var isMoving = e.Value.AsBoolean();
+                Console.WriteLine($"Shutter {Id} movement feedback: {(isMoving ? "Moving" : "Stopped")}");
+                // Movement feedback can help us understand when movement starts/stops
+            }
+            else if (e.Destination == Addresses.MovementStatusFeedback)
+            {
+                var isActive = e.Value.AsBoolean(); // DataType 1.011: Inactive/Active
+                var movementState = isActive ? ShutterMovementState.MovingUp : ShutterMovementState.Stopped;
+                CurrentState = CurrentState with { MovementState = movementState, LastUpdated = DateTime.Now };
+                Console.WriteLine($"Shutter {Id} movement state updated via feedback: {(isActive ? "Active" : "Inactive")} -> {movementState}");
             }
         }
 
-        public void SaveCurrentState()
-        {
-            SavedState = CurrentState;
-            Console.WriteLine($"Shutter {Id} state saved - Position: {SavedState.Position}%, Locked: {SavedState.IsLocked}");
-        }
-
-        public async Task RestoreSavedStateAsync()
+        public override async Task RestoreSavedStateAsync()
         {
             if (SavedState == null)
             {
@@ -461,77 +463,11 @@ namespace KnxModel
             }
         }
 
-        private void StartListeningToFeedback()
-        {
-            if (_isListeningToFeedback)
-                return;
-
-            _isListeningToFeedback = true;
-            
-            // Subscribe to KNX group messages
-            _knxService.GroupMessageReceived += OnKnxGroupMessageReceived;
-
-            Console.WriteLine($"Started listening to feedback for shutter {Id}");
-        }
-
-        private void StopListeningToFeedback()
-        {
-            if (!_isListeningToFeedback)
-                return;
-
-            _isListeningToFeedback = false;
-
-            // Unsubscribe from KNX group messages
-            _knxService.GroupMessageReceived -= OnKnxGroupMessageReceived;
-
-            Console.WriteLine($"Stopped listening to feedback for shutter {Id}");
-        }
-
-        private void OnKnxGroupMessageReceived(object? sender, KnxGroupEventArgs e)
-        {
-            try
-            {
-                // Check if this message is relevant to our shutter and update state accordingly
-                if (e.Destination == Addresses.PositionFeedback)
-                {
-                    var positionPercent = e.Value.AsPercentageValue();
-                    CurrentState = CurrentState with { Position = positionPercent, LastUpdated = DateTime.Now };
-                    Console.WriteLine($"Shutter {Id} position updated via feedback: {positionPercent}%");
-                }
-                else if (e.Destination == Addresses.LockFeedback)
-                {
-                    var isLocked = e.Value.AsBoolean();
-                    CurrentState = CurrentState with { IsLocked = isLocked, LastUpdated = DateTime.Now };
-                    Console.WriteLine($"Shutter {Id} lock state updated via feedback: {(isLocked ? "Locked" : "Unlocked")}");
-                }
-                else if (e.Destination == Addresses.MovementFeedback)
-                {
-                    var isMoving = e.Value.AsBoolean();
-                    Console.WriteLine($"Shutter {Id} movement feedback: {(isMoving ? "Moving" : "Stopped")}");
-                    // Movement feedback can help us understand when movement starts/stops
-                }
-                else if (e.Destination == Addresses.MovementStatusFeedback)
-                {
-                    var isActive = e.Value.AsBoolean(); // DataType 1.011: Inactive/Active
-                    var movementState = isActive ? ShutterMovementState.MovingUp : ShutterMovementState.Stopped;
-                    CurrentState = CurrentState with { MovementState = movementState, LastUpdated = DateTime.Now };
-                    Console.WriteLine($"Shutter {Id} movement state updated via feedback: {(isActive ? "Active" : "Inactive")} -> {movementState}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error processing KNX message for shutter {Id}: {ex.Message}");
-            }
-        }
+        // Note: StartListeningToFeedback, StopListeningToFeedback, OnKnxGroupMessageReceived and Dispose are now handled by base class
 
         public override string ToString()
         {
             return $"Shutter {Id} ({Name}) - Position: {CurrentState.Position}%, Locked: {CurrentState.IsLocked}, Movement: {CurrentState.MovementState}";
-        }
-
-        public void Dispose()
-        {
-            StopListeningToFeedback();
         }
     }
 }
