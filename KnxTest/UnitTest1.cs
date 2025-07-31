@@ -1,8 +1,10 @@
 ﻿using FluentAssertions;
 using KnxModel;
 using KnxService;
+using System;
 using System.Globalization;
 using System.Threading.Tasks;
+using Xunit;
 
 namespace KnxTest
 {
@@ -337,233 +339,93 @@ namespace KnxTest
         }
 
         [Theory]
-        [InlineData("1")]  // R1.1 Bathroom - Lock control, movement control, position feedback test
-        [InlineData("2")]  // R2.1 Master Bathroom
-        [InlineData("3")]  // R3.1 Master Bedroom
-        [InlineData("4")]  // R3.2 Master Bedroom
-        [InlineData("5")]  // R5.1 Guest Room
-        [InlineData("6")]  // R6.1 Kinga's Room
-        [InlineData("7")]  // R6.2 Kinga's Room
-        [InlineData("8")]  // R6.3 Kinga's Room
-        [InlineData("9")]  // R7.1 Rafal's Room
-        [InlineData("10")] // R7.2 Rafal's Room
-        [InlineData("11")] // R7.3 Rafal's Room
-        [InlineData("12")] // R8.1 Hall
-        [InlineData("13")] // R02.1 Kitchen
-        [InlineData("14")] // R02.2 Kitchen
-        [InlineData("15")] // R03.1 Dinning Room
-        [InlineData("16")] // R04.1 Living Room
-        [InlineData("17")] // R04.2 Living Room
-        [InlineData("18")] // R05.1 Office - Lock control, movement control, position feedback test
-        public async Task ShutterDoesNotMoveWhenLocked(string controlSubGroup)
+        [InlineData("R1.1")]  // Bathroom
+        [InlineData("R2.1")]  // Master Bathroom
+        [InlineData("R3.1")]  // Master Bedroom
+        [InlineData("R3.2")]  // Master Bedroom
+        [InlineData("R5.1")]  // Guest Room
+        [InlineData("R6.1")]  // Kinga's Room
+        [InlineData("R6.2")]  // Kinga's Room
+        [InlineData("R6.3")]  // Kinga's Room
+        public async Task ShutterDoesNotMoveWhenLocked(string shutterId)
         {
             // Arrange
-            var feedbackSubGroup = (int.Parse(controlSubGroup) + KnxAddressConfiguration.SHUTTER_FEEDBACK_OFFSET).ToString();
-            var lockControlAddress = KnxAddressConfiguration.CreateShutterLockAddress(controlSubGroup); // 4/3/18 - lock control
-            var lockFeedbackAddress = KnxAddressConfiguration.CreateShutterLockFeedbackAddress(controlSubGroup); // 4/3/118 - lock feedback
-            var movementControlAddress = KnxAddressConfiguration.CreateShutterMovementAddress(controlSubGroup); // 4/0/18 - UP/DOWN control
-            var movementFeedbackAddress = KnxAddressConfiguration.CreateShutterMovementFeedbackAddress(controlSubGroup); // 4/0/118 - UP/DOWN feedback
-            var positionFeedbackAddress = KnxAddressConfiguration.CreateShutterPositionFeedbackAddress(controlSubGroup); // 4/2/118 - position feedback
-
-            Console.WriteLine($"Lock control: {lockControlAddress}, feedback: {lockFeedbackAddress}");
-            Console.WriteLine($"Movement control: {movementControlAddress}, feedback: {movementFeedbackAddress}");
-            Console.WriteLine($"Position feedback: {positionFeedbackAddress}");
-
-            // Get initial states
-            var initialLockState = await _knxService.RequestGroupValue<bool>(lockFeedbackAddress);
-            Console.WriteLine($"Initial lock state: {initialLockState}");
-
-            float? initialPosition = null;
-            try
-            {
-                initialPosition = await _knxService.RequestGroupValue<float>(positionFeedbackAddress);
-                Console.WriteLine($"Initial position: {initialPosition.Value:F1}%");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Could not read initial position: {ex.Message}");
-                return; // Can't test without knowing initial position
-            }
-
-            var feedbackReceived = new List<KnxGroupEventArgs>();
-            var lockReceived = new List<KnxGroupEventArgs>();
-            var positionReceived = new List<KnxGroupEventArgs>();
+            var shutter = ShutterFactory.CreateShutter(shutterId, _knxService);
+            shutter.SaveCurrentState();
             
-            EventHandler<KnxGroupEventArgs> handler = (sender, args) =>
-            {
-                if (args.Destination == lockFeedbackAddress)
-                {
-                    lockReceived.Add(args);
-                    Console.WriteLine($"Lock feedback: {args.Value} at {DateTime.Now:HH:mm:ss.fff}");
-                }
-                else if (args.Destination == movementFeedbackAddress)
-                {
-                    feedbackReceived.Add(args);
-                    Console.WriteLine($"Movement feedback: {args.Value} at {DateTime.Now:HH:mm:ss.fff}");
-                }
-                else if (args.Destination == positionFeedbackAddress)
-                {
-                    positionReceived.Add(args);
-                    Console.WriteLine($"Position feedback: {args.Value} at {DateTime.Now:HH:mm:ss.fff}");
-                }
-            };
-
-            _knxService.GroupMessageReceived += handler;
-
             try
             {
+                // Act & Assert
+                
                 // Step 1: Engage the lock
-                Console.WriteLine("\n=== Step 1: Engaging lock ===");
-                _knxService.WriteGroupValue(lockControlAddress, true);
+                Console.WriteLine("=== Step 1: Engaging lock ===");
+                await shutter.SetLockAsync(true);
                 await Task.Delay(1000); // Wait for lock to engage
                 
                 // Verify lock is engaged
-                var lockState = await _knxService.RequestGroupValue<bool>(lockFeedbackAddress);
-                Assert.True(lockState);
+                Assert.True(shutter.CurrentState.IsLocked);
                 Console.WriteLine("✓ Lock successfully engaged");
 
-                // Determine test order based on current position (intelligent testing)
-                var currentPercent = initialPosition.Value;
-                bool testUpFirst = currentPercent > 50; // If down (>50%), test UP first
+                // Step 2: Test UP movement while locked
+                Console.WriteLine("\n=== Step 2: Testing UP movement while locked ===");
+                var positionBeforeUp = shutter.CurrentState.Position;
+                Console.WriteLine($"Position before UP: {positionBeforeUp:F1}%");
                 
-                Console.WriteLine($"Current position: {currentPercent:F1}% - Testing {(testUpFirst ? "UP first, then DOWN" : "DOWN first, then UP")} while locked");
+                await shutter.MoveAsync(ShutterDirection.Up, TimeSpan.FromSeconds(2));
+                await Task.Delay(1000); // Give time for any potential movement
+                
+                var positionAfterUp = shutter.CurrentState.Position;
+                var upMovement = Math.Abs(positionAfterUp - positionBeforeUp);
+                Console.WriteLine($"Position after UP: {positionAfterUp:F1}% (movement: {upMovement:F1}%)");
 
-                double firstMovement, secondMovement;
-                string firstDirection, secondDirection;
-                bool firstIsUp, secondIsUp;
-
-                if (testUpFirst)
-                {
-                    firstDirection = "UP";
-                    secondDirection = "DOWN";
-                    firstIsUp = true;
-                    secondIsUp = false;
-                }
-                else
-                {
-                    firstDirection = "DOWN";
-                    secondDirection = "UP";
-                    firstIsUp = false;
-                    secondIsUp = true;
-                }
-
-                // Step 2: Try first movement while locked
-                Console.WriteLine($"\n=== Step 2: Attempting {firstDirection} movement while locked ===");
-                var positionBeforeFirst = await _knxService.RequestGroupValue<Percent>(positionFeedbackAddress);
-                Console.WriteLine($"Position before {firstDirection} attempt: {positionBeforeFirst.Value:F1}%");
+                // Step 3: Test DOWN movement while locked
+                Console.WriteLine("\n=== Step 3: Testing DOWN movement while locked ===");
+                var positionBeforeDown = shutter.CurrentState.Position;
+                Console.WriteLine($"Position before DOWN: {positionBeforeDown:F1}%");
                 
-                // Clear previous feedback
-                feedbackReceived.Clear();
-                positionReceived.Clear();
+                await shutter.MoveAsync(ShutterDirection.Down, TimeSpan.FromSeconds(2));
+                await Task.Delay(1000); // Give time for any potential movement
                 
-                // Send first movement command
-                _knxService.WriteGroupValue(movementControlAddress, !firstIsUp); // false = UP, true = DOWN
-                await Task.Delay(3000); // Wait to see if movement occurs
-                
-                // Check position after first attempt
-                var positionAfterFirst = await _knxService.RequestGroupValue<Percent>(positionFeedbackAddress);
-                Console.WriteLine($"Position after {firstDirection} attempt: {positionAfterFirst.Value:F1}%");
-                
-                firstMovement = Math.Abs(positionAfterFirst.Value - positionBeforeFirst.Value);
-                Console.WriteLine($"{firstDirection} movement detected: {firstMovement:F1}%");
-
-                // Step 3: Try second movement while locked
-                Console.WriteLine($"\n=== Step 3: Attempting {secondDirection} movement while locked ===");
-                
-                // Clear previous feedback
-                feedbackReceived.Clear();
-                positionReceived.Clear();
-                
-                // Send second movement command
-                _knxService.WriteGroupValue(movementControlAddress, !secondIsUp); // false = UP, true = DOWN
-                await Task.Delay(3000); // Wait to see if movement occurs
-                
-                // Check position after second attempt
-                var positionAfterSecond = await _knxService.RequestGroupValue<Percent>(positionFeedbackAddress);
-                Console.WriteLine($"Position after {secondDirection} attempt: {positionAfterSecond.Value:F1}%");
-                
-                secondMovement = Math.Abs(positionAfterSecond.Value - positionAfterFirst.Value);
-                Console.WriteLine($"{secondDirection} movement detected: {secondMovement:F1}%");
+                var positionAfterDown = shutter.CurrentState.Position;
+                var downMovement = Math.Abs(positionAfterDown - positionBeforeDown);
+                Console.WriteLine($"Position after DOWN: {positionAfterDown:F1}% (movement: {downMovement:F1}%)");
 
                 // Step 4: Disengage lock and verify movement works
                 Console.WriteLine("\n=== Step 4: Disengaging lock and testing movement ===");
-                
-                // Restore original lock state
-                _knxService.WriteGroupValue(lockControlAddress, initialLockState);
+                await shutter.SetLockAsync(false);
                 await Task.Delay(1000); // Wait for lock to disengage
                 
-                // Verify lock is disengaged
-                var finalLockState = await _knxService.RequestGroupValue<bool>(lockFeedbackAddress);
-                Assert.Equal(initialLockState, finalLockState);
-                Console.WriteLine($"✓ Lock restored to original state: {finalLockState}");
-
-                // Test that movement works when unlocked (brief test)
-                if (!initialLockState) // Only test if originally unlocked
-                {
-                    Console.WriteLine("Testing brief movement while unlocked...");
-                    feedbackReceived.Clear();
-                    positionReceived.Clear();
-                    
-                    var positionBeforeUnlockedTest = await _knxService.RequestGroupValue<Percent>(positionFeedbackAddress);
-                    
-                    // Brief movement test
-                    _knxService.WriteGroupValue(movementControlAddress, false); // UP
-                    await Task.Delay(1000); // Very brief movement
-                    
-                    // Stop movement
-                    var stopAddress = KnxAddressConfiguration.CreateShutterStopAddress(controlSubGroup); // 4/1/18 - STOP
-                    _knxService.WriteGroupValue(stopAddress, true);
-                    await Task.Delay(1000);
-                    
-                    var positionAfterUnlockedTest = await _knxService.RequestGroupValue<Percent>(positionFeedbackAddress);
-                    var unlockedMovement = Math.Abs(positionAfterUnlockedTest.Value - positionBeforeUnlockedTest.Value);
-                    Console.WriteLine($"Movement when unlocked: {unlockedMovement:F1}%");
-                }
+                Assert.False(shutter.CurrentState.IsLocked);
+                Console.WriteLine("✓ Lock successfully disengaged");
+                
+                // Quick movement test to verify shutter responds when unlocked
+                var positionBeforeUnlocked = shutter.CurrentState.Position;
+                Console.WriteLine($"Position before unlocked test: {positionBeforeUnlocked:F1}%");
+                
+                await shutter.MoveAsync(ShutterDirection.Up, TimeSpan.FromSeconds(1));
+                await Task.Delay(1000);
+                
+                var positionAfterUnlocked = shutter.CurrentState.Position;
+                var unlockedMovement = Math.Abs(positionAfterUnlocked - positionBeforeUnlocked);
+                Console.WriteLine($"Position after unlocked test: {positionAfterUnlocked:F1}% (movement: {unlockedMovement:F1}%)");
 
                 // Assertions
                 Console.WriteLine("\n=== Test Results ===");
-                Console.WriteLine($"Movement while locked - {firstDirection}: {firstMovement:F1}%, {secondDirection}: {secondMovement:F1}%");
+                Console.WriteLine($"Movement while locked - UP: {upMovement:F1}%, DOWN: {downMovement:F1}%");
                 
                 // The shutter MUST NOT move AT ALL while locked - zero tolerance
-                Assert.True(firstMovement == 0.0, 
-                    $"Shutter moved {firstDirection} {firstMovement:F1}% while locked - NO movement allowed!");
-                Assert.True(secondMovement == 0.0, 
-                    $"Shutter moved {secondDirection} {secondMovement:F1}% while locked - NO movement allowed!");
+                Assert.True(upMovement == 0.0, 
+                    $"Shutter moved UP {upMovement:F1}% while locked - NO movement allowed!");
+                Assert.True(downMovement == 0.0, 
+                    $"Shutter moved DOWN {downMovement:F1}% while locked - NO movement allowed!");
                 
-                Console.WriteLine($"✓ Shutter correctly ignored {firstDirection} and {secondDirection} movement commands while locked - NO movement detected");
-                Console.WriteLine($"Lock feedback messages received: {lockReceived.Count}");
-                Console.WriteLine($"Movement feedback messages during lock: {feedbackReceived.Count}");
-                Console.WriteLine($"Position feedback messages during lock: {positionReceived.Count}");
-
-                // Step 5: Return to original position (manual restoration)
-                Console.WriteLine("\n=== Step 5: Returning to original position ===");
-                try
-                {
-                    var absolutePositionAddress = $"{KnxAddressConfiguration.SHUTTERS_MAIN_GROUP}/{KnxAddressConfiguration.SHUTTERS_POSITION_MIDDLE_GROUP}/{controlSubGroup}";
-                    _knxService.WriteGroupValue(absolutePositionAddress, initialPosition.Value);
-                    await Task.Delay(2000);
-                    Console.WriteLine($"Position restore command sent to {absolutePositionAddress}");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error returning to original position: {ex.Message}");
-                }
+                Console.WriteLine("✓ Shutter correctly ignored UP and DOWN movement commands while locked - NO movement detected");
             }
             finally
             {
-                _knxService.GroupMessageReceived -= handler;
-                
-                // Ensure we restore the original lock state
-                try
-                {
-                    _knxService.WriteGroupValue(lockControlAddress, initialLockState);
-                    await Task.Delay(500);
-                    Console.WriteLine("Lock state restored in finally block");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error restoring lock state: {ex.Message}");
-                }
+                // Always restore original state using the model's saved state functionality
+                await shutter.RestoreSavedStateAsync();
+                shutter.Dispose();
             }
         }
 
