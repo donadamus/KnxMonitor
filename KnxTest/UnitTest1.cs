@@ -195,283 +195,88 @@ namespace KnxTest
         }
 
         [Theory]
-        [InlineData("1")]  // R1.1 Bathroom UP/DOWN movement test with movement feedback
-        [InlineData("2")]  // R2.1 Master Bathroom UP/DOWN
-        [InlineData("3")]  // R3.1 Master Bedroom UP/DOWN
-        [InlineData("4")]  // R3.2 Master Bedroom UP/DOWN
-        [InlineData("5")]  // R5.1 Guest Room UP/DOWN
-        [InlineData("6")]  // R6.1 Kinga's Room UP/DOWN
-        [InlineData("7")]  // R6.2 Kinga's Room UP/DOWN
-        [InlineData("8")]  // R6.3 Kinga's Room UP/DOWN
-        [InlineData("9")]  // R7.1 Rafal's Room UP/DOWN
-        [InlineData("10")] // R7.2 Rafal's Room UP/DOWN
-        [InlineData("11")] // R7.3 Rafal's Room UP/DOWN
-        [InlineData("12")] // R8.1 Hall UP/DOWN
-        [InlineData("13")] // R02.1 Kitchen
-        [InlineData("14")] // R02.2 Kitchen
-        [InlineData("15")] // R03.1 Dinning Room
-        [InlineData("16")] // R04.1 Living Room
-        [InlineData("17")] // R04.2 Living Room
-        [InlineData("18")] // R05.1 Office - UP/DOWN movement test with movement feedback
-        public async Task CanMoveShutterUpAndDown(string controlSubGroup)
+        [InlineData("R1.1")]  // Bathroom
+        [InlineData("R2.1")]  // Master Bathroom
+        [InlineData("R3.1")]  // Master Bedroom
+        [InlineData("R3.2")]  // Master Bedroom
+        [InlineData("R5.1")]  // Guest Room
+        [InlineData("R6.1")]  // Kinga's Room
+        [InlineData("R6.2")]  // Kinga's Room
+        [InlineData("R6.3")]  // Kinga's Room
+        [InlineData("R7.1")]  // Rafal's Room
+        [InlineData("R7.2")]  // Rafal's Room
+        [InlineData("R7.3")]  // Rafal's Room
+        [InlineData("R8.1")]  // Hall
+        [InlineData("R02.1")] // Kitchen
+        [InlineData("R02.2")] // Kitchen
+        [InlineData("R03.1")] // Dining Room
+        [InlineData("R04.1")] // Living Room
+        [InlineData("R04.2")] // Living Room
+        [InlineData("R05.1")] // Office
+        public async Task CanMoveShutterUpAndDown(string shutterId)
         {
             // Arrange
-            var feedbackSubGroup = (int.Parse(controlSubGroup) + KnxAddressConfiguration.SHUTTER_FEEDBACK_OFFSET).ToString();
-            var controlAddress = KnxAddressConfiguration.CreateShutterMovementAddress(controlSubGroup); // 4/0/18 - UP/DOWN control
-            var feedbackAddress = KnxAddressConfiguration.CreateShutterMovementFeedbackAddress(controlSubGroup); // 4/0/118 - UP/DOWN feedback
-            var positionFeedbackAddress = KnxAddressConfiguration.CreateShutterPositionFeedbackAddress(controlSubGroup); // 4/2/118 - position feedback
-            var movementStatusAddress = KnxAddressConfiguration.CreateShutterMovementStatusFeedbackAddress(controlSubGroup); // 4/1/118 - movement status
-            var stopAddress = KnxAddressConfiguration.CreateShutterStopAddress(controlSubGroup); // 4/1/18 - STOP/STEP control
-
-            Console.WriteLine($"Control: {controlAddress}, Feedback: {feedbackAddress}");
-            Console.WriteLine($"Position feedback: {positionFeedbackAddress}, Movement status: {movementStatusAddress}");
-            Console.WriteLine($"STOP/STEP control: {stopAddress}");
-
-            // Get initial position
-            float? initialPosition = null;
-            try
-            {
-                initialPosition = await _knxService.RequestGroupValue<float>(positionFeedbackAddress);
-                Console.WriteLine($"Initial position: {initialPosition.Value}%");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Could not read initial position: {ex.Message}");
-                return; // Can't test without knowing initial position
-            }
-
-            var initialPercent = initialPosition.Value;
-            
-            // Decide test order based on initial position
-            // If shutter is down (>50% closed), test UP first, then DOWN
-            // If shutter is up (<50% closed), test DOWN first, then UP
-            bool testUpFirst = initialPercent > 50;
-            
-            Console.WriteLine($"Initial position: {initialPercent:F1}% - Testing {(testUpFirst ? "UP first, then DOWN" : "DOWN first, then UP")}");
+            var shutter = ShutterFactory.CreateShutter(shutterId, _knxService);
+            await shutter.InitializeAsync();
+            shutter.SaveCurrentState();
 
             try
             {
+                var initialPosition = shutter.CurrentState.Position;
+                Console.WriteLine($"Shutter {shutterId} initial position: {initialPosition:F1}%");
+
+                // Decide test order based on initial position
+                bool testUpFirst = initialPosition > 50;
+                Console.WriteLine($"Testing {(testUpFirst ? "UP first, then DOWN" : "DOWN first, then UP")}");
+
                 if (testUpFirst)
                 {
-                    // Test UP first, then DOWN
-                    await TestShutterMovement(controlAddress, feedbackAddress, positionFeedbackAddress, 
-                        movementStatusAddress, stopAddress, false, "UP", 8);
-                    
-                    await Task.Delay(2000); // Wait between tests
-                    
-                    await TestShutterMovement(controlAddress, feedbackAddress, positionFeedbackAddress, 
-                        movementStatusAddress, stopAddress, true, "DOWN", 5);
+                    // Test UP movement
+                    await shutter.MoveAsync(ShutterDirection.Up, TimeSpan.FromSeconds(2));
+                    await Task.Delay(1000); // Give time for feedback
+
+                    var afterUpPosition = shutter.CurrentState.Position;
+                    Console.WriteLine($"After UP movement: {afterUpPosition:F1}%");
+                    Assert.True(afterUpPosition < initialPosition, "UP movement should decrease position percentage");
+
+                    await Task.Delay(1000);
+
+                    // Test DOWN movement
+                    await shutter.MoveAsync(ShutterDirection.Down, TimeSpan.FromSeconds(2));
+                    await Task.Delay(1000); // Give time for feedback
+
+                    var afterDownPosition = shutter.CurrentState.Position;
+                    Console.WriteLine($"After DOWN movement: {afterDownPosition:F1}%");
+                    Assert.True(afterDownPosition > afterUpPosition, "DOWN movement should increase position percentage");
                 }
                 else
                 {
-                    // Test DOWN first, then UP
-                    await TestShutterMovement(controlAddress, feedbackAddress, positionFeedbackAddress, 
-                        movementStatusAddress, stopAddress, true, "DOWN", 8);
-                    
-                    await Task.Delay(2000); // Wait between tests
-                    
-                    await TestShutterMovement(controlAddress, feedbackAddress, positionFeedbackAddress, 
-                        movementStatusAddress, stopAddress, false, "UP", 5);
+                    // Test DOWN movement
+                    await shutter.MoveAsync(ShutterDirection.Down, TimeSpan.FromSeconds(2));
+                    await Task.Delay(1000); // Give time for feedback
+
+                    var afterDownPosition = shutter.CurrentState.Position;
+                    Console.WriteLine($"After DOWN movement: {afterDownPosition:F1}%");
+                    Assert.True(afterDownPosition > initialPosition, "DOWN movement should increase position percentage");
+
+                    await Task.Delay(1000);
+
+                    // Test UP movement
+                    await shutter.MoveAsync(ShutterDirection.Up, TimeSpan.FromSeconds(2));
+                    await Task.Delay(1000); // Give time for feedback
+
+                    var afterUpPosition = shutter.CurrentState.Position;
+                    Console.WriteLine($"After UP movement: {afterUpPosition:F1}%");
+                    Assert.True(afterUpPosition < afterDownPosition, "UP movement should decrease position percentage");
                 }
 
-                // Return to original position
-                Console.WriteLine($"\nReturning to original position: {initialPercent:F1}%");
-                await ReturnToOriginalPosition(controlAddress, positionFeedbackAddress, stopAddress, initialPosition.Value, KnxAddressConfiguration.SHUTTERS_POSITION_MIDDLE_GROUP, controlSubGroup);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Test failed: {ex.Message}");
-                
-                // Attempt to return to original position even if test failed
-                try
-                {
-                    Console.WriteLine($"Attempting to return to original position after failure...");
-                    await ReturnToOriginalPosition(controlAddress, positionFeedbackAddress, stopAddress, initialPosition.Value, KnxAddressConfiguration.SHUTTERS_POSITION_MIDDLE_GROUP, controlSubGroup);
-                }
-                catch (Exception returnEx)
-                {
-                    Console.WriteLine($"Failed to return to original position: {returnEx.Message}");
-                }
-                
-                throw; // Re-throw original exception
-            }
-        }
-
-        private async Task TestShutterMovement(string controlAddress, string feedbackAddress, 
-            string positionFeedbackAddress, string movementStatusAddress, string stopAddress, 
-            bool isDownDirection, string directionName, int timeoutSeconds)
-        {
-            Console.WriteLine($"\nTesting {directionName} movement...");
-            
-            // Get position before movement
-            Percent? beforePosition = null;
-            try
-            {
-                beforePosition = await _knxService.RequestGroupValue<Percent>(positionFeedbackAddress);
-                Console.WriteLine($"Position before {directionName}: {beforePosition.Value.Value:F1}%");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Could not read position before {directionName}: {ex.Message}");
-            }
-
-            var feedbackReceived = new List<KnxGroupEventArgs>();
-            var movementReceived = new List<KnxGroupEventArgs>();
-            var upDownReceived = new List<KnxGroupEventArgs>();
-            var taskCompletionSource = new TaskCompletionSource<bool>();
-            bool movementStoppedAutomatically = false;
-
-            EventHandler<KnxGroupEventArgs> handler = (sender, args) =>
-            {
-                if (args.Destination == feedbackAddress)
-                {
-                    upDownReceived.Add(args);
-                    Console.WriteLine($"UP/DOWN feedback: {args.Value} at {DateTime.Now:HH:mm:ss.fff}");
-                }
-                else if (args.Destination == positionFeedbackAddress)
-                {
-                    feedbackReceived.Add(args);
-                    Console.WriteLine($"Position feedback: {args.Value} at {DateTime.Now:HH:mm:ss.fff}");
-                }
-                else if (args.Destination == movementStatusAddress)
-                {
-                    movementReceived.Add(args);
-                    Console.WriteLine($"Movement status: {args.Value} at {DateTime.Now:HH:mm:ss.fff}");
-                    
-                    // If movement stopped (value = 0), we can finish
-                    if (args.Value.AsString() == "0")
-                    {
-                        Console.WriteLine("Movement stopped automatically!");
-                        movementStoppedAutomatically = true;
-                        taskCompletionSource.TrySetResult(true);
-                    }
-                }
-            };
-
-            _knxService.GroupMessageReceived += handler;
-
-            try
-            {
-                // Send movement command
-                _knxService.WriteGroupValue(controlAddress, isDownDirection);
-                
-                // Wait for movement to start and stop, or timeout
-                var movementTask = taskCompletionSource.Task;
-                var timeoutTask = Task.Delay(TimeSpan.FromSeconds(timeoutSeconds));
-                var completedTask = await Task.WhenAny(movementTask, timeoutTask);
-                
-                if (completedTask == timeoutTask)
-                {
-                    Console.WriteLine($"{directionName} movement timeout - no automatic stop received");
-                }
-                
-                // Send STOP command only if movement didn't stop automatically
-                if (!movementStoppedAutomatically)
-                {
-                    Console.WriteLine($"Sending STOP command for {directionName} movement via {stopAddress}...");
-                    _knxService.WriteGroupValue(stopAddress, true);
-                }
-                else
-                {
-                    Console.WriteLine($"{directionName} movement stopped automatically, no STOP command needed");
-                }
-                
-                // Wait for stop command to take effect
-                await Task.Delay(2000);
-
-                // Get position after movement
-                Percent? afterPosition = null;
-                try
-                {
-                    afterPosition = await _knxService.RequestGroupValue<Percent>(positionFeedbackAddress);
-                    Console.WriteLine($"Position after {directionName}: {afterPosition.Value.Value:F1}%");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Could not read position after {directionName}: {ex.Message}");
-                }
-
-                // Assert - Check that we received appropriate feedback
-                Assert.True(upDownReceived.Count > 0 || feedbackReceived.Count > 0 || movementReceived.Count > 0, 
-                    $"Should have received at least one type of feedback message for {directionName} movement");
-                
-                // Check movement direction if we have position data
-                if (beforePosition.HasValue && afterPosition.HasValue)
-                {
-                    var beforePercent = beforePosition.Value.Value;
-                    var afterPercent = afterPosition.Value.Value;
-                    var movement = afterPercent - beforePercent;
-                    
-                    Console.WriteLine($"{directionName} position change: {beforePercent:F1}% → {afterPercent:F1}% (Δ{movement:+0.0;-0.0}%)");
-                    
-                    if (Math.Abs(movement) > 1) // If significant movement occurred
-                    {
-                        if (isDownDirection)
-                        {
-                            // DOWN movement should increase percentage (closer to 100%)
-                            Assert.True(movement > 0, 
-                                $"DOWN movement should increase position percentage. " +
-                                $"Expected positive change, got {movement:+0.0;-0.0}%");
-                        }
-                        else
-                        {
-                            // UP movement should decrease percentage (closer to 0%)
-                            Assert.True(movement < 0, 
-                                $"UP movement should decrease position percentage. " +
-                                $"Expected negative change, got {movement:+0.0;-0.0}%");
-                        }
-                        
-                        Console.WriteLine($"✓ Shutter moved {directionName} correctly ({Math.Abs(movement):F1}% movement)");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"⚠ Small or no {directionName} movement detected ({movement:+0.0;-0.0}%)");
-                    }
-                }
-                
-                Console.WriteLine($"{directionName} feedback summary - UP/DOWN: {upDownReceived.Count}, Position: {feedbackReceived.Count}, Movement: {movementReceived.Count}");
+                Console.WriteLine($"✓ Shutter {shutterId} UP/DOWN movement test completed successfully");
             }
             finally
             {
-                _knxService.GroupMessageReceived -= handler;
-            }
-        }
-
-        private async Task ReturnToOriginalPosition(string controlAddress, string positionFeedbackAddress, 
-            string stopAddress, float originalPosition, string positionMiddleGroup, string controlSubGroup)
-        {
-            try
-            {
-                // Get current position
-                var currentPosition = await _knxService.RequestGroupValue<float>(positionFeedbackAddress);
-                var currentPercent = currentPosition;
-                var originalPercent = originalPosition;
-                
-                var difference = Math.Abs(currentPercent - originalPercent);
-                
-                if (difference < 2) // Already close enough (within 2%)
-                {
-                    Console.WriteLine($"Already at original position (current: {currentPercent:F1}%, original: {originalPercent:F1}%)");
-                    return;
-                }
-                
-                Console.WriteLine($"Moving from {currentPercent:F1}% back to {originalPercent:F1}%");
-                
-                // Use absolute positioning to return to original position
-                var absolutePositionAddress = $"{KnxAddressConfiguration.SHUTTERS_MAIN_GROUP}/{positionMiddleGroup}/{controlSubGroup}";
-                Console.WriteLine($"Using absolute position control: {absolutePositionAddress}");
-                _knxService.WriteGroupValue(absolutePositionAddress, originalPosition);
-                
-                // Wait for movement
-                await Task.Delay(5000);
-                
-                // Verify final position
-                var finalPosition = await _knxService.RequestGroupValue<float>(positionFeedbackAddress);
-                Console.WriteLine($"Final position: {finalPosition:F1}% (target was {originalPercent:F1}%)");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error returning to original position: {ex.Message}");
+                // Always restore original state using the model's saved state functionality
+                await shutter.RestoreSavedStateAsync();
+                shutter.Dispose();
             }
         }
 
@@ -737,10 +542,19 @@ namespace KnxTest
                 Console.WriteLine($"Movement feedback messages during lock: {feedbackReceived.Count}");
                 Console.WriteLine($"Position feedback messages during lock: {positionReceived.Count}");
 
-                // Step 5: Return to original position
+                // Step 5: Return to original position (manual restoration)
                 Console.WriteLine("\n=== Step 5: Returning to original position ===");
-                await ReturnToOriginalPosition(movementControlAddress, positionFeedbackAddress, 
-                    KnxAddressConfiguration.CreateShutterStopAddress(controlSubGroup), initialPosition.Value, KnxAddressConfiguration.SHUTTERS_POSITION_MIDDLE_GROUP, controlSubGroup);
+                try
+                {
+                    var absolutePositionAddress = $"{KnxAddressConfiguration.SHUTTERS_MAIN_GROUP}/{KnxAddressConfiguration.SHUTTERS_POSITION_MIDDLE_GROUP}/{controlSubGroup}";
+                    _knxService.WriteGroupValue(absolutePositionAddress, initialPosition.Value);
+                    await Task.Delay(2000);
+                    Console.WriteLine($"Position restore command sent to {absolutePositionAddress}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error returning to original position: {ex.Message}");
+                }
             }
             finally
             {
