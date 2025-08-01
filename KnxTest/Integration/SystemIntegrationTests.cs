@@ -50,12 +50,10 @@ namespace KnxTest.Integration
                 await light.ToggleAsync();
                 
                 // Model automatically updates state from KNX feedback
-                await Task.Delay(1000); // Give time for feedback
                 Assert.Equal(!initialState, light.CurrentState.IsOn);
                 Console.WriteLine($"✓ Light {lightId} successfully toggled to {(light.CurrentState.IsOn ? "ON" : "OFF")}");
 
                 // Wait for state to stabilize
-                await Task.Delay(1000);
 
                 // Act + Assert (2): Toggle back to original state
                 await light.ToggleAsync();

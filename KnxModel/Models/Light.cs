@@ -103,40 +103,12 @@ namespace KnxModel
         public async Task SetStateAsync(bool isOn)
         {
             Console.WriteLine($"{(isOn ? "Turning ON" : "Turning OFF")} light {Id}");
-            _knxService.WriteGroupValue(Addresses.Control, isOn);
             
-            // Wait for state change to be confirmed via feedback
-            var timeout = TimeSpan.FromSeconds(5);
-            
-            // Create a task that completes when target state is reached
-            var waitTask = Task.Run(async () =>
-            {
-                while (true)
-                {
-                    if (CurrentState.IsOn == isOn)
-                    {
-                        Console.WriteLine($"✅ Light {Id} state confirmed: {(isOn ? "ON" : "OFF")}");
-                        return true;
-                    }
-                    await Task.Delay(_pollingIntervalMs); // Check every 50ms
-                }
-            });
-
-            // Create timeout task
-            var timeoutTask = Task.Delay(timeout);
-
-            // Wait for either state to be reached or timeout
-            var completedTask = await Task.WhenAny(waitTask, timeoutTask);
-
-            if (completedTask == waitTask)
-            {
-                await waitTask; // State reached
-            }
-            else
-            {
-                // Timeout occurred
-                Console.WriteLine($"⚠️ WARNING: Light {Id} state change not confirmed within timeout");
-            }
+            await SetBitFunctionAsync(
+                Addresses.Control,
+                isOn,
+                () => CurrentState.IsOn == isOn
+            );
         }
 
         public async Task TurnOnAsync()
@@ -171,41 +143,13 @@ namespace KnxModel
 
         public async Task<bool> WaitForStateAsync(bool targetState, TimeSpan? timeout = null)
         {
-            var effectiveTimeout = timeout ?? _defaultTimeout;
             Console.WriteLine($"Waiting for light {Id} to become: {(targetState ? "ON" : "OFF")}");
-
-            // Create a task that completes when target state is reached
-            var waitTask = Task.Run(async () =>
-            {
-                while (true)
-                {
-                    if (CurrentState.IsOn == targetState)
-                    {
-                        Console.WriteLine($"✅ Light {Id} state achieved: {(targetState ? "ON" : "OFF")}");
-                        return true;
-                    }
-
-                    await Task.Delay(_pollingIntervalMs); // Check every 50ms
-                }
-            });
-
-            // Create timeout task
-            var timeoutTask = Task.Delay(effectiveTimeout);
-
-            // Wait for either state to be reached or timeout
-            var completedTask = await Task.WhenAny(waitTask, timeoutTask);
-
-            if (completedTask == waitTask)
-            {
-                return await waitTask; // State reached
-            }
-            else
-            {
-                // Timeout occurred
-                Console.WriteLine($"⚠️ WARNING: Light {Id} state timeout - expected {(targetState ? "ON" : "OFF")}, current {(CurrentState.IsOn ? "ON" : "OFF")}");
-                Console.WriteLine($"This may indicate: missing feedback or hardware communication issue");
-                return false;
-            }
+            
+            return await WaitForConditionAsync(
+                condition: () => CurrentState.IsOn == targetState,
+                timeout: timeout,
+                description: $"state {(targetState ? "ON" : "OFF")}"
+            );
         }
 
         private async Task RefreshCurrentStateAsync()

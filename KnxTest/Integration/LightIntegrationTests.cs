@@ -90,25 +90,18 @@ namespace KnxTest.Integration
                 // Test toggle
                 await light.ToggleAsync();
                 
-                // Wait for state change
-                var success = await light.WaitForStateAsync(!initialState, TimeSpan.FromSeconds(5));
-                success.Should().BeTrue($"Light should toggle from {initialState} to {!initialState}");
+                // Verify state changed via feedback (natural device behavior)
+                light.CurrentState.IsOn.Should().Be(!initialState, $"Light state should be toggled via feedback");
                 
-                var toggledState = await light.ReadStateAsync();
-                toggledState.Should().Be(!initialState, $"Light state should be toggled");
-                
-                Console.WriteLine($"Light {lightId} successfully toggled to {(toggledState ? "ON" : "OFF")}");
+                Console.WriteLine($"Light {lightId} successfully toggled to {(light.CurrentState.IsOn ? "ON" : "OFF")}");
 
                 // Toggle back
                 await light.ToggleAsync();
                 
-                var successBack = await light.WaitForStateAsync(initialState, TimeSpan.FromSeconds(5));
-                successBack.Should().BeTrue($"Light should toggle back to {initialState}");
+                // Verify state restored via feedback (natural device behavior)
+                light.CurrentState.IsOn.Should().Be(initialState, $"Light state should be restored via feedback");
                 
-                var finalState = await light.ReadStateAsync();
-                finalState.Should().Be(initialState, $"Light state should be restored");
-                
-                Console.WriteLine($"Light {lightId} successfully toggled back to {(finalState ? "ON" : "OFF")}");
+                Console.WriteLine($"Light {lightId} successfully toggled back to {(light.CurrentState.IsOn ? "ON" : "OFF")}");
             }
             finally
             {
@@ -134,20 +127,16 @@ namespace KnxTest.Integration
 
                 // Test turn ON
                 await light.TurnOnAsync();
-                var onSuccess = await light.WaitForStateAsync(true, TimeSpan.FromSeconds(5));
-                onSuccess.Should().BeTrue("Light should turn ON");
                 
-                var onState = await light.ReadStateAsync();
-                onState.Should().BeTrue("Light should be ON");
+                // Verify state via feedback (natural device behavior)
+                light.CurrentState.IsOn.Should().BeTrue("Light should be ON via feedback");
                 Console.WriteLine($"Light {lightId} successfully turned ON");
 
                 // Test turn OFF
                 await light.TurnOffAsync();
-                var offSuccess = await light.WaitForStateAsync(false, TimeSpan.FromSeconds(5));
-                offSuccess.Should().BeTrue("Light should turn OFF");
                 
-                var offState = await light.ReadStateAsync();
-                offState.Should().BeFalse("Light should be OFF");
+                // Verify state via feedback (natural device behavior)
+                light.CurrentState.IsOn.Should().BeFalse("Light should be OFF via feedback");
                 Console.WriteLine($"Light {lightId} successfully turned OFF");
             }
             finally
@@ -247,18 +236,12 @@ namespace KnxTest.Integration
                 
                 // Act & Assert - Lock the light
                 await light.SetLockAsync(true);
-                light.CurrentState.IsLocked.Should().BeTrue();
-                
-                var lockState = await light.ReadLockStateAsync();
-                lockState.Should().BeTrue();
+                light.CurrentState.IsLocked.Should().BeTrue("Light should be locked via feedback");
                 Console.WriteLine($"✅ Light {lightId} successfully locked");
 
                 // Act & Assert - Unlock the light
                 await light.SetLockAsync(false);
-                light.CurrentState.IsLocked.Should().BeFalse();
-                
-                lockState = await light.ReadLockStateAsync();
-                lockState.Should().BeFalse();
+                light.CurrentState.IsLocked.Should().BeFalse("Light should be unlocked via feedback");
                 Console.WriteLine($"✅ Light {lightId} successfully unlocked");
 
                 // Test convenience methods

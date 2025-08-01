@@ -138,19 +138,12 @@ namespace KnxModel
                 throw new ArgumentOutOfRangeException(nameof(position), "Position must be between 0.0 and 100.0.");
             }
             
-            var effectiveTimeout = timeout ?? _defaultTimeout;
             Console.WriteLine($"Setting shutter {Id} position to {position}%");
 
-            _knxService.WriteGroupValue(Addresses.PositionControl, position);
-            
             // Wait for position to be reached (considering relay delay and mechanical precision)
             // One byte step = 100/255 ≈ 0.39%, but mechanical systems may have 1-2 steps tolerance
-            const double byteTolerancePercent = 1.0; // Allow for relay delay and mechanical precision
-            var success = await WaitForPositionAsync(position, tolerance: byteTolerancePercent, timeout: effectiveTimeout);
-            if (!success)
-            {
-                Console.WriteLine($"⚠️ WARNING: Shutter {Id} did not reach target position {position}% within {byteTolerancePercent}% tolerance");
-            }
+            const float byteTolerancePercent = 1.0f; // Allow for relay delay and mechanical precision
+            await SetFloatFunctionAsync(Addresses.PositionControl, position, () => Math.Abs(CurrentState.Position - position) <= byteTolerancePercent, timeout);
         }
 
         public async Task MoveAsync(ShutterDirection direction, TimeSpan? duration = null)
@@ -223,92 +216,24 @@ namespace KnxModel
                 throw new ArgumentOutOfRangeException(nameof(targetPosition), "Target position must be between 0.0 and 100.0.");
             }
             
-            var effectiveTimeout = timeout ?? _defaultTimeout;
             Console.WriteLine($"Waiting for shutter {Id} to reach target {targetPosition}% (allowing for mechanical precision)");
 
-            var lastMovementState = CurrentState.MovementState;
-
-            // Create a task that completes when target position is reached OR movement stops
-            var waitTask = Task.Run(async () =>
-            {
-                while (true)
-                {
-                    // Check if we reached target position within tolerance (considering byte precision)
-                    if (Math.Abs(CurrentState.Position - targetPosition) <= tolerance)
-                    {
-                        var precision = Math.Abs(CurrentState.Position - targetPosition);
-                        Console.WriteLine($"✅ Shutter {Id} reached target position: {CurrentState.Position}% (target: {targetPosition}%, precision: ±{precision:F2}%)");
-                        return true;
-                    }
-
-                    // Check if movement stopped without reaching target
-                    if (CurrentState.MovementState == ShutterMovementState.Stopped && 
-                        lastMovementState != ShutterMovementState.Stopped)
-                    {
-                        Console.WriteLine($"❌ Shutter {Id} stopped at {CurrentState.Position}% before reaching target {targetPosition}%");
-                        Console.WriteLine($"This may indicate: obstruction, manual stop, or hardware limit reached");
-                        return false;
-                    }
-
-                    lastMovementState = CurrentState.MovementState;
-                    await Task.Delay(_pollingIntervalMs); // Check every 200ms
-                }
-            });
-
-            // Create timeout task
-            var timeoutTask = Task.Delay(effectiveTimeout);
-
-            // Wait for either position to be reached or timeout
-            var completedTask = await Task.WhenAny(waitTask, timeoutTask);
-
-            if (completedTask == waitTask)
-            {
-                return await waitTask; // Position reached or movement stopped
-            }
-            else
-            {
-                // Timeout occurred
-                Console.WriteLine($"⚠️ WARNING: Shutter {Id} position timeout - target {targetPosition}%, current {CurrentState.Position}%");
-                Console.WriteLine($"Movement state: {CurrentState.MovementState}");
-                Console.WriteLine($"This may indicate: slow movement, missing position feedback, or hardware issue");
-                return false;
-            }
+            return await WaitForConditionAsync(
+                condition: () => Math.Abs(CurrentState.Position - targetPosition) <= tolerance,
+                timeout: timeout,
+                description: $"position {targetPosition}% (tolerance ±{tolerance}%)"
+            );
         }
 
         public async Task<bool> WaitForMovementStopAsync(TimeSpan? timeout = null)
         {
-            var effectiveTimeout = timeout ?? _defaultMoveTimeout;
             Console.WriteLine($"Waiting for shutter {Id} movement to stop");
-
-            // Create a task that completes when movement stops
-            var waitTask = Task.Run(async () =>
-            {
-                while (CurrentState.MovementState != ShutterMovementState.Stopped)
-                {
-                    await Task.Delay(_pollingIntervalMs); // Check internal state every 200ms
-                }
-                Console.WriteLine($"Shutter {Id} movement stopped via feedback");
-                return true;
-            });
-
-            // Create timeout task
-            var timeoutTask = Task.Delay(effectiveTimeout);
-
-            // Wait for either movement to stop or timeout
-            var completedTask = await Task.WhenAny(waitTask, timeoutTask);
-
-            if (completedTask == waitTask)
-            {
-                return await waitTask; // Movement stopped
-            }
-            else
-            {
-                // Timeout occurred - indicates a problem!
-                Console.WriteLine($"⚠️ WARNING: Shutter {Id} movement timeout - NO FEEDBACK RECEIVED!");
-                Console.WriteLine($"This may indicate: missing feedback configuration, hardware issue, or communication problem");
-                
-                return false;
-            }
+            
+            return await WaitForConditionAsync(
+                condition: () => CurrentState.MovementState == ShutterMovementState.Stopped,
+                timeout: timeout ?? _defaultMoveTimeout,
+                description: "movement to stop"
+            );
         }
 
         /// <summary>

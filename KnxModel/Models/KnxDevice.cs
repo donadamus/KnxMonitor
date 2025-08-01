@@ -179,6 +179,30 @@ namespace KnxModel
         }
 
         /// <summary>
+        /// Sets a float value on KNX bus and waits for state confirmation
+        /// </summary>
+        /// <param name="address">The KNX group address to write to</param>
+        /// <param name="targetValue">The float value to set</param>
+        /// <param name="stateSelector">Function that returns current state value</param>
+        /// <param name="tolerance">Tolerance for float comparison (default: 0.01f)</param>
+        /// <param name="timeout">Timeout for the operation. If null, 
+        /// default timeout is used.</param>
+        /// <returns>A task that represents the asynchronous operation.</returns>
+        protected async Task SetFloatFunctionAsync(string address, float targetValue, Func<float> stateSelector, float tolerance = 0.01f, TimeSpan? timeout = null)
+        {
+            var effectiveTimeout = timeout ?? _defaultTimeout;
+            // Write the value to the KNX bus
+            _knxService.WriteGroupValue(address, targetValue);
+            // Wait for the state to be updated
+
+            await WaitForConditionAsync(
+                condition: () => Math.Abs(stateSelector() - targetValue) <= tolerance,
+                timeout: effectiveTimeout,
+                description: $"set {address} to {targetValue}"
+            );
+        }
+
+        /// <summary>
         /// Creates a wait task that completes when a condition is met
         /// </summary>
         protected async Task<bool> WaitForConditionAsync(Func<bool> condition, TimeSpan? timeout = null, string description = "condition")

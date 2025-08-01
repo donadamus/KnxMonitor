@@ -105,41 +105,13 @@ namespace KnxModel
 
         public async Task<bool> WaitForLockStateAsync(bool targetLockState, TimeSpan? timeout = null)
         {
-            var effectiveTimeout = timeout ?? _defaultTimeout;
             Console.WriteLine($"Waiting for {GetType().Name.ToLower()} {Id} lock to become: {(targetLockState ? "LOCKED" : "UNLOCKED")}");
-
-            // Create a task that completes when target lock state is reached
-            var waitTask = Task.Run(async () =>
-            {
-                while (true)
-                {
-                    if (CurrentState.IsLocked == targetLockState)
-                    {
-                        Console.WriteLine($"✅ {GetType().Name} {Id} lock state achieved: {(targetLockState ? "LOCKED" : "UNLOCKED")}");
-                        return true;
-                    }
-
-                    await Task.Delay(_pollingIntervalMs); // Check every 50ms
-                }
-            });
-
-            // Create timeout task
-            var timeoutTask = Task.Delay(effectiveTimeout);
-
-            // Wait for either state to be reached or timeout
-            var completedTask = await Task.WhenAny(waitTask, timeoutTask);
-
-            if (completedTask == waitTask)
-            {
-                return await waitTask; // State reached
-            }
-            else
-            {
-                // Timeout occurred
-                Console.WriteLine($"⚠️ WARNING: {GetType().Name} {Id} lock state timeout - expected {(targetLockState ? "LOCKED" : "UNLOCKED")}, current {(CurrentState.IsLocked ? "LOCKED" : "UNLOCKED")}");
-                Console.WriteLine($"This may indicate: missing feedback or hardware communication issue");
-                return false;
-            }
+            
+            return await WaitForConditionAsync(
+                condition: () => CurrentState.IsLocked == targetLockState,
+                timeout: timeout,
+                description: $"lock state {(targetLockState ? "LOCKED" : "UNLOCKED")}"
+            );
         }
 
     }

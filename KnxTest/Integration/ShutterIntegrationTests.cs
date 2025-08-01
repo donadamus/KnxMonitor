@@ -75,19 +75,17 @@ namespace KnxTest.Integration
             var testPosition = originalPosition + (originalPosition > 50 ? -1 : 1) * 20.0f;
             
             await shutter.SetPositionAsync(testPosition);
-            await Task.Delay(2000); // Wait for movement
+            await shutter.WaitForMovementStopAsync();//wait for movement to complete
             
-            // Verify state changed
-            await shutter.InitializeAsync(); // Refresh current state
+            // Verify state changed via feedback (natural device behavior)
             var currentPosition = shutter.CurrentState.Position;
             Math.Abs(currentPosition - originalPosition).Should().BeGreaterThan(1);
 
             // Restore original state
             await shutter.RestoreSavedStateAsync();
-            await Task.Delay(3000); // Wait for restoration
-            
-            // Verify restoration
-            await shutter.InitializeAsync(); // Refresh current state
+            await shutter.WaitForMovementStopAsync();//wait for movement to complete
+
+            // Verify restoration via feedback (natural device behavior)
             var restoredPosition = shutter.CurrentState.Position;
             Math.Abs(restoredPosition - originalPosition).Should().BeLessThan(3); // Allow 3% tolerance
             
@@ -117,24 +115,22 @@ namespace KnxTest.Integration
                 {
                     // Test UP movement
                     await shutter.MoveAsync(ShutterDirection.Up, TimeSpan.FromSeconds(3));
-                    await Task.Delay(2000);
-                    await shutter.StopAsync();
+                    await shutter.WaitForMovementStopAsync();//wait for movement to complete
                     
-                    var upPosition = await shutter.ReadPositionAsync();
+                    // Verify state via feedback (natural device behavior)
+                    var upPosition = shutter.CurrentState.Position;
                     Console.WriteLine($"After UP movement: {upPosition}%");
                     
                     // UP should decrease percentage (toward 0%)
                     (upPosition < initialPosition).Should().BeTrue(
                         $"UP movement should decrease position. Initial: {initialPosition}%, After UP: {upPosition}%");
 
-                    await Task.Delay(1000);
-
                     // Test DOWN movement
                     await shutter.MoveAsync(ShutterDirection.Down, TimeSpan.FromSeconds(3));
-                    await Task.Delay(2000);
-                    await shutter.StopAsync();
+                    await shutter.WaitForMovementStopAsync();//wait for movement to complete
                     
-                    var downPosition = await shutter.ReadPositionAsync();
+                    // Verify state via feedback (natural device behavior)
+                    var downPosition = shutter.CurrentState.Position;
                     Console.WriteLine($"After DOWN movement: {downPosition}%");
                     
                     // DOWN should increase percentage (toward 100%)
@@ -145,24 +141,22 @@ namespace KnxTest.Integration
                 {
                     // Test DOWN movement first
                     await shutter.MoveAsync(ShutterDirection.Down, TimeSpan.FromSeconds(3));
-                    await Task.Delay(2000);
-                    await shutter.StopAsync();
+                    await shutter.WaitForMovementStopAsync();//wait for movement to complete
                     
-                    var downPosition = await shutter.ReadPositionAsync();
+                    // Verify state via feedback (natural device behavior)
+                    var downPosition = shutter.CurrentState.Position;
                     Console.WriteLine($"After DOWN movement: {downPosition}%");
                     
                     // DOWN should increase percentage (toward 100%)
                     (downPosition > initialPosition).Should().BeTrue(
                         $"DOWN movement should increase position. Initial: {initialPosition}%, After DOWN: {downPosition}%");
 
-                    await Task.Delay(1000);
-
                     // Test UP movement
                     await shutter.MoveAsync(ShutterDirection.Up, TimeSpan.FromSeconds(3));
-                    await Task.Delay(2000);
-                    await shutter.StopAsync();
+                    await shutter.WaitForMovementStopAsync();//wait for movement to complete
                     
-                    var upPosition = await shutter.ReadPositionAsync();
+                    // Verify state via feedback (natural device behavior)
+                    var upPosition = shutter.CurrentState.Position;
                     Console.WriteLine($"After UP movement: {upPosition}%");
                     
                     // UP should decrease percentage (toward 0%)
@@ -206,7 +200,8 @@ namespace KnxTest.Integration
                 // Assert
                 reached.Should().BeTrue($"Shutter should reach target position {targetPosition}%");
                 
-                var finalPosition = await shutter.ReadPositionAsync();
+                // Verify final position via feedback (natural device behavior)
+                var finalPosition = shutter.CurrentState.Position;
                 Console.WriteLine($"Final position: {finalPosition}%");
                 
                 Math.Abs(finalPosition - targetPosition).Should().BeLessThan(1.0f, 
@@ -238,16 +233,16 @@ namespace KnxTest.Integration
                 var newLockState = !initialLockState;
                 await shutter.SetLockAsync(newLockState);
                 
-                var currentLockState = await shutter.ReadLockStateAsync();
-                currentLockState.Should().Be(newLockState, 
-                    $"Lock state should be {newLockState}, but was {currentLockState}");
+                // Verify state via feedback (natural device behavior)
+                shutter.CurrentState.IsLocked.Should().Be(newLockState, 
+                    $"Lock state should be {newLockState} via feedback");
 
                 // Toggle back
                 await shutter.SetLockAsync(initialLockState);
                 
-                var restoredLockState = await shutter.ReadLockStateAsync();
-                restoredLockState.Should().Be(initialLockState, 
-                    $"Lock state should be restored to {initialLockState}, but was {restoredLockState}");
+                // Verify restoration via feedback (natural device behavior)
+                shutter.CurrentState.IsLocked.Should().Be(initialLockState, 
+                    $"Lock state should be restored to {initialLockState} via feedback");
 
                 Console.WriteLine($"Lock toggle test passed for shutter {shutterId}");
             }
@@ -270,9 +265,9 @@ namespace KnxTest.Integration
 
             try
             {
-                // Act & Assert - Manual test implementation (moved from model)
-                var initialPosition = await shutter.ReadPositionAsync();
-                var initialLockState = await shutter.ReadLockStateAsync();
+                // Act & Assert - Use current state (natural device behavior)
+                var initialPosition = shutter.CurrentState.Position;
+                var initialLockState = shutter.CurrentState.IsLocked;
 
                 // Ensure shutter is locked
                 if (!initialLockState)
@@ -284,8 +279,8 @@ namespace KnxTest.Integration
                 Console.WriteLine($"Attempting to move locked shutter {shutterId}");
                 await shutter.MoveAsync(ShutterDirection.Up, TimeSpan.FromSeconds(4));
                 
-                // Check if position changed
-                var positionAfterMove = await shutter.ReadPositionAsync();
+                // Check if position changed via feedback (natural device behavior)
+                var positionAfterMove = shutter.CurrentState.Position;
                 var positionDifference = Math.Abs(positionAfterMove - initialPosition);
                 var lockEffective = positionDifference < 1.0; // Less than 1% movement means lock is effective
 
