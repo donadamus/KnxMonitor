@@ -57,7 +57,8 @@ namespace KnxModel
             ["L13"] = new("Light 13", "13"),
             ["L14"] = new("Light 14", "14"),
             ["L15"] = new("Light 15", "15"),
-            
+            ["L25"] = new("Light 25", "25"),
+
             // Additional lights based on common KNX patterns
             ["L01"] = new("Kitchen Main", "01"),
             ["L02"] = new("Kitchen Counter", "02"),

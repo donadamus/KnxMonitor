@@ -12,7 +12,8 @@ namespace KnxModel
         /// Set device lock state
         /// </summary>
         /// <param name="isLocked">True to lock, false to unlock</param>
-        Task SetLockAsync(bool isLocked);
+        /// <param name="timeout">Timeout for the operation. If null, default timeout is used.</param>
+        Task SetLockAsync(bool isLocked, TimeSpan? timeout = null);
 
         /// <summary>
         /// Lock the device

@@ -70,13 +70,14 @@ namespace KnxModel
             // Override in derived classes (Light, Shutter) to add specific logic
         }
 
-        public async Task SetLockAsync(bool isLocked)
+        public async Task SetLockAsync(bool isLocked, TimeSpan? timeout = null)
         {
 
             await SetBitFunctionAsync(
                 Addresses.LockControl,
                 isLocked,
-                () => CurrentState.IsLocked == isLocked
+                () => CurrentState.IsLocked == isLocked,
+                timeout
             );
         }
 

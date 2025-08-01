@@ -188,7 +188,7 @@ namespace KnxModel
         /// <param name="timeout">Timeout for the operation. If null, 
         /// default timeout is used.</param>
         /// <returns>A task that represents the asynchronous operation.</returns>
-        protected async Task SetFloatFunctionAsync(string address, float targetValue, Func<float> stateSelector, float tolerance = 0.01f, TimeSpan? timeout = null)
+        protected async Task SetFloatFunctionAsync(string address, float targetValue, Func<bool> stateSelector, TimeSpan? timeout = null)
         {
             var effectiveTimeout = timeout ?? _defaultTimeout;
             // Write the value to the KNX bus
@@ -196,7 +196,7 @@ namespace KnxModel
             // Wait for the state to be updated
 
             await WaitForConditionAsync(
-                condition: () => Math.Abs(stateSelector() - targetValue) <= tolerance,
+                condition: () => stateSelector(),
                 timeout: effectiveTimeout,
                 description: $"set {address} to {targetValue}"
             );
