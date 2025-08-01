@@ -117,19 +117,6 @@ namespace KnxService
             _knxBus.WriteGroupValue(groupAddress, groupValue);
         }
 
-        public void WriteGroupValue(string address, int percentage)
-        {
-            if (percentage < 0 || percentage > 100)
-            {
-                throw new ArgumentOutOfRangeException(nameof(percentage), "Percentage must be between 0 and 100.");
-            }
-            
-            var groupAddress = new GroupAddress(address);
-            var knxRawValue = (byte)(percentage * 2.55); // Convert 0-100% to 0-255 KNX range
-            var groupValue = new GroupValue(knxRawValue);
-            _knxBus.WriteGroupValue(groupAddress, groupValue);
-        }
-
         public void WriteGroupValue(string address, float percentage)
         {
             if (percentage < 0.0f || percentage > 100.0f)
@@ -142,11 +129,6 @@ namespace KnxService
             var knxRawValue = (byte)(percentage * 2.55f); // Convert 0.0-100.0% to 0-255 KNX range
             var groupValue = new GroupValue(knxRawValue);
             _knxBus.WriteGroupValue(groupAddress, groupValue);
-        }
-
-        public void WriteGroupValue(KnxGroupAddress address, bool value)
-        {
-            WriteGroupValue(address.Address, value);
         }
 
         public event EventHandler<KnxGroupEventArgs> GroupMessageReceived;

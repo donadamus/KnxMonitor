@@ -50,9 +50,6 @@ namespace KnxModel
 
         #region LockableKnxDevice Implementation
 
-        protected override string GetLockControlAddress() => Addresses.LockControl;
-        protected override string GetLockFeedbackAddress() => Addresses.LockFeedback;
-        protected override bool GetCurrentLockState() => CurrentState.IsLocked;
         protected override ShutterState UpdateLockState(bool isLocked) => 
             CurrentState with { IsLocked = isLocked, LastUpdated = DateTime.Now };
 
@@ -72,15 +69,9 @@ namespace KnxModel
             );
         }
 
-        protected override void ProcessKnxMessage(KnxGroupEventArgs e)
+        protected override void ProcessDeviceSpecificMessage(KnxGroupEventArgs e)
         {
-            // Check if this is a lock message first
-            if (ProcessLockMessage(e.Destination, e.Value))
-            {
-                return; // Lock message was processed
-            }
-
-            // Handle non-lock messages
+            // Handle shutter-specific (non-lock) messages
             if (e.Destination == Addresses.PositionFeedback)
             {
                 var positionPercent = e.Value.AsPercentageValue();
@@ -114,17 +105,15 @@ namespace KnxModel
             try
             {
                 // First unlock if currently locked
-                if (CurrentState.IsLocked && !SavedState.IsLocked)
+                if (CurrentState.IsLocked)
                 {
                     await SetLockAsync(false);
-                    await Task.Delay(1000); // Wait for unlock
                 }
 
                 // Restore position (use mechanical precision tolerance)
                 if (Math.Abs(CurrentState.Position - SavedState.Position) > 1.0)
                 {
                     await SetPositionAsync(SavedState.Position);
-                    await WaitForPositionAsync(SavedState.Position, tolerance: 1.0); // Match mechanical precision
                 }
 
                 // Restore lock state

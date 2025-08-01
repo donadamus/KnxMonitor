@@ -150,6 +150,33 @@ namespace KnxModel
         }
 
         /// <summary>
+        /// Sets the specified bit value on the KNX bus and waits for the state to reflect the change.
+        /// </summary>
+        /// <remarks>This method writes the specified value to the KNX bus and waits for the state to
+        /// update  by repeatedly evaluating the <paramref name="stateSelector"/> function. If the state does not 
+        /// update within the specified timeout, the operation will fail.</remarks>
+        /// <param name="address">The KNX group address to which the value will be written.</param>
+        /// <param name="targetValue">The desired boolean value to set on the KNX bus.</param>
+        /// <param name="stateSelector">A function that evaluates the current state. The method waits until this function returns <see
+        /// langword="true"/>  to confirm the state matches the desired value.</param>
+        /// <param name="timeout">An optional timeout specifying the maximum duration to wait for the state to update.  If not provided, a
+        /// default timeout is used.</param>
+        /// <returns>A task that represents the asynchronous operation.</returns>
+        protected async Task SetBitFunctionAsync(string address, bool targetValue, Func<bool> stateSelector, TimeSpan? timeout = null)
+        {
+            var effectiveTimeout = timeout ?? _defaultTimeout;
+            // Write the value to the KNX bus
+            _knxService.WriteGroupValue(address, targetValue);
+            // Wait for the state to be updated
+
+            await WaitForConditionAsync(
+                condition: stateSelector,
+                timeout: effectiveTimeout,
+                description: $"set {address} to {targetValue}"
+            );
+        }
+
+        /// <summary>
         /// Creates a wait task that completes when a condition is met
         /// </summary>
         protected async Task<bool> WaitForConditionAsync(Func<bool> condition, TimeSpan? timeout = null, string description = "condition")

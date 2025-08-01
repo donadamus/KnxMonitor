@@ -14,7 +14,7 @@ namespace KnxModel
         string LockFeedback,         // 4/3/{X+100} - lock feedback
         string StopControl,          // 4/1/X - stop/step control
         string MovementStatusFeedback // 4/1/{X+100} - movement status feedback
-    );
+    ) : ILockableAddress;
 
     /// <summary>
     /// Current state of a shutter
@@ -24,7 +24,7 @@ namespace KnxModel
         bool IsLocked,
         ShutterMovementState MovementState,
         DateTime LastUpdated
-    );
+    ) : ILockableState;
 
     /// <summary>
     /// Direction of shutter movement

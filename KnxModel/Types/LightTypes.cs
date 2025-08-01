@@ -14,7 +14,13 @@ namespace KnxModel
         string Feedback,
         string LockControl,
         string LockFeedback
-    );
+    ) : ILockableAddress;
+
+    public interface ILockableAddress
+    {
+        string LockControl { get; }
+        string LockFeedback { get; }
+    }
 
     /// <summary>
     /// Current state of a KNX light
@@ -26,5 +32,10 @@ namespace KnxModel
         bool IsOn,
         bool IsLocked,
         DateTime LastUpdated
-    );
+    ) : ILockableState;
+
+    public interface ILockableState
+    {
+        bool IsLocked { get; }
+    }
 }

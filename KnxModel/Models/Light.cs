@@ -52,15 +52,9 @@ namespace KnxModel
             );
         }
 
-        protected override void ProcessKnxMessage(KnxGroupEventArgs e)
+        protected override void ProcessDeviceSpecificMessage(KnxGroupEventArgs e)
         {
-            // Check if this is a lock message first
-            if (ProcessLockMessage(e.Destination, e.Value))
-            {
-                return; // Lock message was processed
-            }
-
-            // Handle non-lock messages
+            // Handle light-specific (non-lock) messages
             if (e.Destination == Addresses.Feedback)
             {
                 var isOn = e.Value.AsBoolean();
@@ -101,9 +95,6 @@ namespace KnxModel
 
         #region LockableKnxDevice Implementation
 
-        protected override string GetLockControlAddress() => Addresses.LockControl;
-        protected override string GetLockFeedbackAddress() => Addresses.LockFeedback;
-        protected override bool GetCurrentLockState() => CurrentState.IsLocked;
         protected override LightState UpdateLockState(bool isLocked) => 
             CurrentState with { IsLocked = isLocked, LastUpdated = DateTime.Now };
 
