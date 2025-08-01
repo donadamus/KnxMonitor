@@ -23,7 +23,7 @@ namespace KnxModel
         /// <summary>
         /// Updates the device state with new lock state
         /// </summary>
-        protected abstract TState UpdateLockState(bool isLocked);
+        public abstract TState UpdateLockState(bool isLocked);
 
         /// <summary>
         /// Processes a lock-related KNX message and updates the device state if applicable
@@ -141,5 +141,6 @@ namespace KnxModel
                 return false;
             }
         }
+
     }
 }

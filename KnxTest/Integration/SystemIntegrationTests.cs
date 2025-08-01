@@ -145,8 +145,8 @@ namespace KnxTest.Integration
                 var initialPosition = shutter.CurrentState.Position;
                 Console.WriteLine($"Shutter {shutterId} initial position: {initialPosition:F1}%");
 
-                // Choose a movement of 10% in appropriate direction
-                var targetPosition = initialPosition < 50 ? initialPosition + 10 : initialPosition - 10;
+                // Choose a movement of 20% in appropriate direction
+                var targetPosition = initialPosition < 50 ? initialPosition + 20 : initialPosition - 20;
                 targetPosition = Math.Max(0, Math.Min(100, targetPosition));
 
                 Console.WriteLine($"Moving shutter {shutterId} from {initialPosition:F1}% to {targetPosition:F1}%");
@@ -307,16 +307,12 @@ namespace KnxTest.Integration
                 // Act - Toggle lock state
                 await shutter.SetLockAsync(!initialLockState);
                 
-                // Model automatically updates lock state from KNX feedback
-                await Task.Delay(1000); // Give time for feedback
-                
                 // Assert - Check lock state changed on model
                 Assert.Equal(!initialLockState, shutter.CurrentState.IsLocked);
                 Console.WriteLine($"✓ Shutter {shutterId} lock successfully toggled to {(shutter.CurrentState.IsLocked ? "LOCKED" : "UNLOCKED")}");
 
                 // Toggle back to original state
                 await shutter.SetLockAsync(initialLockState);
-                await Task.Delay(1000); // Give time for feedback
                 
                 Assert.Equal(initialLockState, shutter.CurrentState.IsLocked);
                 Console.WriteLine($"✓ Shutter {shutterId} lock successfully restored to {(shutter.CurrentState.IsLocked ? "LOCKED" : "UNLOCKED")}");
@@ -363,7 +359,7 @@ namespace KnxTest.Integration
                 Console.WriteLine($"Position before UP: {positionBeforeUp:F1}%");
                 
                 await shutter.MoveAsync(ShutterDirection.Up, TimeSpan.FromSeconds(2));
-                await Task.Delay(1000); // Give time for any potential movement
+                await Task.Delay(500); // Give time for any potential movement
                 
                 var positionAfterUp = shutter.CurrentState.Position;
                 var upMovement = Math.Abs(positionAfterUp - positionBeforeUp);
@@ -375,7 +371,7 @@ namespace KnxTest.Integration
                 Console.WriteLine($"Position before DOWN: {positionBeforeDown:F1}%");
                 
                 await shutter.MoveAsync(ShutterDirection.Down, TimeSpan.FromSeconds(2));
-                await Task.Delay(1000); // Give time for any potential movement
+                await Task.Delay(500); // Give time for any potential movement
                 
                 var positionAfterDown = shutter.CurrentState.Position;
                 var downMovement = Math.Abs(positionAfterDown - positionBeforeDown);

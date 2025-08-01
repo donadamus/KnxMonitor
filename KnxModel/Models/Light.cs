@@ -95,7 +95,7 @@ namespace KnxModel
 
         #region LockableKnxDevice Implementation
 
-        protected override LightState UpdateLockState(bool isLocked) => 
+        public override LightState UpdateLockState(bool isLocked) => 
             CurrentState with { IsLocked = isLocked, LastUpdated = DateTime.Now };
 
         #endregion

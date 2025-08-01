@@ -37,5 +37,6 @@ namespace KnxModel
     public interface ILockableState
     {
         bool IsLocked { get; }
+        DateTime LastUpdated { get; }
     }
 }

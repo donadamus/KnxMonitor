@@ -50,7 +50,7 @@ namespace KnxModel
 
         #region LockableKnxDevice Implementation
 
-        protected override ShutterState UpdateLockState(bool isLocked) => 
+        public override ShutterState UpdateLockState(bool isLocked) => 
             CurrentState with { IsLocked = isLocked, LastUpdated = DateTime.Now };
 
         #endregion

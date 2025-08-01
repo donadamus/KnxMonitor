@@ -20,8 +20,8 @@ namespace KnxModel
         public string Id { get; }
         public string Name { get; }
         public string SubGroup { get; }
-        public TAddresses Addresses { get; protected set; }
-        public TState CurrentState { get; protected set; }
+        public TAddresses Addresses { get; set; }
+        public TState CurrentState { get; set; }
         public TState? SavedState { get; protected set; }
 
         /// <summary>
@@ -71,8 +71,7 @@ namespace KnxModel
         {
             try
             {
-                // Start listening to feedback events
-                StartListeningToFeedback();
+                
 
                 Console.WriteLine($"{GetType().Name} {Id} ({Name}) initializing...");
 
@@ -80,6 +79,9 @@ namespace KnxModel
                 CurrentState = await ReadCurrentStateAsync();
 
                 Console.WriteLine($"{GetType().Name} {Id} ({Name}) initialized successfully");
+                
+                // Start listening to feedback events
+                StartListeningToFeedback();
             }
             catch (Exception ex)
             {
