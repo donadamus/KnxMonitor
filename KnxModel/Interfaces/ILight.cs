@@ -6,7 +6,7 @@ namespace KnxModel
     /// <summary>
     /// Interface representing a KNX light with all its operations and state management
     /// </summary>
-    public interface ILight : IKnxDevice
+    public interface ILight : IKnxDevice, ILockable
     {
         /// <summary>
         /// KNX addresses for light control and feedback

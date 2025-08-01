@@ -17,10 +17,29 @@ namespace KnxModel
         /// </summary>
         public const string LIGHTS_MIDDLE_GROUP = "1";
         
+        /// <summary>
+        /// Middle group for lighting lock control (2)
+        /// </summary>
+        public const string LIGHTS_LOCK_MIDDLE_GROUP = "2";
+
+        /// <summary>
+        /// Feedback offset for lights - add this value to control sub group to get feedback sub group
+        /// Control: 1/x/11 -> Feedback: 1/x/111
+        /// </summary>
+        public const int LIGHT_FEEDBACK_OFFSET = 100;
+
+        /// <summary>
+        /// Feedback offset for light locks - set to 0 because switch doesn't send automatic feedback
+        /// We treat write messages as feedback since lock uses the same address for control and status
+        /// Control: 1/2/11 -> Feedback: 1/2/11 (same address)
+        /// </summary>
+        public const int LIGHT_LOCK_FEEDBACK_OFFSET = 0;
+
+        
         #endregion
-        
+
         #region Shutter Control Configuration
-        
+
         /// <summary>
         /// Main group for shutter control (4)
         /// </summary>
@@ -60,6 +79,10 @@ namespace KnxModel
         /// Creates a light control address
         /// </summary>
         /// <param name="subGroup">Sub group number (e.g., "01", "02", etc.)</param>
+        /// <summary>
+        /// Creates a light control address
+        /// </summary>
+        /// <param name="subGroup">Sub group number (e.g., "11", "12", etc.)</param>
         /// <returns>Complete KNX address for light control</returns>
         public static string CreateLightControlAddress(string subGroup)
         {
@@ -69,11 +92,33 @@ namespace KnxModel
         /// <summary>
         /// Creates a light feedback address
         /// </summary>
-        /// <param name="feedbackSubGroup">Feedback sub group number (e.g., "101", "102", etc.)</param>
+        /// <param name="controlSubGroup">Control sub group number (e.g., "11", "12", etc.)</param>
         /// <returns>Complete KNX address for light feedback</returns>
-        public static string CreateLightFeedbackAddress(string feedbackSubGroup)
+        public static string CreateLightFeedbackAddress(string controlSubGroup)
         {
+            var feedbackSubGroup = (int.Parse(controlSubGroup) + LIGHT_FEEDBACK_OFFSET).ToString();
             return $"{LIGHTS_MAIN_GROUP}/{LIGHTS_MIDDLE_GROUP}/{feedbackSubGroup}";
+        }
+        
+        /// <summary>
+        /// Creates a light lock control address
+        /// </summary>
+        /// <param name="subGroup">Sub group number (e.g., "11", "12", etc.)</param>
+        /// <returns>Complete KNX address for light lock control</returns>
+        public static string CreateLightLockAddress(string subGroup)
+        {
+            return $"{LIGHTS_MAIN_GROUP}/{LIGHTS_LOCK_MIDDLE_GROUP}/{subGroup}";
+        }
+        
+        /// <summary>
+        /// Creates a light lock feedback address
+        /// </summary>
+        /// <param name="controlSubGroup">Control sub group number (e.g., "11", "12", etc.)</param>
+        /// <returns>Complete KNX address for light lock feedback</returns>
+        public static string CreateLightLockFeedbackAddress(string controlSubGroup)
+        {
+            var feedbackSubGroup = (int.Parse(controlSubGroup) + LIGHT_LOCK_FEEDBACK_OFFSET).ToString();
+            return $"{LIGHTS_MAIN_GROUP}/{LIGHTS_LOCK_MIDDLE_GROUP}/{feedbackSubGroup}";
         }
         
         /// <summary>

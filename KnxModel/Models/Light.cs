@@ -6,7 +6,7 @@ namespace KnxModel
     /// <summary>
     /// Implementation of ILight that manages a KNX light device
     /// </summary>
-    public class Light : KnxDevice<LightState, LightAddresses>, ILight
+    public class Light : LockableKnxDevice<LightState, LightAddresses>, ILight
     {
 
         /// <summary>
@@ -23,12 +23,11 @@ namespace KnxModel
 
         protected override LightAddresses CreateAddresses()
         {
-            // Calculate KNX addresses based on sub-group
-            // Feedback address has 100 offset (e.g., control "11" -> feedback "111")
-            var feedbackSubGroup = (int.Parse(SubGroup) + 100).ToString();
             return new LightAddresses(
                 Control: KnxAddressConfiguration.CreateLightControlAddress(SubGroup),
-                Feedback: KnxAddressConfiguration.CreateLightFeedbackAddress(feedbackSubGroup)
+                Feedback: KnxAddressConfiguration.CreateLightFeedbackAddress(SubGroup),
+                LockControl: KnxAddressConfiguration.CreateLightLockAddress(SubGroup),
+                LockFeedback: KnxAddressConfiguration.CreateLightLockFeedbackAddress(SubGroup)
             );
         }
 
@@ -37,6 +36,7 @@ namespace KnxModel
             // Initialize with default state
             return new LightState(
                 IsOn: false,
+                IsLocked: false,
                 LastUpdated: DateTime.Now
             );
         }
@@ -44,19 +44,31 @@ namespace KnxModel
         protected override async Task<LightState> ReadCurrentStateAsync()
         {
             var isOn = await ReadStateAsync();
+            var isLocked = await ReadLockStateAsync();
             return new LightState(
                 IsOn: isOn,
+                IsLocked: isLocked,
                 LastUpdated: DateTime.Now
             );
         }
 
         protected override void ProcessKnxMessage(KnxGroupEventArgs e)
         {
-            // Check if this message is relevant to our light and update state accordingly
+            // Check if this is a lock message first
+            if (ProcessLockMessage(e.Destination, e.Value))
+            {
+                return; // Lock message was processed
+            }
+
+            // Handle non-lock messages
             if (e.Destination == Addresses.Feedback)
             {
                 var isOn = e.Value.AsBoolean();
-                CurrentState = new LightState(IsOn: isOn, LastUpdated: DateTime.Now);
+                CurrentState = new LightState(
+                    IsOn: isOn, 
+                    IsLocked: CurrentState.IsLocked, 
+                    LastUpdated: DateTime.Now
+                );
                 Console.WriteLine($"Light {Id} state updated via feedback: {(isOn ? "ON" : "OFF")}");
             }
         }
@@ -86,6 +98,16 @@ namespace KnxModel
                 throw;
             }
         }
+
+        #region LockableKnxDevice Implementation
+
+        protected override string GetLockControlAddress() => Addresses.LockControl;
+        protected override string GetLockFeedbackAddress() => Addresses.LockFeedback;
+        protected override bool GetCurrentLockState() => CurrentState.IsLocked;
+        protected override LightState UpdateLockState(bool isLocked) => 
+            CurrentState with { IsLocked = isLocked, LastUpdated = DateTime.Now };
+
+        #endregion
 
         public async Task SetStateAsync(bool isOn)
         {
@@ -200,9 +222,11 @@ namespace KnxModel
             try
             {
                 var isOn = await ReadStateAsync();
+                var isLocked = await ReadLockStateAsync();
 
                 CurrentState = new LightState(
                     IsOn: isOn,
+                    IsLocked: isLocked,
                     LastUpdated: DateTime.Now
                 );
             }
@@ -218,7 +242,7 @@ namespace KnxModel
 
         public override string ToString()
         {
-            return $"Light {Id} ({Name}) - State: {(CurrentState.IsOn ? "ON" : "OFF")}";
+            return $"Light {Id} ({Name}) - State: {(CurrentState.IsOn ? "ON" : "OFF")}, Lock: {(CurrentState.IsLocked ? "LOCKED" : "UNLOCKED")}";
         }
 
         // Note: Dispose is now handled by base class

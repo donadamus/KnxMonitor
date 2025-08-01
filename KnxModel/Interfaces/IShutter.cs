@@ -6,7 +6,7 @@ namespace KnxModel
     /// <summary>
     /// Interface representing a KNX shutter with all its operations and state management
     /// </summary>
-    public interface IShutter : IKnxDevice
+    public interface IShutter : IKnxDevice, ILockable
     {
 
         /// <summary>
@@ -44,20 +44,9 @@ namespace KnxModel
         Task StopAsync();
 
         /// <summary>
-        /// Set shutter lock state
-        /// </summary>
-        /// <param name="locked">True to lock, false to unlock</param>
-        Task SetLockAsync(bool locked);
-
-        /// <summary>
         /// Read current position from KNX bus
         /// </summary>
         Task<float> ReadPositionAsync();
-
-        /// <summary>
-        /// Read current lock state from KNX bus
-        /// </summary>
-        Task<bool> ReadLockStateAsync();
 
         /// <summary>
         /// Read current movement state from KNX bus
@@ -77,14 +66,6 @@ namespace KnxModel
         /// </summary>
         /// <param name="timeout">Maximum time to wait</param>
         Task<bool> WaitForMovementStopAsync(TimeSpan? timeout = null);
-
-        /// <summary>
-        /// Wait for shutter to reach target lock state
-        /// </summary>
-        /// <param name="targetLockState">Target lock state to wait for</param>
-        /// <param name="timeout">Maximum time to wait</param>
-        /// <returns>True if lock state reached, false on timeout</returns>
-        Task<bool> WaitForLockStateAsync(bool targetLockState, TimeSpan? timeout = null);
 
         /// <summary>
         /// Open shutter completely (0% position)

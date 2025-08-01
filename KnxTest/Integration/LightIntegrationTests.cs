@@ -219,9 +219,102 @@ namespace KnxTest.Integration
             light.Name.Should().Be(expectedName);
             
             // Verify addresses are calculated correctly
-            var feedbackSubGroup = (int.Parse(expectedSubGroup) + 100).ToString();
+            var feedbackSubGroup = (int.Parse(expectedSubGroup) + KnxAddressConfiguration.LIGHT_FEEDBACK_OFFSET).ToString();
+            var lockSubGroup = (int.Parse(expectedSubGroup) + KnxAddressConfiguration.LIGHTS_LOCK_MIDDLE_GROUP).ToString();
+            var lockFeedbackSubGroup = (int.Parse(lockSubGroup) + KnxAddressConfiguration.LIGHT_FEEDBACK_OFFSET).ToString();
+            
             light.Addresses.Control.Should().Be($"1/1/{expectedSubGroup}");
             light.Addresses.Feedback.Should().Be($"1/1/{feedbackSubGroup}");
+            light.Addresses.LockControl.Should().Be($"1/2/{lockSubGroup}");
+            light.Addresses.LockFeedback.Should().Be($"1/2/{lockFeedbackSubGroup}");
+        }
+
+        [Theory]
+        [InlineData("L11")]
+        [InlineData("L13")]
+        [InlineData("L15")]
+        public async Task CanSetAndReadLightLockState(string lightId)
+        {
+            // Arrange
+            var light = LightFactory.CreateLight(lightId, _knxService);
+            await light.InitializeAsync();
+            light.SaveCurrentState();
+
+            try
+            {
+                // Test locking
+                Console.WriteLine($"Testing lock functionality for light {lightId}");
+                
+                // Act & Assert - Lock the light
+                await light.SetLockAsync(true);
+                light.CurrentState.IsLocked.Should().BeTrue();
+                
+                var lockState = await light.ReadLockStateAsync();
+                lockState.Should().BeTrue();
+                Console.WriteLine($"✅ Light {lightId} successfully locked");
+
+                // Act & Assert - Unlock the light
+                await light.SetLockAsync(false);
+                light.CurrentState.IsLocked.Should().BeFalse();
+                
+                lockState = await light.ReadLockStateAsync();
+                lockState.Should().BeFalse();
+                Console.WriteLine($"✅ Light {lightId} successfully unlocked");
+
+                // Test convenience methods
+                await light.LockAsync();
+                light.CurrentState.IsLocked.Should().BeTrue();
+                Console.WriteLine($"✅ Light {lightId} LockAsync() works");
+
+                await light.UnlockAsync();
+                light.CurrentState.IsLocked.Should().BeFalse();
+                Console.WriteLine($"✅ Light {lightId} UnlockAsync() works");
+            }
+            finally
+            {
+                // Cleanup - restore original state
+                await light.RestoreSavedStateAsync();
+                Console.WriteLine($"Light {lightId} lock test completed");
+            }
+        }
+
+        [Theory]
+        [InlineData("L11", true)]
+        [InlineData("L13", false)]
+        public async Task CanWaitForLightLockState(string lightId, bool targetLockState)
+        {
+            // Arrange
+            var light = LightFactory.CreateLight(lightId, _knxService);
+            await light.InitializeAsync();
+            light.SaveCurrentState();
+
+            try
+            {
+                Console.WriteLine($"Testing wait for lock state {(targetLockState ? "LOCKED" : "UNLOCKED")} for light {lightId}");
+
+                // Act - Set opposite state first
+                await light.SetLockAsync(!targetLockState);
+                
+                // Start waiting for target state in background
+                var waitTask = light.WaitForLockStateAsync(targetLockState, TimeSpan.FromSeconds(10));
+                
+                // Trigger state change after a delay
+                await Task.Delay(500);
+                await light.SetLockAsync(targetLockState);
+
+                // Assert
+                var result = await waitTask;
+                result.Should().BeTrue();
+                light.CurrentState.IsLocked.Should().Be(targetLockState);
+                
+                Console.WriteLine($"✅ Light {lightId} wait for lock state test passed");
+            }
+            finally
+            {
+                // Cleanup
+                await light.RestoreSavedStateAsync();
+                Console.WriteLine($"Light {lightId} wait lock test completed");
+            }
         }
     }
 }

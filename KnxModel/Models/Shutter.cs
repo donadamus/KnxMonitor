@@ -6,7 +6,7 @@ namespace KnxModel
     /// <summary>
     /// Implementation of IShutter that manages a KNX shutter device
     /// </summary>
-    public class Shutter : KnxDevice<ShutterState, ShutterAddresses>, IShutter
+    public class Shutter : LockableKnxDevice<ShutterState, ShutterAddresses>, IShutter
     {
         private readonly TimeSpan _defaultMoveTimeout = TimeSpan.FromSeconds(30);
 
@@ -48,6 +48,16 @@ namespace KnxModel
             );
         }
 
+        #region LockableKnxDevice Implementation
+
+        protected override string GetLockControlAddress() => Addresses.LockControl;
+        protected override string GetLockFeedbackAddress() => Addresses.LockFeedback;
+        protected override bool GetCurrentLockState() => CurrentState.IsLocked;
+        protected override ShutterState UpdateLockState(bool isLocked) => 
+            CurrentState with { IsLocked = isLocked, LastUpdated = DateTime.Now };
+
+        #endregion
+
         protected override async Task<ShutterState> ReadCurrentStateAsync()
         {
             var position = await ReadPositionAsync();
@@ -64,18 +74,18 @@ namespace KnxModel
 
         protected override void ProcessKnxMessage(KnxGroupEventArgs e)
         {
-            // Check if this message is relevant to our shutter and update state accordingly
+            // Check if this is a lock message first
+            if (ProcessLockMessage(e.Destination, e.Value))
+            {
+                return; // Lock message was processed
+            }
+
+            // Handle non-lock messages
             if (e.Destination == Addresses.PositionFeedback)
             {
                 var positionPercent = e.Value.AsPercentageValue();
                 CurrentState = CurrentState with { Position = positionPercent, LastUpdated = DateTime.Now };
                 Console.WriteLine($"Shutter {Id} position updated via feedback: {positionPercent}%");
-            }
-            else if (e.Destination == Addresses.LockFeedback)
-            {
-                var isLocked = e.Value.AsBoolean();
-                CurrentState = CurrentState with { IsLocked = isLocked, LastUpdated = DateTime.Now };
-                Console.WriteLine($"Shutter {Id} lock state updated via feedback: {(isLocked ? "Locked" : "Unlocked")}");
             }
             else if (e.Destination == Addresses.MovementFeedback)
             {
@@ -187,45 +197,6 @@ namespace KnxModel
             }
         }
 
-        public async Task SetLockAsync(bool locked)
-        {
-            Console.WriteLine($"{(locked ? "Locking" : "Unlocking")} shutter {Id}");
-            _knxService.WriteGroupValue(Addresses.LockControl, locked);
-            
-            // Wait for lock state change to be confirmed via feedback
-            var timeout = TimeSpan.FromSeconds(5);
-            
-            // Create a task that completes when target lock state is reached
-            var waitTask = Task.Run(async () =>
-            {
-                while (true)
-                {
-                    if (CurrentState.IsLocked == locked)
-                    {
-                        Console.WriteLine($"✅ Shutter {Id} lock state confirmed: {(locked ? "Locked" : "Unlocked")}");
-                        return true;
-                    }
-                    await Task.Delay(_pollingIntervalMs); // Check every 200ms
-                }
-            });
-
-            // Create timeout task
-            var timeoutTask = Task.Delay(timeout);
-
-            // Wait for either lock state to be reached or timeout
-            var completedTask = await Task.WhenAny(waitTask, timeoutTask);
-
-            if (completedTask == waitTask)
-            {
-                await waitTask; // Lock state reached
-            }
-            else
-            {
-                // Timeout occurred
-                Console.WriteLine($"⚠️ WARNING: Shutter {Id} lock state change not confirmed within timeout");
-            }
-        }
-
         public async Task<float> ReadPositionAsync()
         {
             try
@@ -235,19 +206,6 @@ namespace KnxModel
             catch (Exception ex)
             {
                 Console.WriteLine($"Failed to read position for shutter {Id}: {ex.Message}");
-                throw;
-            }
-        }
-
-        public async Task<bool> ReadLockStateAsync()
-        {
-            try
-            {
-                return await _knxService.RequestGroupValue<bool>(Addresses.LockFeedback);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Failed to read lock state for shutter {Id}: {ex.Message}");
                 throw;
             }
         }
@@ -360,51 +318,6 @@ namespace KnxModel
                 Console.WriteLine($"⚠️ WARNING: Shutter {Id} movement timeout - NO FEEDBACK RECEIVED!");
                 Console.WriteLine($"This may indicate: missing feedback configuration, hardware issue, or communication problem");
                 
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Waits for the shutter to reach the specified lock state
-        /// </summary>
-        /// <param name="targetLockState">Target lock state to wait for</param>
-        /// <param name="timeout">Maximum time to wait</param>
-        /// <returns>True if lock state was reached, false on timeout</returns>
-        public async Task<bool> WaitForLockStateAsync(bool expectedIsLocked, TimeSpan? timeout = null)
-        {
-            var effectiveTimeout = timeout ?? _defaultTimeout;
-            Console.WriteLine($"Waiting for shutter {Id} lock state to become: {(expectedIsLocked ? "LOCKED" : "UNLOCKED")}");
-
-            // Create a task that completes when target lock state is reached
-            var waitTask = Task.Run(async () =>
-            {
-                while (true)
-                {
-                    if (CurrentState.IsLocked == expectedIsLocked)
-                    {
-                        Console.WriteLine($"✅ Shutter {Id} lock state achieved: {(expectedIsLocked ? "LOCKED" : "UNLOCKED")}");
-                        return true;
-                    }
-
-                    await Task.Delay(_pollingIntervalMs); // Check every 200ms
-                }
-            });
-
-            // Create timeout task
-            var timeoutTask = Task.Delay(effectiveTimeout);
-
-            // Wait for either lock state to be reached or timeout
-            var completedTask = await Task.WhenAny(waitTask, timeoutTask);
-
-            if (completedTask == waitTask)
-            {
-                return await waitTask; // Lock state reached
-            }
-            else
-            {
-                // Timeout occurred
-                Console.WriteLine($"⚠️ WARNING: Shutter {Id} lock state timeout - expected {(expectedIsLocked ? "LOCKED" : "UNLOCKED")}, current {(CurrentState.IsLocked ? "LOCKED" : "UNLOCKED")}");
-                Console.WriteLine($"This may indicate: missing lock feedback or hardware communication issue");
                 return false;
             }
         }
