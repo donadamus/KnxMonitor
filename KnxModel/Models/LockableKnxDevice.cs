@@ -72,7 +72,11 @@ namespace KnxModel
 
         public async Task SetLockAsync(bool isLocked, TimeSpan? timeout = null)
         {
+            await SetLockStateAsync(isLocked, timeout);
+        }
 
+        protected virtual async Task SetLockStateAsync(bool isLocked, TimeSpan? timeout = null)
+        {
             await SetBitFunctionAsync(
                 Addresses.LockControl,
                 isLocked,
@@ -91,7 +95,7 @@ namespace KnxModel
             await SetLockAsync(false);
         }
 
-        public async Task<bool> ReadLockStateAsync()
+        public virtual async Task<bool> ReadLockStateAsync()
         {
             try
             {
@@ -104,7 +108,7 @@ namespace KnxModel
             }
         }
 
-        public async Task<bool> WaitForLockStateAsync(bool targetLockState, TimeSpan? timeout = null)
+        public virtual async Task<bool> WaitForLockStateAsync(bool targetLockState, TimeSpan? timeout = null)
         {
             Console.WriteLine($"Waiting for {GetType().Name.ToLower()} {Id} lock to become: {(targetLockState ? "LOCKED" : "UNLOCKED")}");
             

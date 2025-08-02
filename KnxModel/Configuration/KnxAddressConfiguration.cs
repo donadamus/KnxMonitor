@@ -38,6 +38,36 @@ namespace KnxModel
         
         #endregion
 
+        #region Dimmer Control Configuration
+        
+        /// <summary>
+        /// Main group for dimmer control (2)
+        /// </summary>
+        public const string DIMMERS_MAIN_GROUP = "2";
+        
+        /// <summary>
+        /// Middle group for dimmer switch control (on/off) (1)
+        /// </summary>
+        public const string DIMMERS_SWITCH_MIDDLE_GROUP = "1";
+        
+        /// <summary>
+        /// Middle group for dimmer brightness control (0-100%) (2)
+        /// </summary>
+        public const string DIMMERS_BRIGHTNESS_MIDDLE_GROUP = "2";
+        
+        /// <summary>
+        /// Middle group for dimmer lock control (3)
+        /// </summary>
+        public const string DIMMERS_LOCK_MIDDLE_GROUP = "3";
+
+        /// <summary>
+        /// Feedback offset for dimmers - add this value to control sub group to get feedback sub group
+        /// Control: 2/x/1 -> Feedback: 2/x/101
+        /// </summary>
+        public const int DIMMER_FEEDBACK_OFFSET = 100;
+
+        #endregion
+
         #region Shutter Control Configuration
 
         /// <summary>
@@ -70,6 +100,73 @@ namespace KnxModel
         /// Control: 4/x/18 -> Feedback: 4/x/118
         /// </summary>
         public const int SHUTTER_FEEDBACK_OFFSET = 100;
+        
+        #endregion
+        
+        #region Dimmer Address Creation Methods
+        
+        /// <summary>
+        /// Creates a dimmer switch control address (on/off)
+        /// </summary>
+        /// <param name="subGroup">Sub group number (e.g., "1", "2", etc.)</param>
+        /// <returns>Complete KNX address for dimmer switch control</returns>
+        public static string CreateDimmerSwitchControlAddress(string subGroup)
+        {
+            return $"{DIMMERS_MAIN_GROUP}/{DIMMERS_SWITCH_MIDDLE_GROUP}/{subGroup}";
+        }
+        
+        /// <summary>
+        /// Creates a dimmer switch feedback address (on/off)
+        /// </summary>
+        /// <param name="controlSubGroup">Control sub group number (e.g., "1", "2", etc.)</param>
+        /// <returns>Complete KNX address for dimmer switch feedback</returns>
+        public static string CreateDimmerSwitchFeedbackAddress(string controlSubGroup)
+        {
+            var feedbackSubGroup = (int.Parse(controlSubGroup) + DIMMER_FEEDBACK_OFFSET).ToString();
+            return $"{DIMMERS_MAIN_GROUP}/{DIMMERS_SWITCH_MIDDLE_GROUP}/{feedbackSubGroup}";
+        }
+        
+        /// <summary>
+        /// Creates a dimmer brightness control address (0-100%)
+        /// </summary>
+        /// <param name="subGroup">Sub group number (e.g., "1", "2", etc.)</param>
+        /// <returns>Complete KNX address for dimmer brightness control</returns>
+        public static string CreateDimmerBrightnessControlAddress(string subGroup)
+        {
+            return $"{DIMMERS_MAIN_GROUP}/{DIMMERS_BRIGHTNESS_MIDDLE_GROUP}/{subGroup}";
+        }
+        
+        /// <summary>
+        /// Creates a dimmer brightness feedback address (0-100%)
+        /// </summary>
+        /// <param name="controlSubGroup">Control sub group number (e.g., "1", "2", etc.)</param>
+        /// <returns>Complete KNX address for dimmer brightness feedback</returns>
+        public static string CreateDimmerBrightnessFeedbackAddress(string controlSubGroup)
+        {
+            var feedbackSubGroup = (int.Parse(controlSubGroup) + DIMMER_FEEDBACK_OFFSET).ToString();
+            return $"{DIMMERS_MAIN_GROUP}/{DIMMERS_BRIGHTNESS_MIDDLE_GROUP}/{feedbackSubGroup}";
+        }
+        
+        /// <summary>
+        /// Creates a dimmer lock control address
+        /// </summary>
+        /// <param name="subGroup">Sub group number (e.g., "1", "2", etc.)</param>
+        /// <returns>Complete KNX address for dimmer lock control</returns>
+        public static string CreateDimmerLockAddress(string subGroup)
+        {
+            return $"{DIMMERS_MAIN_GROUP}/{DIMMERS_LOCK_MIDDLE_GROUP}/{subGroup}";
+        }
+        
+        /// <summary>
+        /// Creates a dimmer lock feedback address
+        /// </summary>
+        /// <param name="controlSubGroup">Control sub group number (e.g., "1", "2", etc.)</param>
+        /// <returns>Complete KNX address for dimmer lock feedback</returns>
+        public static string CreateDimmerLockFeedbackAddress(string controlSubGroup)
+        {
+            var feedbackSubGroup = (int.Parse(controlSubGroup) + DIMMER_FEEDBACK_OFFSET).ToString();
+            return $"{DIMMERS_MAIN_GROUP}/{DIMMERS_LOCK_MIDDLE_GROUP}/{feedbackSubGroup}";
+        }
         
         #endregion
         

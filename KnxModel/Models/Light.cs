@@ -100,7 +100,7 @@ namespace KnxModel
 
         #endregion
 
-        public async Task SetStateAsync(bool isOn)
+        public virtual async Task SetStateAsync(bool isOn)
         {
             Console.WriteLine($"{(isOn ? "Turning ON" : "Turning OFF")} light {Id}");
             
@@ -111,24 +111,24 @@ namespace KnxModel
             );
         }
 
-        public async Task TurnOnAsync()
+        public virtual async Task TurnOnAsync()
         {
             await SetStateAsync(true);
         }
 
-        public async Task TurnOffAsync()
+        public virtual async Task TurnOffAsync()
         {
             await SetStateAsync(false);
         }
 
-        public async Task ToggleAsync()
+        public virtual async Task ToggleAsync()
         {
             var newState = !CurrentState.IsOn;
             Console.WriteLine($"Toggling light {Id} to {(newState ? "ON" : "OFF")}");
             await SetStateAsync(newState);
         }
 
-        public async Task<bool> ReadStateAsync()
+        public virtual async Task<bool> ReadStateAsync()
         {
             try
             {
@@ -141,7 +141,7 @@ namespace KnxModel
             }
         }
 
-        public async Task<bool> WaitForStateAsync(bool targetState, TimeSpan? timeout = null)
+        public virtual async Task<bool> WaitForStateAsync(bool targetState, TimeSpan? timeout = null)
         {
             Console.WriteLine($"Waiting for light {Id} to become: {(targetState ? "ON" : "OFF")}");
             
