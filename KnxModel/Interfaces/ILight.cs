@@ -32,17 +32,17 @@ namespace KnxModel
         /// <summary>
         /// Turn light on
         /// </summary>
-        Task TurnOnAsync();
+        Task TurnOnAsync(TimeSpan? timeout = null);
 
         /// <summary>
         /// Turn light off
         /// </summary>
-        Task TurnOffAsync();
+        Task TurnOffAsync(TimeSpan? timeout = null);
 
         /// <summary>
         /// Toggle light state (on->off, off->on)
         /// </summary>
-        Task ToggleAsync();
+        Task ToggleAsync(TimeSpan? timeout = null);
 
         /// <summary>
         /// Read current light state from KNX bus

@@ -22,6 +22,7 @@ namespace KnxModel
 
     /// <summary>
     /// Current state of a KNX dimmer
+    /// Extends LightState with brightness information
     /// </summary>
     /// <param name="IsOn">Whether the dimmer is currently on</param>
     /// <param name="Brightness">Current brightness level (0-100%)</param>
@@ -32,5 +33,5 @@ namespace KnxModel
         float Brightness,
         bool IsLocked,
         DateTime LastUpdated
-    ) : ILockableState;
+    ) : LightState(IsOn, IsLocked, LastUpdated);
 }

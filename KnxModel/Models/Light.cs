@@ -112,21 +112,21 @@ namespace KnxModel
             );
         }
 
-        public virtual async Task TurnOnAsync()
+        public virtual async Task TurnOnAsync(TimeSpan? timeout = null)
         {
-            await SetStateAsync(true);
+            await SetStateAsync(true, timeout);
         }
 
-        public virtual async Task TurnOffAsync()
+        public virtual async Task TurnOffAsync(TimeSpan? timeout = null)
         {
-            await SetStateAsync(false);
+            await SetStateAsync(false, timeout);
         }
 
-        public virtual async Task ToggleAsync()
+        public virtual async Task ToggleAsync(TimeSpan? timeout = null)
         {
             var newState = !CurrentState.IsOn;
             Console.WriteLine($"Toggling light {Id} to {(newState ? "ON" : "OFF")}");
-            await SetStateAsync(newState);
+            await SetStateAsync(newState, timeout);
         }
 
         public virtual async Task<bool> ReadStateAsync()

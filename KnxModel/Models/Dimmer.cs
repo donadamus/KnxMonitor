@@ -9,7 +9,7 @@ namespace KnxModel
     /// </summary>
     public class Dimmer : Light, IDimmer
     {
-        private DimmerAddresses _dimmerAddresses;
+        private DimmerAddresses _dimmerAddresses = null!; // Initialized in CreateAddresses() called by base constructor
 
         /// <summary>
         /// Gets the dimmer-specific addresses
@@ -17,14 +17,47 @@ namespace KnxModel
         public new DimmerAddresses Addresses => _dimmerAddresses;
 
         /// <summary>
-        /// Gets the current dimmer state
+        /// Override base Addresses property to map dimmer addresses to light addresses
+        /// This ensures that inherited Light methods use the correct dimmer addresses
         /// </summary>
-        public new DimmerState CurrentState { get; protected set; }
+        protected override LightAddresses CreateAddresses()
+        {
+            // Create and store dimmer addresses
+            _dimmerAddresses = new DimmerAddresses(
+                SwitchControl: KnxAddressConfiguration.CreateDimmerSwitchControlAddress(SubGroup),
+                SwitchFeedback: KnxAddressConfiguration.CreateDimmerSwitchFeedbackAddress(SubGroup),
+                BrightnessControl: KnxAddressConfiguration.CreateDimmerBrightnessControlAddress(SubGroup),
+                BrightnessFeedback: KnxAddressConfiguration.CreateDimmerBrightnessFeedbackAddress(SubGroup),
+                LockControl: KnxAddressConfiguration.CreateDimmerLockAddress(SubGroup),
+                LockFeedback: KnxAddressConfiguration.CreateDimmerLockFeedbackAddress(SubGroup)
+            );
+            
+            // Return mapped addresses for base class compatibility
+            return new LightAddresses(
+                Control: _dimmerAddresses.SwitchControl,
+                Feedback: _dimmerAddresses.SwitchFeedback,
+                LockControl: _dimmerAddresses.LockControl,
+                LockFeedback: _dimmerAddresses.LockFeedback
+            );
+        }
 
         /// <summary>
-        /// Gets the saved dimmer state
+        /// Gets the current dimmer state (shadows base LightState)
         /// </summary>
-        public new DimmerState? SavedState { get; protected set; }
+        public new DimmerState CurrentState 
+        { 
+            get => (DimmerState)base.CurrentState; 
+            protected set => base.CurrentState = value; 
+        }
+
+        /// <summary>
+        /// Gets the saved dimmer state (shadows base LightState)
+        /// </summary>
+        public new DimmerState? SavedState 
+        { 
+            get => (DimmerState?)base.SavedState; 
+            protected set => base.SavedState = value; 
+        }
 
         /// <summary>
         /// Creates a new Dimmer instance
@@ -36,24 +69,12 @@ namespace KnxModel
         public Dimmer(string id, string name, string subGroup, IKnxService knxService)
             : base(id, name, subGroup, knxService)
         {
-            _dimmerAddresses = CreateDimmerAddresses();
-            CurrentState = CreateDefaultDimmerState();
+            // CurrentState is automatically set by base constructor via CreateDefaultState()
         }
 
-        private DimmerAddresses CreateDimmerAddresses()
+        protected override LightState CreateDefaultState()
         {
-            return new DimmerAddresses(
-                SwitchControl: KnxAddressConfiguration.CreateDimmerSwitchControlAddress(SubGroup),
-                SwitchFeedback: KnxAddressConfiguration.CreateDimmerSwitchFeedbackAddress(SubGroup),
-                BrightnessControl: KnxAddressConfiguration.CreateDimmerBrightnessControlAddress(SubGroup),
-                BrightnessFeedback: KnxAddressConfiguration.CreateDimmerBrightnessFeedbackAddress(SubGroup),
-                LockControl: KnxAddressConfiguration.CreateDimmerLockAddress(SubGroup),
-                LockFeedback: KnxAddressConfiguration.CreateDimmerLockFeedbackAddress(SubGroup)
-            );
-        }
-
-        private DimmerState CreateDefaultDimmerState()
-        {
+            // Return DimmerState which inherits from LightState  
             return new DimmerState(
                 IsOn: false,
                 Brightness: 0,
@@ -64,13 +85,8 @@ namespace KnxModel
 
         protected override async Task<LightState> ReadCurrentStateAsync()
         {
-            // Read the full dimmer state and convert to LightState for base class compatibility
-            var dimmerState = await ReadCurrentDimmerStateAsync();
-            return new LightState(
-                IsOn: dimmerState.IsOn,
-                IsLocked: dimmerState.IsLocked,
-                LastUpdated: dimmerState.LastUpdated
-            );
+            // Read the full dimmer state and return it (DimmerState inherits from LightState)
+            return await ReadCurrentDimmerStateAsync();
         }
 
         private async Task<DimmerState> ReadCurrentDimmerStateAsync()
