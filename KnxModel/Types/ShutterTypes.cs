@@ -40,9 +40,8 @@ namespace KnxModel
     /// </summary>
     public enum ShutterMovementState
     {
-        Stopped,
-        MovingUp,
-        MovingDown,
+        Inactive,
+        Active,
         Unknown
     }
 }

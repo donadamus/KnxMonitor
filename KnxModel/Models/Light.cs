@@ -100,14 +100,15 @@ namespace KnxModel
 
         #endregion
 
-        public virtual async Task SetStateAsync(bool isOn)
+        public virtual async Task SetStateAsync(bool isOn, TimeSpan? timeout = null)
         {
             Console.WriteLine($"{(isOn ? "Turning ON" : "Turning OFF")} light {Id}");
             
             await SetBitFunctionAsync(
                 Addresses.Control,
-                isOn,
-                () => CurrentState.IsOn == isOn
+                targetValue: isOn,
+                stateSelector: () => CurrentState.IsOn == isOn,
+                timeout: timeout
             );
         }
 

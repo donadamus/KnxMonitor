@@ -18,12 +18,12 @@ namespace KnxModel
         /// <summary>
         /// Lock the device
         /// </summary>
-        Task LockAsync();
+        Task LockAsync(TimeSpan? timeout = null);
 
         /// <summary>
         /// Unlock the device
         /// </summary>
-        Task UnlockAsync();
+        Task UnlockAsync(TimeSpan? timeout = null);
 
         /// <summary>
         /// Read current device lock state from KNX bus

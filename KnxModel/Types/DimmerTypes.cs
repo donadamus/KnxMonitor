@@ -29,7 +29,7 @@ namespace KnxModel
     /// <param name="LastUpdated">When the state was last updated</param>
     public record DimmerState(
         bool IsOn,
-        int Brightness,
+        float Brightness,
         bool IsLocked,
         DateTime LastUpdated
     ) : ILockableState;

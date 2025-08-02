@@ -158,48 +158,9 @@ namespace KnxModel
             Console.WriteLine($"Saved current state for dimmer {Id} - State: {(CurrentState.IsOn ? "ON" : "OFF")}, Brightness: {CurrentState.Brightness}%");
         }
 
-        #region Switch Control (Light functionality)
-
-        public override async Task SetStateAsync(bool isOn)
-        {
-            Console.WriteLine($"{(isOn ? "Turning ON" : "Turning OFF")} dimmer {Id}");
-            
-            await SetBitFunctionAsync(
-                _dimmerAddresses.SwitchControl,
-                isOn,
-                () => CurrentState.IsOn == isOn
-            );
-        }
-
-        public override async Task<bool> ReadStateAsync()
-        {
-            try
-            {
-                return await _knxService.RequestGroupValue<bool>(_dimmerAddresses.SwitchFeedback);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Failed to read switch state for dimmer {Id}: {ex.Message}");
-                throw;
-            }
-        }
-
-        public override async Task<bool> WaitForStateAsync(bool targetState, TimeSpan? timeout = null)
-        {
-            Console.WriteLine($"Waiting for dimmer {Id} to become: {(targetState ? "ON" : "OFF")}");
-            
-            return await WaitForConditionAsync(
-                condition: () => CurrentState.IsOn == targetState,
-                timeout: timeout,
-                description: $"switch state {(targetState ? "ON" : "OFF")}"
-            );
-        }
-
-        #endregion
-
         #region Brightness Control
 
-        public async Task SetBrightnessAsync(int brightness)
+        public async Task SetBrightnessAsync(float brightness, TimeSpan? timespan = null)
         {
             if (brightness < 0 || brightness > 100)
             {
@@ -212,16 +173,17 @@ namespace KnxModel
             await SetFloatFunctionAsync(
                 _dimmerAddresses.BrightnessControl,
                 (float)brightness,
-                () => Math.Abs(CurrentState.Brightness - brightness) <= 1 // Allow 1% tolerance
+                () => Math.Abs(CurrentState.Brightness - brightness) <= 1, // Allow 1% tolerance
+                timespan
             );
         }
 
-        public async Task<int> ReadBrightnessAsync()
+        public async Task<float> ReadBrightnessAsync()
         {
             try
             {
                 // RequestGroupValue<int> will handle KNX byte (0-255) to percentage (0-100) conversion
-                return await _knxService.RequestGroupValue<int>(_dimmerAddresses.BrightnessFeedback);
+                return await _knxService.RequestGroupValue<float>(_dimmerAddresses.BrightnessFeedback);
             }
             catch (Exception ex)
             {
@@ -230,7 +192,7 @@ namespace KnxModel
             }
         }
 
-        public async Task<bool> WaitForBrightnessAsync(int targetBrightness, TimeSpan? timeout = null)
+        public async Task<bool> WaitForBrightnessAsync(float targetBrightness, TimeSpan? timeout = null)
         {
             Console.WriteLine($"Waiting for dimmer {Id} brightness to become: {targetBrightness}%");
             
@@ -241,7 +203,7 @@ namespace KnxModel
             );
         }
 
-        public async Task FadeToAsync(int targetBrightness, TimeSpan duration)
+        public async Task FadeToAsync(float targetBrightness, TimeSpan duration)
         {
             if (targetBrightness < 0 || targetBrightness > 100)
             {

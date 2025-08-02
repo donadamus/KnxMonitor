@@ -53,11 +53,11 @@ namespace KnxTest.Unit.Models
         {
             // Arrange
             var expectedPosition = 45.0f;
-            _mockKnxService.Setup(s => s.RequestGroupValue<float>("4/2/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>(_shutter.Addresses.PositionFeedback))
                           .ReturnsAsync(expectedPosition);
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.LockFeedback))
                           .ReturnsAsync(true); // locked
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/1/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.MovementStatusFeedback))
                           .ReturnsAsync(false); // stopped
 
             // Act
@@ -66,7 +66,7 @@ namespace KnxTest.Unit.Models
             // Assert
             _shutter.CurrentState.Position.Should().Be(expectedPosition);
             _shutter.CurrentState.IsLocked.Should().BeTrue();
-            _shutter.CurrentState.MovementState.Should().Be(ShutterMovementState.Stopped);
+            _shutter.CurrentState.MovementState.Should().Be(ShutterMovementState.Inactive);
             _shutter.CurrentState.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(5));
         }
 
@@ -75,11 +75,11 @@ namespace KnxTest.Unit.Models
         {
             // Arrange
             var expectedPosition = 75.0f;
-            _mockKnxService.Setup(s => s.RequestGroupValue<float>("4/2/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>(_shutter.Addresses.PositionFeedback))
                           .ReturnsAsync(expectedPosition);
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.LockFeedback))
                           .ReturnsAsync(false); // unlocked
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/1/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.MovementStatusFeedback))
                           .ReturnsAsync(false); // stopped
 
             // Act
@@ -90,7 +90,7 @@ namespace KnxTest.Unit.Models
             _shutter.SavedState.Should().NotBeNull();
             _shutter.SavedState!.Position.Should().Be(expectedPosition);
             _shutter.SavedState.IsLocked.Should().BeFalse();
-            _shutter.SavedState.MovementState.Should().Be(ShutterMovementState.Stopped);
+            _shutter.SavedState.MovementState.Should().Be(ShutterMovementState.Inactive);
         }
 
         [Fact]
@@ -107,112 +107,193 @@ namespace KnxTest.Unit.Models
             var targetPosition = 60.0f;
             
             // Setup for RefreshCurrentStateAsync calls
-            _mockKnxService.Setup(s => s.RequestGroupValue<float>("4/2/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>(_shutter.Addresses.PositionFeedback))
                           .ReturnsAsync(targetPosition);
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.LockFeedback))
                           .ReturnsAsync(false);
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/1/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.MovementStatusFeedback))
                           .ReturnsAsync(false);
+
+            // Initialize shutter to start listening to feedback events
+            await _shutter.InitializeAsync();
+
+            // Setup WriteGroupValue to trigger feedback event when position control is written
+            _mockKnxService.Setup(s => s.WriteGroupValue(_shutter.Addresses.PositionControl, It.IsAny<float>()))
+                          .Callback<string, float>((address, positionValue) =>
+                          {
+                              // Simulate KNX feedback response with the same value that was written
+                              // Convert float to double for KnxValue since AsPercentageValue() supports double but not float
+                              var feedbackArgs = new KnxGroupEventArgs(_shutter.Addresses.PositionFeedback, new KnxValue((double)positionValue));
+                              _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, feedbackArgs);
+                          });
 
             // Act
             await _shutter.SetPositionAsync(targetPosition);
 
             // Assert
-            _mockKnxService.Verify(s => s.WriteGroupValue("4/2/1", targetPosition), Times.Once);
+            _mockKnxService.Verify(s => s.WriteGroupValue(_shutter.Addresses.PositionControl, targetPosition), Times.Once);
         }
 
         [Fact]
         public async Task MoveAsync_CallsKnxServiceWithCorrectValues()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.RequestGroupValue<float>("4/2/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>(_shutter.Addresses.PositionFeedback))
                           .ReturnsAsync(50.0f);
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.LockFeedback))
                           .ReturnsAsync(false);
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/1/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.MovementStatusFeedback))
                           .ReturnsAsync(false);
+
+            // Initialize shutter to start listening to feedback events
+            await _shutter.InitializeAsync();
+
+            // Setup WriteGroupValue to trigger feedback event when movement control is written
+            _mockKnxService.Setup(s => s.WriteGroupValue(_shutter.Addresses.MovementControl, It.IsAny<bool>()))
+                          .Callback<string, bool>((address, movementValue) =>
+                          {
+                              // Simulate movement start feedback, then stop after short delay
+                              var startArgs = new KnxGroupEventArgs(_shutter.Addresses.MovementStatusFeedback, new KnxValue(true));
+                              _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, startArgs);
+                              
+                              // Simulate automatic stop after movement
+                              Task.Run(async () =>
+                              {
+                                  await Task.Delay(10); // Short delay to simulate movement
+                                  var stopArgs = new KnxGroupEventArgs(_shutter.Addresses.MovementStatusFeedback, new KnxValue(false));
+                                  _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, stopArgs);
+                              });
+                          });
 
             // Act - Test UP direction
             await _shutter.MoveAsync(ShutterDirection.Up);
 
             // Assert
-            _mockKnxService.Verify(s => s.WriteGroupValue("4/0/1", false), Times.Once); // UP = false
+            _mockKnxService.Verify(s => s.WriteGroupValue(_shutter.Addresses.MovementControl, false), Times.Once); // UP = false
 
             // Act - Test DOWN direction
             await _shutter.MoveAsync(ShutterDirection.Down);
 
             // Assert
-            _mockKnxService.Verify(s => s.WriteGroupValue("4/0/1", true), Times.Once); // DOWN = true
+            _mockKnxService.Verify(s => s.WriteGroupValue(_shutter.Addresses.MovementControl, true), Times.Once); // DOWN = true
         }
 
         [Fact]
         public async Task MoveAsync_WithDuration_CallsStopAfterDelay()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.RequestGroupValue<float>("4/2/101"))
-                          .ReturnsAsync(50.0f);
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
+            var startingPosition = 50.0f;
+            var endingPosition = 60.0f;
+
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>(_shutter.Addresses.PositionFeedback))
+                          .ReturnsAsync(startingPosition);
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.LockFeedback))
                           .ReturnsAsync(false);
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/1/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.MovementStatusFeedback))
                           .ReturnsAsync(false);
+            _mockKnxService.Setup(s => s.WriteGroupValue(_shutter.Addresses.MovementControl, It.IsAny<bool>()))
+                .Callback<string, bool>((address, movementValue) =>
+                {
+                    // Simulate movement start feedback
+                    {
+                        var startArgs = new KnxGroupEventArgs(_shutter.Addresses.MovementStatusFeedback, new KnxValue(true));
+                        _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, startArgs);
+                    }
+
+                    {
+                        var startArgs = new KnxGroupEventArgs(_shutter.Addresses.MovementFeedback, new KnxValue(movementValue));
+                        _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, startArgs);
+                    }
+
+                    {
+                        var startArgs = new KnxGroupEventArgs(_shutter.Addresses.PositionFeedback, new KnxValue(endingPosition));
+                        _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, startArgs);
+                    }
+
+
+                });
+            _mockKnxService.Setup(s => s.WriteGroupValue(_shutter.Addresses.StopControl, It.IsAny<bool>()))
+                .Callback<string, bool>((address, movementValue) =>
+                {
+                    // Simulate movement stop
+                    {
+                        var startArgs = new KnxGroupEventArgs(_shutter.Addresses.MovementStatusFeedback, new KnxValue(false));
+                        _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, startArgs);
+                    }
+                });
+
+            // Initialize shutter to start listening to feedback events
+            await _shutter.InitializeAsync();
+
+            //assert that the shutter is not moving before the test
+            _shutter.CurrentState.MovementState.Should().Be(ShutterMovementState.Inactive);
+            _shutter.CurrentState.Position.Should().Be(startingPosition);
 
             // Act
             await _shutter.MoveAsync(ShutterDirection.Up, TimeSpan.FromMilliseconds(100));
 
+            // Assert that the shutter is stopped after the move
+            _shutter.CurrentState.MovementState.Should().Be(ShutterMovementState.Inactive);
+            _shutter.CurrentState.Position.Should().Be(endingPosition);
+
             // Assert
-            _mockKnxService.Verify(s => s.WriteGroupValue("4/0/1", false), Times.Once); // Movement command
-            _mockKnxService.Verify(s => s.WriteGroupValue("4/1/1", true), Times.Once);  // Stop command
+            _mockKnxService.Verify(s => s.WriteGroupValue(_shutter.Addresses.MovementControl, false), Times.Once); // Movement command
+            _mockKnxService.Verify(s => s.WriteGroupValue(_shutter.Addresses.StopControl, true), Times.Once);  // Stop command
         }
 
         [Fact]
         public async Task StopAsync_CallsKnxServiceWithStopCommand()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.RequestGroupValue<float>("4/2/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>(_shutter.Addresses.PositionFeedback))
                           .ReturnsAsync(50.0f);
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.LockFeedback))
                           .ReturnsAsync(false);
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/1/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.MovementStatusFeedback))
                           .ReturnsAsync(false);
 
             // Act
             await _shutter.StopAsync();
 
             // Assert
-            _mockKnxService.Verify(s => s.WriteGroupValue("4/1/1", true), Times.Once);
+            _mockKnxService.Verify(s => s.WriteGroupValue(_shutter.Addresses.StopControl, true), Times.Once);
         }
 
         [Fact]
         public async Task SetLockAsync_CallsKnxServiceWithCorrectValues()
         {
-            // Arrange
-            _mockKnxService.Setup(s => s.RequestGroupValue<float>("4/2/101"))
-                          .ReturnsAsync(50.0f);
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
-                          .ReturnsAsync(true);
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/1/101"))
-                          .ReturnsAsync(false);
+            // Initialize shutter to start listening to feedback events
+            await _shutter.InitializeAsync();
+
+            // Setup WriteGroupValue to trigger feedback event when lock control is written
+            _mockKnxService.Setup(s => s.WriteGroupValue(_shutter.Addresses.LockControl, It.IsAny<bool>()))
+                          .Callback<string, bool>((address, lockValue) =>
+                          {
+                              // Simulate KNX feedback response with the same value that was written
+                              var feedbackArgs = new KnxGroupEventArgs(_shutter.Addresses.LockFeedback, new KnxValue(lockValue));
+                              _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, feedbackArgs);
+                          });
 
             // Act - Lock
             await _shutter.SetLockAsync(true);
 
             // Assert
-            _mockKnxService.Verify(s => s.WriteGroupValue("4/3/1", true), Times.Once);
+            _mockKnxService.Verify(s => s.WriteGroupValue(_shutter.Addresses.LockControl, true), Times.Once);
 
             // Act - Unlock
             await _shutter.SetLockAsync(false);
 
             // Assert
-            _mockKnxService.Verify(s => s.WriteGroupValue("4/3/1", false), Times.Once);
+            _mockKnxService.Verify(s => s.WriteGroupValue(_shutter.Addresses.LockControl, false), Times.Once);
         }
 
         [Theory]
-        [InlineData(false, ShutterMovementState.Stopped)]    // Inactive = Stopped
-        [InlineData(true, ShutterMovementState.MovingUp)]   // Active = Moving (can't distinguish direction)
+        [InlineData(false, ShutterMovementState.Inactive)]    // Inactive = Stopped
+        [InlineData(true, ShutterMovementState.Active)]   // Active = Moving (can't distinguish direction)
         public async Task ReadMovementStateAsync_ReturnsCorrectState(bool knxValue, ShutterMovementState expectedState)
         {
             // Arrange
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/1/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.MovementStatusFeedback))
                           .ReturnsAsync(knxValue);
 
             // Act
@@ -226,13 +307,13 @@ namespace KnxTest.Unit.Models
         public async Task ReadLockStateAsync_ReturnsCorrectBooleanValue()
         {
             // Arrange & Act & Assert - Locked
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.LockFeedback))
                           .ReturnsAsync(true);
             var lockedResult = await _shutter.ReadLockStateAsync();
             lockedResult.Should().BeTrue();
 
             // Arrange & Act & Assert - Unlocked
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.LockFeedback))
                           .ReturnsAsync(false);
             var unlockedResult = await _shutter.ReadLockStateAsync();
             unlockedResult.Should().BeFalse();
@@ -243,11 +324,11 @@ namespace KnxTest.Unit.Models
         {
             // Arrange
             var targetPosition = 50.0f;
-            _mockKnxService.Setup(s => s.RequestGroupValue<float>("4/2/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>(_shutter.Addresses.PositionFeedback))
                           .ReturnsAsync(targetPosition);
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.LockFeedback))
                           .ReturnsAsync(false);
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/1/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.MovementStatusFeedback))
                           .ReturnsAsync(false);
 
             // Initialize the shutter state to match target position
@@ -264,11 +345,11 @@ namespace KnxTest.Unit.Models
         public async Task WaitForMovementStopAsync_ReturnsTrueWhenStopped()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.RequestGroupValue<float>("4/2/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>(_shutter.Addresses.PositionFeedback))
                           .ReturnsAsync(50.0f);
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/3/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.LockFeedback))
                           .ReturnsAsync(false);
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("4/1/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.MovementStatusFeedback))
                           .ReturnsAsync(false); // stopped
 
             // Initialize the shutter state to stopped

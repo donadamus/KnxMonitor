@@ -137,13 +137,13 @@ namespace KnxTest.Integration
                 // Test 50% brightness
                 await _dimmer1.SetBrightnessAsync(50);
                 await _dimmer1.WaitForBrightnessAsync(50, TimeSpan.FromSeconds(3));
-                _dimmer1.CurrentState.Brightness.Should().BeCloseTo(50, 5, "Brightness should be 50% ±5%");
+                _dimmer1.CurrentState.Brightness.Should().BeApproximately(50, 1, "Brightness should be 50%");
                 _dimmer1.CurrentState.IsOn.Should().BeTrue("Dimmer should be ON at 50%");
 
                 // Test 100% brightness
                 await _dimmer1.SetBrightnessAsync(100);
                 await _dimmer1.WaitForBrightnessAsync(100, TimeSpan.FromSeconds(3));
-                _dimmer1.CurrentState.Brightness.Should().BeCloseTo(100, 5, "Brightness should be 100% ±5%");
+                _dimmer1.CurrentState.Brightness.Should().BeApproximately(100, 1, "Brightness should be 100%");
                 _dimmer1.CurrentState.IsOn.Should().BeTrue("Dimmer should be ON at 100%");
 
                 // Test 0% brightness (should turn off)
@@ -178,7 +178,7 @@ namespace KnxTest.Integration
                 // Verify final state
                 await Task.Delay(500); // Give extra time for final adjustment
                 await _dimmer1.WaitForBrightnessAsync(80, TimeSpan.FromSeconds(3));
-                _dimmer1.CurrentState.Brightness.Should().BeCloseTo(80, 10, "Brightness should be 80% ±10%");
+                _dimmer1.CurrentState.Brightness.Should().BeApproximately(80, 1, "Brightness should be 80%");
 
                 Console.WriteLine("✅ Fade function test passed");
             }
@@ -210,7 +210,7 @@ namespace KnxTest.Integration
 
                 // Read brightness
                 var brightness = await _dimmer1.ReadBrightnessAsync();
-                brightness.Should().BeCloseTo(75, 10, "Brightness should be 75% ±10%");
+                brightness.Should().BeApproximately(75, 1, "Brightness should be 75%");
 
                 Console.WriteLine("✅ State reading test passed");
             }
@@ -350,7 +350,7 @@ namespace KnxTest.Integration
                 await Task.Delay(1000);
                 await _dimmer1.SetBrightnessAsync(75);
                 await _dimmer1.WaitForBrightnessAsync(75, TimeSpan.FromSeconds(3));
-                _dimmer1.CurrentState.Brightness.Should().BeCloseTo(75, 10, "Dimmer brightness should work normally after unlock");
+                _dimmer1.CurrentState.Brightness.Should().BeApproximately(75, 1, "Dimmer brightness should work normally after unlock");
 
                 Console.WriteLine("🎉 Lock prevention test for brightness control completed successfully");
             }
@@ -419,15 +419,15 @@ namespace KnxTest.Integration
                 await _dimmer2.WaitForBrightnessAsync(70, TimeSpan.FromSeconds(3));
 
                 // Verify states are different
-                _dimmer1.CurrentState.Brightness.Should().BeCloseTo(30, 10, "DIM1 should be at 30%");
-                _dimmer2.CurrentState.Brightness.Should().BeCloseTo(70, 10, "DIM2 should be at 70%");
+                _dimmer1.CurrentState.Brightness.Should().BeApproximately(30, 1, "DIM1 should be at 30%");
+                _dimmer2.CurrentState.Brightness.Should().BeApproximately(70, 1, "DIM2 should be at 70%");
 
                 // Change one dimmer, verify other unchanged
                 await _dimmer1.SetBrightnessAsync(90);
                 await _dimmer1.WaitForBrightnessAsync(90, TimeSpan.FromSeconds(3));
 
-                _dimmer1.CurrentState.Brightness.Should().BeCloseTo(90, 10, "DIM1 should be at 90%");
-                _dimmer2.CurrentState.Brightness.Should().BeCloseTo(70, 10, "DIM2 should still be at 70%");
+                _dimmer1.CurrentState.Brightness.Should().BeApproximately(90, 1, "DIM1 should be at 90%");
+                _dimmer2.CurrentState.Brightness.Should().BeApproximately(70, 1, "DIM2 should still be at 70%");
 
                 Console.WriteLine("✅ Multiple dimmers test passed");
             }

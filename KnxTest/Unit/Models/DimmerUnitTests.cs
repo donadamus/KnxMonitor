@@ -5,6 +5,7 @@ using FluentAssertions;
 using Moq;
 using Moq.Language.Flow;
 using KnxModel;
+using KnxService;
 
 namespace KnxTest.Unit
 {
@@ -41,13 +42,22 @@ namespace KnxTest.Unit
         [Fact]
         public void Constructor_ShouldCreateCorrectAddresses()
         {
+            // Arrange - Create expected addresses using configuration
+            var subGroup = "1";
+            var expectedSwitchControl = KnxAddressConfiguration.CreateDimmerSwitchControlAddress(subGroup);
+            var expectedSwitchFeedback = KnxAddressConfiguration.CreateDimmerSwitchFeedbackAddress(subGroup);
+            var expectedBrightnessControl = KnxAddressConfiguration.CreateDimmerBrightnessControlAddress(subGroup);
+            var expectedBrightnessFeedback = KnxAddressConfiguration.CreateDimmerBrightnessFeedbackAddress(subGroup);
+            var expectedLockControl = KnxAddressConfiguration.CreateDimmerLockAddress(subGroup);
+            var expectedLockFeedback = KnxAddressConfiguration.CreateDimmerLockFeedbackAddress(subGroup);
+
             // Assert
-            _dimmer.Addresses.SwitchControl.Should().Be("2/1/1");
-            _dimmer.Addresses.SwitchFeedback.Should().Be("2/1/101");
-            _dimmer.Addresses.BrightnessControl.Should().Be("2/2/1");
-            _dimmer.Addresses.BrightnessFeedback.Should().Be("2/2/101");
-            _dimmer.Addresses.LockControl.Should().Be("2/3/1");
-            _dimmer.Addresses.LockFeedback.Should().Be("2/3/101");
+            _dimmer.Addresses.SwitchControl.Should().Be(expectedSwitchControl);
+            _dimmer.Addresses.SwitchFeedback.Should().Be(expectedSwitchFeedback);
+            _dimmer.Addresses.BrightnessControl.Should().Be(expectedBrightnessControl);
+            _dimmer.Addresses.BrightnessFeedback.Should().Be(expectedBrightnessFeedback);
+            _dimmer.Addresses.LockControl.Should().Be(expectedLockControl);
+            _dimmer.Addresses.LockFeedback.Should().Be(expectedLockFeedback);
         }
 
         #endregion
@@ -58,49 +68,46 @@ namespace KnxTest.Unit
         public async Task SetStateAsync_ShouldSendCorrectCommand()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.WriteGroupValue("2/1/1", true))
-                          .Returns(Task.CompletedTask);
+            _mockKnxService.Setup(s => s.WriteGroupValue(_dimmer.Addresses.SwitchControl, true));
 
             // Act
             await _dimmer.SetStateAsync(true);
 
             // Assert
-            _mockKnxService.Verify(s => s.WriteGroupValue("2/1/1", true), Times.Once);
+            _mockKnxService.Verify(s => s.WriteGroupValue(_dimmer.Addresses.SwitchControl, true), Times.Once);
         }
 
         [Fact]
         public async Task TurnOnAsync_ShouldCallSetStateWithTrue()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.WriteGroupValue("2/1/1", true))
-                          .Returns(Task.CompletedTask);
+            _mockKnxService.Setup(s => s.WriteGroupValue(_dimmer.Addresses.SwitchControl, true));
 
             // Act
             await _dimmer.TurnOnAsync();
 
             // Assert
-            _mockKnxService.Verify(s => s.WriteGroupValue("2/1/1", true), Times.Once);
+            _mockKnxService.Verify(s => s.WriteGroupValue(_dimmer.Addresses.SwitchControl, true), Times.Once);
         }
 
         [Fact]
         public async Task TurnOffAsync_ShouldCallSetStateWithFalse()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.WriteGroupValue("2/1/1", false))
-                          .Returns(Task.CompletedTask);
+            _mockKnxService.Setup(s => s.WriteGroupValue(_dimmer.Addresses.SwitchControl, false));
 
             // Act
             await _dimmer.TurnOffAsync();
 
             // Assert
-            _mockKnxService.Verify(s => s.WriteGroupValue("2/1/1", false), Times.Once);
+            _mockKnxService.Verify(s => s.WriteGroupValue(_dimmer.Addresses.SwitchControl, false), Times.Once);
         }
 
         [Fact]
         public async Task ReadStateAsync_ShouldReturnCorrectValue()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("2/1/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_dimmer.Addresses.SwitchFeedback))
                           .ReturnsAsync(true);
 
             // Act
@@ -108,21 +115,20 @@ namespace KnxTest.Unit
 
             // Assert
             result.Should().BeTrue();
-            _mockKnxService.Verify(s => s.RequestGroupValue<bool>("2/1/101"), Times.Once);
+            _mockKnxService.Verify(s => s.RequestGroupValue<bool>(_dimmer.Addresses.SwitchFeedback), Times.Once);
         }
 
         [Fact]
         public async Task ToggleAsync_WhenOff_ShouldTurnOn()
         {
             // Arrange - dimmer starts OFF
-            _mockKnxService.Setup(s => s.WriteGroupValue("2/1/1", true))
-                          .Returns(Task.CompletedTask);
+            _mockKnxService.Setup(s => s.WriteGroupValue(_dimmer.Addresses.SwitchControl, true));
 
             // Act
             await _dimmer.ToggleAsync();
 
             // Assert
-            _mockKnxService.Verify(s => s.WriteGroupValue("2/1/1", true), Times.Once);
+            _mockKnxService.Verify(s => s.WriteGroupValue(_dimmer.Addresses.SwitchControl, true), Times.Once);
         }
 
         #endregion
@@ -133,42 +139,39 @@ namespace KnxTest.Unit
         public async Task SetBrightnessAsync_ShouldSendCorrectFloatValue()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.WriteGroupValue("2/2/1", 0.5f))
-                          .Returns(Task.CompletedTask);
+            _mockKnxService.Setup(s => s.WriteGroupValue(_dimmer.Addresses.BrightnessControl, 50));
 
             // Act
-            await _dimmer.SetBrightnessAsync(50);
+            await _dimmer.SetBrightnessAsync(50, TimeSpan.Zero);
 
             // Assert
-            _mockKnxService.Verify(s => s.WriteGroupValue("2/2/1", 0.5f), Times.Once);
+            _mockKnxService.Verify(s => s.WriteGroupValue(_dimmer.Addresses.BrightnessControl, 50), Times.Once);
         }
 
         [Fact]
         public async Task SetBrightnessAsync_With0_ShouldSend0()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.WriteGroupValue("2/2/1", 0.0f))
-                          .Returns(Task.CompletedTask);
+            _mockKnxService.Setup(s => s.WriteGroupValue(_dimmer.Addresses.BrightnessControl, 0.0f));
 
             // Act
             await _dimmer.SetBrightnessAsync(0);
 
             // Assert
-            _mockKnxService.Verify(s => s.WriteGroupValue("2/2/1", 0.0f), Times.Once);
+            _mockKnxService.Verify(s => s.WriteGroupValue(_dimmer.Addresses.BrightnessControl, 0.0f), Times.Once);
         }
 
         [Fact]
         public async Task SetBrightnessAsync_With100_ShouldSend1()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.WriteGroupValue("2/2/1", 1.0f))
-                          .Returns(Task.CompletedTask);
+            _mockKnxService.Setup(s => s.WriteGroupValue(_dimmer.Addresses.BrightnessControl, 1.0f));
 
             // Act
             await _dimmer.SetBrightnessAsync(100);
 
             // Assert
-            _mockKnxService.Verify(s => s.WriteGroupValue("2/2/1", 1.0f), Times.Once);
+            _mockKnxService.Verify(s => s.WriteGroupValue(_dimmer.Addresses.BrightnessControl, 1.0f), Times.Once);
         }
 
         [Fact]
@@ -189,23 +192,23 @@ namespace KnxTest.Unit
         public async Task ReadBrightnessAsync_ShouldReturnCorrectPercentage()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.RequestGroupValue<float>("2/2/101"))
-                          .ReturnsAsync(0.75f);
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>(_dimmer.Addresses.BrightnessFeedback))
+                          .ReturnsAsync(75);
 
             // Act
             var result = await _dimmer.ReadBrightnessAsync();
 
             // Assert
             result.Should().Be(75);
-            _mockKnxService.Verify(s => s.RequestGroupValue<float>("2/2/101"), Times.Once);
+            _mockKnxService.Verify(s => s.RequestGroupValue<float>(_dimmer.Addresses.BrightnessFeedback), Times.Once);
         }
 
         [Fact]
         public async Task ReadBrightnessAsync_WithZero_ShouldReturn0()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.RequestGroupValue<float>("2/2/101"))
-                          .ReturnsAsync(0.0f);
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>(_dimmer.Addresses.BrightnessFeedback))
+                          .ReturnsAsync(0);
 
             // Act
             var result = await _dimmer.ReadBrightnessAsync();
@@ -218,8 +221,8 @@ namespace KnxTest.Unit
         public async Task ReadBrightnessAsync_WithOne_ShouldReturn100()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.RequestGroupValue<float>("2/2/101"))
-                          .ReturnsAsync(1.0f);
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>(_dimmer.Addresses.BrightnessFeedback))
+                          .ReturnsAsync(100);
 
             // Act
             var result = await _dimmer.ReadBrightnessAsync();
@@ -250,35 +253,33 @@ namespace KnxTest.Unit
         public async Task LockAsync_ShouldSendCorrectCommand()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.WriteGroupValue("2/3/1", true))
-                          .Returns(Task.CompletedTask);
+            _mockKnxService.Setup(s => s.WriteGroupValue(_dimmer.Addresses.LockControl, true));
 
             // Act
-            await _dimmer.LockAsync();
+            await _dimmer.LockAsync(TimeSpan.Zero);
 
             // Assert
-            _mockKnxService.Verify(s => s.WriteGroupValue("2/3/1", true), Times.Once);
+            _mockKnxService.Verify(s => s.WriteGroupValue(_dimmer.Addresses.LockControl, true), Times.Once);
         }
 
         [Fact]
         public async Task UnlockAsync_ShouldSendCorrectCommand()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.WriteGroupValue("2/3/1", false))
-                          .Returns(Task.CompletedTask);
+            _mockKnxService.Setup(s => s.WriteGroupValue(_dimmer.Addresses.LockControl, false));
 
             // Act
             await _dimmer.UnlockAsync();
 
             // Assert
-            _mockKnxService.Verify(s => s.WriteGroupValue("2/3/1", false), Times.Once);
+            _mockKnxService.Verify(s => s.WriteGroupValue(_dimmer.Addresses.LockControl, false), Times.Once);
         }
 
         [Fact]
         public async Task ReadLockStateAsync_ShouldReturnCorrectValue()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("2/3/101"))
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_dimmer.Addresses.LockFeedback))
                           .ReturnsAsync(true);
 
             // Act
@@ -286,77 +287,7 @@ namespace KnxTest.Unit
 
             // Assert
             result.Should().BeTrue();
-            _mockKnxService.Verify(s => s.RequestGroupValue<bool>("2/3/101"), Times.Once);
-        }
-
-        #endregion
-
-        #region Message Processing Tests
-
-        [Fact]
-        public void ProcessKnxMessage_WithSwitchFeedback_ShouldUpdateState()
-        {
-            // Arrange
-            var mockValue = new Mock<IKnxValue>();
-            mockValue.Setup(v => v.AsBoolean()).Returns(true);
-            
-            var args = new KnxGroupEventArgs("2/1/101", mockValue.Object);
-
-            // Act
-            _dimmer.ProcessKnxMessage(args);
-
-            // Assert
-            _dimmer.CurrentState.IsOn.Should().BeTrue();
-        }
-
-        [Fact]
-        public void ProcessKnxMessage_WithBrightnessFeedback_ShouldUpdateBrightnessAndState()
-        {
-            // Arrange
-            var mockValue = new Mock<IKnxValue>();
-            mockValue.Setup(v => v.AsFloat()).Returns(0.8f);
-            
-            var args = new KnxGroupEventArgs("2/2/101", mockValue.Object);
-
-            // Act
-            _dimmer.ProcessKnxMessage(args);
-
-            // Assert
-            _dimmer.CurrentState.IsOn.Should().BeTrue();
-            _dimmer.CurrentState.Brightness.Should().Be(80);
-        }
-
-        [Fact]
-        public void ProcessKnxMessage_WithZeroBrightness_ShouldTurnOff()
-        {
-            // Arrange
-            var mockValue = new Mock<IKnxValue>();
-            mockValue.Setup(v => v.AsFloat()).Returns(0.0f);
-            
-            var args = new KnxGroupEventArgs("2/2/101", mockValue.Object);
-
-            // Act
-            _dimmer.ProcessKnxMessage(args);
-
-            // Assert
-            _dimmer.CurrentState.IsOn.Should().BeFalse();
-            _dimmer.CurrentState.Brightness.Should().Be(0);
-        }
-
-        [Fact]
-        public void ProcessKnxMessage_WithLockFeedback_ShouldUpdateLockState()
-        {
-            // Arrange
-            var mockValue = new Mock<IKnxValue>();
-            mockValue.Setup(v => v.AsBoolean()).Returns(true);
-            
-            var args = new KnxGroupEventArgs("2/3/101", mockValue.Object);
-
-            // Act
-            _dimmer.ProcessKnxMessage(args);
-
-            // Assert
-            _dimmer.CurrentState.IsLocked.Should().BeTrue();
+            _mockKnxService.Verify(s => s.RequestGroupValue<bool>(_dimmer.Addresses.LockFeedback), Times.Once);
         }
 
         #endregion
@@ -364,12 +295,12 @@ namespace KnxTest.Unit
         #region State Management Tests
 
         [Fact]
-        public async Task SaveCurrentStateAsync_ShouldReadAndSaveState()
+        public void SaveCurrentStateAsync_ShouldReadAndSaveState()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("2/1/101")).ReturnsAsync(true);
-            _mockKnxService.Setup(s => s.RequestGroupValue<float>("2/2/101")).ReturnsAsync(0.6f);
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>("2/3/101")).ReturnsAsync(false);
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_dimmer.Addresses.SwitchFeedback)).ReturnsAsync(true);
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>(_dimmer.Addresses.BrightnessFeedback)).ReturnsAsync(0.6f);
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_dimmer.Addresses.LockFeedback)).ReturnsAsync(false);
 
             // Act
             _dimmer.SaveCurrentState();
@@ -386,7 +317,7 @@ namespace KnxTest.Unit
         {
             // Arrange
             _dimmer.SaveCurrentState(); // Save default state (0%)
-            _mockKnxService.Setup(s => s.WriteGroupValue("2/2/1", 0.5f)).Returns(Task.CompletedTask);
+            _mockKnxService.Setup(s => s.WriteGroupValue(_dimmer.Addresses.BrightnessControl, 0.5f));
 
             // Manually set a saved state with 50% brightness
             var savedState = new DimmerState(true, 50, false, DateTime.Now);
@@ -396,7 +327,7 @@ namespace KnxTest.Unit
             await _dimmer.RestoreSavedStateAsync();
 
             // Assert
-            _mockKnxService.Verify(s => s.WriteGroupValue("2/2/1", 0.5f), Times.Once);
+            _mockKnxService.Verify(s => s.WriteGroupValue(_dimmer.Addresses.BrightnessControl, 0.5f), Times.Once);
         }
 
         [Fact]

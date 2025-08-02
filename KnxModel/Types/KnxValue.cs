@@ -54,17 +54,16 @@ namespace KnxModel
         /// <summary>
         /// Converts the value to a percentage value as integer (0-100)
         /// </summary>
-        public int AsPercentageValue()
+        public float AsPercentageValue()
         {
             return RawValue switch
             {
                 Percent p => (int)p.Value,
                 byte b => (int)(b / 2.55), // Convert KNX byte (0-255) to percentage (0-100)
-                int i when i >= 0 && i <= 255 => (int)(i / 2.55),
-                int i when i >= 0 && i <= 100 => i, // Already percentage
-                double d when d >= 0 && d <= 100 => (int)d,
+                int i when i >= 0 && i <= 100 => (float)i, // Already percentage
+                float f when f >= 0 && f <= 100 => f,
+                double d when d >= 0 && d <= 100 => (float)d,
                 string s when double.TryParse(s, out var val) && val >= 0 && val <= 100 => (int)val,
-                string s when double.TryParse(s, out var val) && val >= 0 && val <= 255 => (int)(val / 2.55),
                 _ => 0
             };
         }

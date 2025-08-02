@@ -27,7 +27,7 @@ namespace KnxModel
         /// Turn light on or off
         /// </summary>
         /// <param name="isOn">True to turn on, false to turn off</param>
-        Task SetStateAsync(bool isOn);
+        Task SetStateAsync(bool isOn, TimeSpan? timeout = null);
 
         /// <summary>
         /// Turn light on

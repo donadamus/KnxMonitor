@@ -87,7 +87,7 @@ namespace KnxModel
             else if (e.Destination == Addresses.MovementStatusFeedback)
             {
                 var isActive = e.Value.AsBoolean(); // DataType 1.011: Inactive/Active
-                var movementState = isActive ? ShutterMovementState.MovingUp : ShutterMovementState.Stopped;
+                var movementState = isActive ? ShutterMovementState.Active : ShutterMovementState.Inactive;
                 CurrentState = CurrentState with { MovementState = movementState, LastUpdated = DateTime.Now };
                 Console.WriteLine($"Shutter {Id} movement state updated via feedback: {(isActive ? "Active" : "Inactive")} -> {movementState}");
             }
@@ -198,7 +198,7 @@ namespace KnxModel
             {
                 var isActive = await _knxService.RequestGroupValue<bool>(Addresses.MovementStatusFeedback);
                 
-                return isActive ? ShutterMovementState.MovingUp : ShutterMovementState.Stopped;
+                return isActive ? ShutterMovementState.Active : ShutterMovementState.Inactive;
                 // Note: We can't distinguish UP/DOWN from this feedback alone
                 // Would need additional feedback or state tracking for direction
             }
@@ -230,7 +230,7 @@ namespace KnxModel
             Console.WriteLine($"Waiting for shutter {Id} movement to stop");
             
             return await WaitForConditionAsync(
-                condition: () => CurrentState.MovementState == ShutterMovementState.Stopped,
+                condition: () => CurrentState.MovementState == ShutterMovementState.Inactive,
                 timeout: timeout ?? _defaultMoveTimeout,
                 description: "movement to stop"
             );

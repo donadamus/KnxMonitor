@@ -1,0 +1,196 @@
+using System;
+using System.Threading.Tasks;
+using Moq;
+using Xunit;
+using KnxModel;
+
+namespace KnxTest.Unit.Models
+{
+    public class LightUnitTests
+    {
+        private readonly Mock<IKnxService> _mockKnxService;
+        private readonly Light _light;
+
+        public LightUnitTests()
+        {
+            _mockKnxService = new Mock<IKnxService>();
+            _light = new Light("L1.1", "Test Light", "1", _mockKnxService.Object);
+        }
+
+        [Fact]
+        public async Task SetLockAsync_True_TurnsOffLightThenLocks()
+        {
+            // Arrange
+            // Mock InitializeAsync() calls
+            _mockKnxService.Setup(x => x.RequestGroupValue<bool>(_light.Addresses.Feedback))
+                          .ReturnsAsync(true); // Light starts ON
+
+            _mockKnxService.Setup(x => x.RequestGroupValue<bool>(_light.Addresses.LockFeedback))
+                          .ReturnsAsync(false); // Light starts UNLOCKED
+
+            _mockKnxService.Setup(x => x.WriteGroupValue(_light.Addresses.LockControl, It.IsAny<bool>()))
+                          .Callback<string, bool>((addr, value) =>
+                          {
+                              // Simulate lock feedback if Light is ON simulate turning it OFF first
+                              if (_light.CurrentState.IsOn && value == true)
+                              {
+                                  var lockFeedbackArgs = new KnxGroupEventArgs(_light.Addresses.Feedback, new KnxValue(false));
+                                  _light.GetType().GetMethod("ProcessKnxMessage",
+                                      System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?
+                                      .Invoke(_light, new object[] { lockFeedbackArgs });
+                              }
+
+                              {
+                                  // Simulate lock feedback
+                                  var lockFeedbackArgs = new KnxGroupEventArgs(_light.Addresses.LockFeedback, new KnxValue(value));
+                                  _light.GetType().GetMethod("ProcessKnxMessage",
+                                      System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?
+                                      .Invoke(_light, new object[] { lockFeedbackArgs });
+                              }
+
+                          });
+
+            // Initialize the light to subscribe to events
+            await _light.InitializeAsync();
+
+            // Act
+            await _light.SetLockAsync(true);
+
+            // Assert
+            // Verify lock was set to true
+            _mockKnxService.Verify(x => x.WriteGroupValue(_light.Addresses.LockControl, true), Times.Once);
+
+            // Verify final state - for business logic testing, assume lock means OFF
+            Assert.True(_light.CurrentState.IsLocked);  // Light should be LOCKED
+            Assert.False(_light.CurrentState.IsOn);  // Light should be OFF after locking
+
+            await _light.SetLockAsync(false);
+            // Verify final state - for business logic testing, assume lock means OFF
+            Assert.False(_light.CurrentState.IsLocked);
+            Assert.False(_light.CurrentState.IsOn);
+
+        }
+
+        [Fact]
+        public async Task SetLockAsync_False_UnlocksWithoutChangingLightState()
+        {
+            // Arrange
+            // Mock InitializeAsync() calls
+            _mockKnxService.Setup(x => x.RequestGroupValue<bool>(_light.Addresses.Feedback))
+                          .ReturnsAsync(true); // Light starts ON
+            _mockKnxService.Setup(x => x.RequestGroupValue<bool>(_light.Addresses.LockFeedback))
+                          .ReturnsAsync(true); // Light starts LOCKED
+
+            // Setup light to be ON and LOCKED initially
+            _light.GetType().GetProperty("CurrentState")?.SetValue(_light, 
+                new LightState(IsOn: true, IsLocked: true, LastUpdated: DateTime.Now));
+
+            _mockKnxService.Setup(x => x.WriteGroupValue(_light.Addresses.LockControl, It.IsAny<bool>()))
+                          .Callback<string, bool>((addr, value) =>
+                          {
+                              // Simulate lock feedback
+                              var lockFeedbackArgs = new KnxGroupEventArgs(_light.Addresses.LockFeedback, new KnxValue(value));
+                              _light.GetType().GetMethod("ProcessKnxMessage", 
+                                  System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?
+                                  .Invoke(_light, new object[] { lockFeedbackArgs });
+                          });
+
+            // Initialize the light to subscribe to events
+            await _light.InitializeAsync();
+
+            // Act
+            await _light.SetLockAsync(false);
+
+            // Assert
+            // Verify light control was NOT called (state should not change)
+            _mockKnxService.Verify(x => x.WriteGroupValue(_light.Addresses.Control, It.IsAny<bool>()), Times.Never);
+            
+            // Verify unlock was called
+            _mockKnxService.Verify(x => x.WriteGroupValue(_light.Addresses.LockControl, false), Times.Once);
+            
+            // Verify final state
+            Assert.True(_light.CurrentState.IsOn);   // Light should remain ON
+            Assert.False(_light.CurrentState.IsLocked); // Light should be UNLOCKED
+        }
+
+        [Fact]
+        public async Task LockAsync_LocksWithoutChangingLightState()
+        {
+            // Arrange
+            // Mock InitializeAsync() calls
+            _mockKnxService.Setup(x => x.RequestGroupValue<bool>(_light.Addresses.Feedback))
+                          .ReturnsAsync(true); // Light starts ON
+            _mockKnxService.Setup(x => x.RequestGroupValue<bool>(_light.Addresses.LockFeedback))
+                          .ReturnsAsync(false); // Light starts UNLOCKED
+
+            _mockKnxService.Setup(x => x.WriteGroupValue(_light.Addresses.LockControl, It.IsAny<bool>()))
+                          .Callback<string, bool>((addr, value) =>
+                          {
+                              // Simulate lock feedback
+                              var lockFeedbackArgs = new KnxGroupEventArgs(_light.Addresses.LockFeedback, new KnxValue(value));
+                              _light.GetType().GetMethod("ProcessKnxMessage",
+                                  System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?
+                                  .Invoke(_light, new object[] { lockFeedbackArgs });
+                          });
+
+            // Initialize the light to subscribe to events
+            await _light.InitializeAsync();
+
+            // Act
+            await _light.LockAsync();
+
+            // Assert
+            // Verify light control was NOT called (standard lock doesn't change light state)
+            _mockKnxService.Verify(x => x.WriteGroupValue(_light.Addresses.Control, It.IsAny<bool>()), Times.Never);
+            
+            // Verify lock was set to true
+            _mockKnxService.Verify(x => x.WriteGroupValue(_light.Addresses.LockControl, true), Times.Once);
+
+            // Verify final state
+            Assert.True(_light.CurrentState.IsOn);  // Light should remain ON
+            Assert.True(_light.CurrentState.IsLocked);  // Light should be LOCKED
+        }
+
+        [Fact]
+        public async Task UnlockAsync_UnlocksWithoutChangingLightState()
+        {
+            // Arrange
+            // Mock InitializeAsync() calls
+            _mockKnxService.Setup(x => x.RequestGroupValue<bool>(_light.Addresses.Feedback))
+                          .ReturnsAsync(false); // Light starts OFF
+            _mockKnxService.Setup(x => x.RequestGroupValue<bool>(_light.Addresses.LockFeedback))
+                          .ReturnsAsync(true); // Light starts LOCKED
+
+            // Setup light to be OFF and LOCKED initially
+            _light.GetType().GetProperty("CurrentState")?.SetValue(_light, 
+                new LightState(IsOn: false, IsLocked: true, LastUpdated: DateTime.Now));
+
+            _mockKnxService.Setup(x => x.WriteGroupValue(_light.Addresses.LockControl, It.IsAny<bool>()))
+                          .Callback<string, bool>((addr, value) =>
+                          {
+                              // Simulate lock feedback
+                              var lockFeedbackArgs = new KnxGroupEventArgs(_light.Addresses.LockFeedback, new KnxValue(value));
+                              _light.GetType().GetMethod("ProcessKnxMessage",
+                                  System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?
+                                  .Invoke(_light, new object[] { lockFeedbackArgs });
+                          });
+
+            // Initialize the light to subscribe to events
+            await _light.InitializeAsync();
+
+            // Act
+            await _light.UnlockAsync();
+
+            // Assert
+            // Verify light control was NOT called (state should not change)
+            _mockKnxService.Verify(x => x.WriteGroupValue(_light.Addresses.Control, It.IsAny<bool>()), Times.Never);
+            
+            // Verify unlock was called
+            _mockKnxService.Verify(x => x.WriteGroupValue(_light.Addresses.LockControl, false), Times.Once);
+            
+            // Verify final state
+            Assert.False(_light.CurrentState.IsOn);  // Light should remain OFF
+            Assert.False(_light.CurrentState.IsLocked); // Light should be UNLOCKED
+        }
+    }
+}

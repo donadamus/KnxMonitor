@@ -85,14 +85,14 @@ namespace KnxModel
             );
         }
 
-        public async Task LockAsync()
+        public async Task LockAsync(TimeSpan? timeout = null)
         {
-            await SetLockAsync(true);
+            await SetLockAsync(true, timeout);
         }
 
-        public async Task UnlockAsync()
+        public async Task UnlockAsync(TimeSpan? timeout = null)
         {
-            await SetLockAsync(false);
+            await SetLockAsync(false, timeout);
         }
 
         public virtual async Task<bool> ReadLockStateAsync()
