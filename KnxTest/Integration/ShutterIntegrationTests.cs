@@ -230,7 +230,7 @@ namespace KnxTest.Integration
                 Console.WriteLine($"Shutter {shutterId} initial lock state: {initialLockState}");
 
                 // Toggle lock state
-                var newLockState = !initialLockState;
+                var newLockState = initialLockState == Lock.On ? Lock.Off : Lock.On;
                 await shutter.SetLockAsync(newLockState);
                 
                 // Verify state via feedback (natural device behavior)
@@ -270,9 +270,9 @@ namespace KnxTest.Integration
                 var initialLockState = shutter.CurrentState.Lock;
 
                 // Ensure shutter is locked
-                if (!initialLockState)
+                if (initialLockState == Lock.Off)
                 {
-                    await shutter.SetLockAsync(true);
+                    await shutter.SetLockAsync(Lock.On);
                 }
 
                 // Try to move the shutter

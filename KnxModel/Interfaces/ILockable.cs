@@ -13,7 +13,7 @@ namespace KnxModel
         /// </summary>
         /// <param name="isLocked">True to lock, false to unlock</param>
         /// <param name="timeout">Timeout for the operation. If null, default timeout is used.</param>
-        Task SetLockAsync(bool isLocked, TimeSpan? timeout = null);
+        Task SetLockAsync(Lock lockState, TimeSpan? timeout = null);
 
         /// <summary>
         /// Lock the device
@@ -28,7 +28,7 @@ namespace KnxModel
         /// <summary>
         /// Read current device lock state from KNX bus
         /// </summary>
-        Task<bool> ReadLockStateAsync();
+        Task<Lock> ReadLockStateAsync();
 
         /// <summary>
         /// Wait for device to reach target lock state
@@ -36,6 +36,6 @@ namespace KnxModel
         /// <param name="targetLockState">Target lock state to wait for</param>
         /// <param name="timeout">Maximum time to wait</param>
         /// <returns>True if lock state reached, false on timeout</returns>
-        Task<bool> WaitForLockStateAsync(bool targetLockState, TimeSpan? timeout = null);
+        Task<bool> WaitForLockStateAsync(Lock lockState, TimeSpan? timeout = null);
     }
 }

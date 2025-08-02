@@ -234,17 +234,17 @@ namespace KnxTest.Integration
 
                 // Lock the dimmer
                 await _dimmer1.LockAsync();
-                var lockSuccess = await _dimmer1.WaitForLockStateAsync(true, TimeSpan.FromSeconds(3));
+                var lockSuccess = await _dimmer1.WaitForLockStateAsync(Lock.On, TimeSpan.FromSeconds(3));
                 
                 if (lockSuccess)
                 {
-                    _dimmer1.CurrentState.Lock.Should().BeTrue("Dimmer should be locked");
+                    _dimmer1.CurrentState.Lock.Should().Be(Lock.On,"Dimmer should be locked");
                     Console.WriteLine("✅ Lock successful");
 
                     // Unlock the dimmer
                     await _dimmer1.UnlockAsync();
-                    await _dimmer1.WaitForLockStateAsync(false, TimeSpan.FromSeconds(3));
-                    _dimmer1.CurrentState.Lock.Should().BeFalse("Dimmer should be unlocked");
+                    await _dimmer1.WaitForLockStateAsync(Lock.Off, TimeSpan.FromSeconds(3));
+                    _dimmer1.CurrentState.Lock.Should().Be(Lock.Off, "Dimmer should be unlocked");
                     Console.WriteLine("✅ Unlock successful");
                 }
                 else
@@ -273,7 +273,7 @@ namespace KnxTest.Integration
                 await _dimmer1.WaitForStateAsync(false, TimeSpan.FromSeconds(3));
 
                 // Lock the dimmer (use TimeSpan.Zero to skip feedback waiting)
-                await _dimmer1.SetLockAsync(true, TimeSpan.Zero);
+                await _dimmer1.SetLockAsync(Lock.On, TimeSpan.Zero);
                 Console.WriteLine($"Lock command sent, current lock state: {_dimmer1.CurrentState.Lock}");
 
                 // Try to turn on - should be prevented by lock
@@ -323,7 +323,7 @@ namespace KnxTest.Integration
                 var initialBrightness = _dimmer1.CurrentState.Brightness;
 
                 // Lock the dimmer (use TimeSpan.Zero to skip feedback waiting)
-                await _dimmer1.SetLockAsync(true, TimeSpan.Zero);
+                await _dimmer1.SetLockAsync(Lock.On, TimeSpan.Zero);
                 Console.WriteLine($"Lock command sent, current lock state: {_dimmer1.CurrentState.Lock}");
 
                 // Try to change brightness - should be prevented by lock

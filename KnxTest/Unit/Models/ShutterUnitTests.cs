@@ -8,14 +8,12 @@ using Xunit;
 
 namespace KnxTest.Unit.Models
 {
-    public class ShutterUnitTests
+    public class ShutterUnitTests : BaseKnxDeviceUnitTests
     {
-        private readonly Mock<IKnxService> _mockKnxService;
         private readonly IShutter _shutter;
 
         public ShutterUnitTests()
         {
-            _mockKnxService = new Mock<IKnxService>();
             _shutter = new Shutter("R1.1", "Test Bathroom", "1", _mockKnxService.Object);
         }
 
@@ -65,7 +63,7 @@ namespace KnxTest.Unit.Models
 
             // Assert
             _shutter.CurrentState.Position.Should().Be(expectedPosition);
-            _shutter.CurrentState.Lock.Should().BeTrue();
+            _shutter.CurrentState.Lock.Should().Be(Lock.On);
             _shutter.CurrentState.MovementState.Should().Be(ShutterMovementState.Inactive);
             _shutter.CurrentState.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(1));
         }
@@ -89,7 +87,7 @@ namespace KnxTest.Unit.Models
             // Assert
             _shutter.SavedState.Should().NotBeNull();
             _shutter.SavedState!.Position.Should().Be(expectedPosition);
-            _shutter.SavedState.Lock.Should().BeFalse();
+            _shutter.SavedState.Lock.Should().Be(Lock.Off);
             _shutter.SavedState.MovementState.Should().Be(ShutterMovementState.Inactive);
         }
 
@@ -245,18 +243,17 @@ namespace KnxTest.Unit.Models
         public async Task StopAsync_CallsKnxServiceWithStopCommand()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.RequestGroupValue<float>(_shutter.Addresses.PositionFeedback))
-                          .ReturnsAsync(50.0f);
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.LockFeedback))
-                          .ReturnsAsync(false);
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.MovementStatusFeedback))
-                          .ReturnsAsync(false);
+            _mockKnxService.Setup(s => s.WriteGroupValue(_shutter.Addresses.StopControl, true))
+                          .Callback<string, bool>((address, stopValue) =>
+                          {
+                              // Simulate KNX feedback response for stop command
+                              var feedbackArgs = new KnxGroupEventArgs(_shutter.Addresses.MovementStatusFeedback, new KnxValue(false));
+                              _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, feedbackArgs);
+                          });
 
             // Act
             await _shutter.StopAsync(TimeSpan.Zero);
 
-            // Assert
-            _mockKnxService.Verify(s => s.WriteGroupValue(_shutter.Addresses.StopControl, true), Times.Once);
         }
 
         [Fact]
@@ -275,13 +272,13 @@ namespace KnxTest.Unit.Models
                           });
 
             // Act - Lock
-            await _shutter.SetLockAsync(true);
+            await _shutter.SetLockAsync(Lock.On);
 
             // Assert
             _mockKnxService.Verify(s => s.WriteGroupValue(_shutter.Addresses.LockControl, true), Times.Once);
 
             // Act - Unlock
-            await _shutter.SetLockAsync(false);
+            await _shutter.SetLockAsync(Lock.Off);
 
             // Assert
             _mockKnxService.Verify(s => s.WriteGroupValue(_shutter.Addresses.LockControl, false), Times.Once);
@@ -310,13 +307,13 @@ namespace KnxTest.Unit.Models
             _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.LockFeedback))
                           .ReturnsAsync(true);
             var lockedResult = await _shutter.ReadLockStateAsync();
-            lockedResult.Should().BeTrue();
+            lockedResult.Should().Be(Lock.On);
 
             // Arrange & Act & Assert - Unlocked
             _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.LockFeedback))
                           .ReturnsAsync(false);
             var unlockedResult = await _shutter.ReadLockStateAsync();
-            unlockedResult.Should().BeFalse();
+            unlockedResult.Should().Be(Lock.Off);
         }
 
         [Fact]

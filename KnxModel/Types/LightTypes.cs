@@ -2,6 +2,17 @@ using System;
 
 namespace KnxModel
 {
+    // ... existing code ...
+
+    public static class LockExtensions
+    {
+        public static Lock OppositeLock(this Lock lockState) => lockState switch
+        {
+            Lock.Off => Lock.On,
+            Lock.On => Lock.Off,
+            _ => Lock.Unknown
+        };
+    }
     /// <summary>
     /// KNX addresses for light control and feedback
     /// </summary>
@@ -30,13 +41,13 @@ namespace KnxModel
     /// <param name="LastUpdated">When the state was last updated</param>
     public record LightState(
         bool IsOn,
-        bool Lock,
+        Lock Lock,
         DateTime LastUpdated
     ) : ILockableState;
 
     public interface ILockableState
     {
-        bool Lock { get; }
+        Lock Lock { get; }
         DateTime LastUpdated { get; }
     }
 
@@ -52,5 +63,4 @@ namespace KnxModel
         On,     // true in KNX
         Unknown // state not known
     }
-
 }

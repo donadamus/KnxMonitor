@@ -9,14 +9,12 @@ using KnxService;
 
 namespace KnxTest.Unit.Models
 {
-    public class DimmerUnitTests : IDisposable
+    public class DimmerUnitTests : BaseKnxDeviceUnitTests
     {
-        private readonly Mock<IKnxService> _mockKnxService;
         private readonly Dimmer _dimmer;
 
         public DimmerUnitTests()
         {
-            _mockKnxService = new Mock<IKnxService>();
             _dimmer = new Dimmer("DIM1", "Test Dimmer", "1", _mockKnxService.Object);
         }
 
@@ -36,7 +34,7 @@ namespace KnxTest.Unit.Models
             _dimmer.SubGroup.Should().Be("1");
             _dimmer.CurrentState.IsOn.Should().BeFalse();
             _dimmer.CurrentState.Brightness.Should().Be(0);
-            _dimmer.CurrentState.Lock.Should().BeFalse();
+            _dimmer.CurrentState.Lock.Should().Be(Lock.Unknown);
         }
 
         [Fact]
@@ -286,7 +284,7 @@ namespace KnxTest.Unit.Models
             var result = await _dimmer.ReadLockStateAsync();
 
             // Assert
-            result.Should().BeTrue();
+            result.Should().Be(Lock.On);
             _mockKnxService.Verify(s => s.RequestGroupValue<bool>(_dimmer.Addresses.LockFeedback), Times.Once);
         }
 
@@ -312,7 +310,7 @@ namespace KnxTest.Unit.Models
             _dimmer.SavedState.Should().NotBeNull();
             _dimmer.SavedState.IsOn.Should().BeTrue();
             _dimmer.SavedState.Brightness.Should().Be(60);
-            _dimmer.SavedState.Lock.Should().BeFalse();
+            _dimmer.SavedState.Lock.Should().Be(Lock.Off);
         }
 
         [Fact]
@@ -372,7 +370,7 @@ namespace KnxTest.Unit.Models
             var result = _dimmer.ToString();
 
             // Assert
-            result.Should().Be("Dimmer DIM1 (Test Dimmer) - State: OFF, Brightness: 0%, Lock: UNLOCKED");
+            result.Should().Be("Dimmer DIM1 (Test Dimmer) - State: OFF, Brightness: 0%, Lock: Unknown");
         }
 
         #endregion

@@ -71,7 +71,7 @@ namespace KnxModel
             // Initialize with default state
             return new ShutterState(
                 Position: 0.0f,
-                Lock: false,
+                Lock: Lock.Unknown,
                 MovementState: ShutterMovementState.Unknown,
                 LastUpdated: DateTime.Now
             );
@@ -125,18 +125,18 @@ namespace KnxModel
 
         #region Lock Implementation (inherited from LockableKnxDeviceBase)
 
-        public virtual ShutterState UpdateLockState(bool isLocked) => 
-            CurrentState with { Lock = isLocked, LastUpdated = DateTime.Now };
+        public virtual ShutterState UpdateLockState(Lock lockState) => 
+            CurrentState with { Lock = lockState, LastUpdated = DateTime.Now };
 
         protected override string GetLockControlAddress() => Addresses.LockControl;
         protected override string GetLockFeedbackAddress() => Addresses.LockFeedback;
 
-        protected override void UpdateCurrentStateLock(bool isLocked)
+        protected override void UpdateCurrentStateLock(Lock lockState)
         {
-            CurrentState = CurrentState with { Lock = isLocked, LastUpdated = DateTime.Now };
+            CurrentState = CurrentState with { Lock = lockState, LastUpdated = DateTime.Now };
         }
 
-        protected override bool GetCurrentLockState() => CurrentState.Lock;
+        protected override Lock GetCurrentLockState() => CurrentState.Lock;
 
         #endregion
 
@@ -184,7 +184,8 @@ namespace KnxModel
             if (e.Destination == Addresses.LockFeedback)
             {
                 var isLocked = e.Value.AsBoolean();
-                CurrentState = CurrentState with { Lock = isLocked, LastUpdated = DateTime.Now };
+                var lockState = isLocked ? Lock.On : Lock.Off;
+                CurrentState = CurrentState with { Lock = lockState, LastUpdated = DateTime.Now };
                 Console.WriteLine($"Shutter {Id} lock state updated via feedback: {(isLocked ? "LOCKED" : "UNLOCKED")}");
             }
             else

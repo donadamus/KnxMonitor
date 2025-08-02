@@ -235,22 +235,22 @@ namespace KnxTest.Integration
                 Console.WriteLine($"Testing lock functionality for light {lightId}");
                 
                 // Act & Assert - Lock the light
-                await light.SetLockAsync(true);
-                light.CurrentState.Lock.Should().BeTrue("Light should be locked via feedback");
+                await light.SetLockAsync(Lock.On);
+                light.CurrentState.Lock.Should().Be(Lock.On, "Light should be locked via feedback");
                 Console.WriteLine($"✅ Light {lightId} successfully locked");
 
                 // Act & Assert - Unlock the light
-                await light.SetLockAsync(false);
-                light.CurrentState.Lock.Should().BeFalse("Light should be unlocked via feedback");
+                await light.SetLockAsync(Lock.Off);
+                light.CurrentState.Lock.Should().Be(Lock.Off, "Light should be unlocked via feedback");
                 Console.WriteLine($"✅ Light {lightId} successfully unlocked");
 
                 // Test convenience methods
                 await light.LockAsync();
-                light.CurrentState.Lock.Should().BeTrue();
+                light.CurrentState.Lock.Should().Be(Lock.On);
                 Console.WriteLine($"✅ Light {lightId} LockAsync() works");
 
                 await light.UnlockAsync();
-                light.CurrentState.Lock.Should().BeFalse();
+                light.CurrentState.Lock.Should().Be(Lock.Off);
                 Console.WriteLine($"✅ Light {lightId} UnlockAsync() works");
             }
             finally
@@ -262,9 +262,9 @@ namespace KnxTest.Integration
         }
 
         [Theory]
-        [InlineData("L11", true)]
-        [InlineData("L13", false)]
-        public async Task CanWaitForLightLockState(string lightId, bool targetLockState)
+        [InlineData("L11", Lock.On)]
+        [InlineData("L13", Lock.Off)]
+        public async Task CanWaitForLightLockState(string lightId, Lock targetLockState)
         {
             // Arrange
             var light = LightFactory.CreateLight(lightId, _knxService);
@@ -273,10 +273,11 @@ namespace KnxTest.Integration
 
             try
             {
-                Console.WriteLine($"Testing wait for lock state {(targetLockState ? "LOCKED" : "UNLOCKED")} for light {lightId}");
+                Console.WriteLine($"Testing wait for lock state {targetLockState} for light {lightId}");
 
                 // Act - Set opposite state first
-                await light.SetLockAsync(!targetLockState);
+                var oppositeLockState = targetLockState == Lock.On ? Lock.Off : Lock.On;
+                await light.SetLockAsync(oppositeLockState);
                 
                 // Start waiting for target state in background
                 var waitTask = light.WaitForLockStateAsync(targetLockState, TimeSpan.FromSeconds(10));
@@ -316,20 +317,20 @@ namespace KnxTest.Integration
             var initialLockState = light.CurrentState.Lock;
             
             Console.WriteLine($"Testing lock functionality prevents state changes for light {lightId}");
-            Console.WriteLine($"Initial state: {(initialState ? "ON" : "OFF")}, Lock: {(initialLockState ? "LOCKED" : "UNLOCKED")}");
+            Console.WriteLine($"Initial state: {(initialState ? "ON" : "OFF")}, Lock: {initialLockState}");
 
             try
             {
                 // Step 1: Ensure light is unlocked and set to known state
-                await light.SetLockAsync(false);
+                await light.SetLockAsync(Lock.Off);
                 await light.SetStateAsync(true); // Turn ON
                 light.CurrentState.IsOn.Should().BeTrue("Light should be ON when unlocked");
-                light.CurrentState.Lock.Should().BeFalse("Light should be unlocked");
+                light.CurrentState.Lock.Should().Be(Lock.Off,"Light should be unlocked");
                 Console.WriteLine($"✅ Step 1: Light {lightId} set to ON and unlocked");
 
                 // Step 2: Try to lock the light - for lights we don't expect feedback, use zero timeout
                 Console.WriteLine($"Step 2: Setting lock for light {lightId} (lights may not provide lock feedback)");
-                await light.SetLockAsync(true, TimeSpan.Zero);
+                await light.SetLockAsync(Lock.On, TimeSpan.Zero);
                 
                 // For lights, we don't wait for feedback - just assume the lock command was sent
                 // The real test is whether the lock actually prevents state changes
@@ -358,8 +359,8 @@ namespace KnxTest.Integration
                 }
 
                 // Step 4: Unlock the light
-                await light.SetLockAsync(false);
-                light.CurrentState.Lock.Should().BeFalse("Light should be unlocked");
+                await light.SetLockAsync(Lock.Off);
+                light.CurrentState.Lock.Should().Be(Lock.Off,"Light should be unlocked");
                 Console.WriteLine($"✅ Step 4: Light {lightId} unlocked");
 
                 // Step 5: Verify state can be changed after unlocking
@@ -376,11 +377,11 @@ namespace KnxTest.Integration
                 // Always restore original state and lock state
                 try
                 {
-                    await light.SetLockAsync(false); // Ensure unlocked for cleanup
+                    await light.SetLockAsync(Lock.Off); // Ensure unlocked for cleanup
                     await light.RestoreSavedStateAsync();
-                    if (initialLockState)
+                    if (initialLockState == Lock.On)
                     {
-                        await light.SetLockAsync(true); // Restore original lock state if needed
+                        await light.SetLockAsync(Lock.On); // Restore original lock state if needed
                     }
                 }
                 catch (Exception ex)

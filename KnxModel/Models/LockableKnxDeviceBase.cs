@@ -13,19 +13,19 @@ namespace KnxModel
         {
         }
 
-        public async Task SetLockAsync(bool isLocked, TimeSpan? timeout = null)
+        public async Task SetLockAsync(Lock lockState, TimeSpan? timeout = null)
         {
-            await SetLockStateAsync(isLocked, timeout);
+            await SetLockStateAsync(lockState, timeout);
         }
 
         public async Task LockAsync(TimeSpan? timeout = null)
         {
-            await SetLockAsync(true, timeout);
+            await SetLockAsync(Lock.On, timeout);
         }
 
         public async Task UnlockAsync(TimeSpan? timeout = null)
         {
-            await SetLockAsync(false, timeout);
+            await SetLockAsync(Lock.Off, timeout);
         }
 
         /// <summary>
@@ -41,30 +41,31 @@ namespace KnxModel
         /// <summary>
         /// Updates the current state with lock information - must be implemented by derived classes
         /// </summary>
-        protected abstract void UpdateCurrentStateLock(bool isLocked);
+        protected abstract void UpdateCurrentStateLock(Lock lockState);
 
         /// <summary>
         /// Gets the current lock state from the device state - must be implemented by derived classes
         /// </summary>
-        protected abstract bool GetCurrentLockState();
+        protected abstract Lock GetCurrentLockState();
 
-        protected virtual async Task SetLockStateAsync(bool isLocked, TimeSpan? timeout = null)
+        protected virtual async Task SetLockStateAsync(Lock lockState, TimeSpan? timeout = null)
         {
-            Console.WriteLine($"{(isLocked ? "Locking" : "Unlocking")} {GetType().Name.ToLower()} {Id}");
+            Console.WriteLine($"{lockState} {GetType().Name.ToLower()} {Id}");
             
             await SetBitFunctionAsync(
                 GetLockControlAddress(),
-                isLocked,
-                () => GetCurrentLockState() == isLocked,
+                lockState == Lock.On,
+                () => GetCurrentLockState() == lockState,
                 timeout
             );
         }
 
-        public virtual async Task<bool> ReadLockStateAsync()
+        public virtual async Task<Lock> ReadLockStateAsync()
         {
             try
             {
-                return await _knxService.RequestGroupValue<bool>(GetLockFeedbackAddress());
+                var lockState = await _knxService.RequestGroupValue<bool>(GetLockFeedbackAddress());
+                return lockState ? Lock.On : Lock.Off;
             }
             catch (Exception ex)
             {
@@ -73,14 +74,14 @@ namespace KnxModel
             }
         }
 
-        public virtual async Task<bool> WaitForLockStateAsync(bool targetLockState, TimeSpan? timeout = null)
+        public virtual async Task<bool> WaitForLockStateAsync(Lock lockState, TimeSpan? timeout = null)
         {
-            Console.WriteLine($"Waiting for {GetType().Name.ToLower()} {Id} lock to become: {(targetLockState ? "LOCKED" : "UNLOCKED")}");
+            Console.WriteLine($"Waiting for {GetType().Name.ToLower()} {Id} lock to become: {lockState}");
             
             return await WaitForConditionAsync(
-                condition: () => GetCurrentLockState() == targetLockState,
+                condition: () => GetCurrentLockState() == lockState,
                 timeout: timeout,
-                description: $"lock state {(targetLockState ? "LOCKED" : "UNLOCKED")}"
+                description: $"lock state {lockState}"
             );
         }
 
@@ -90,7 +91,8 @@ namespace KnxModel
             if (e.Destination == GetLockFeedbackAddress())
             {
                 var isLocked = e.Value.AsBoolean();
-                UpdateCurrentStateLock(isLocked);
+                var lockState = isLocked ? Lock.On : Lock.Off;
+                UpdateCurrentStateLock(lockState);
                 Console.WriteLine($"{GetType().Name} {Id} lock state updated via feedback: {(isLocked ? "LOCKED" : "UNLOCKED")}");
             }
             else

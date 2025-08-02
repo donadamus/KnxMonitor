@@ -10,7 +10,7 @@ namespace KnxModel
     /// </summary>
     public class Dimmer : Light, IDimmer
     {
-        private static readonly TimeSpan _defaultTimeout = TimeSpan.FromSeconds(10);
+        private static new readonly TimeSpan _defaultTimeout = TimeSpan.FromSeconds(10);
 
         private DimmerAddresses _dimmerAddresses = null!; // Initialized in CreateAddresses() called by base constructor
 
@@ -68,7 +68,7 @@ namespace KnxModel
             return new DimmerState(
                 IsOn: false,
                 Brightness: 0,
-                Lock: false,
+                Lock: Lock.Unknown,
                 LastUpdated: DateTime.Now
             );
         }
@@ -226,12 +226,12 @@ namespace KnxModel
         protected override string GetLockControlAddress() => _dimmerAddresses.LockControl;
         protected override string GetLockFeedbackAddress() => _dimmerAddresses.LockFeedback;
 
-        protected override void UpdateCurrentStateLock(bool isLocked)
+        protected override void UpdateCurrentStateLock(Lock lockState)
         {
-            CurrentState = CurrentState with { Lock = isLocked, LastUpdated = DateTime.Now };
+            CurrentState = CurrentState with { Lock = lockState, LastUpdated = DateTime.Now };
         }
 
-        protected override bool GetCurrentLockState() => CurrentState.Lock;
+        protected override Lock GetCurrentLockState() => CurrentState.Lock;
 
         #endregion
 
@@ -255,7 +255,7 @@ namespace KnxModel
 
         public override string ToString()
         {
-            return $"Dimmer {Id} ({Name}) - State: {(CurrentState.IsOn ? "ON" : "OFF")}, Brightness: {CurrentState.Brightness}%, Lock: {(CurrentState.Lock ? "LOCKED" : "UNLOCKED")}";
+            return $"Dimmer {Id} ({Name}) - State: {(CurrentState.IsOn ? "ON" : "OFF")}, Brightness: {CurrentState.Brightness}%, Lock: {CurrentState.Lock}";
         }
     }
 }
