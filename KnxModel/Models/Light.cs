@@ -6,8 +6,36 @@ namespace KnxModel
     /// <summary>
     /// Implementation of ILight that manages a KNX light device
     /// </summary>
-    public class Light : LockableKnxDevice<LightState, LightAddresses>, ILight
+    public class Light : LockableKnxDeviceBase, ILight
     {
+        private static readonly TimeSpan _defaultTimeout = TimeSpan.FromSeconds(2);
+
+        private LightAddresses _addresses = null!; // Initialized in constructor
+        protected LightState _currentState = null!; // Initialized in constructor
+        protected LightState? _savedState;
+
+        /// <summary>
+        /// KNX addresses for light control and feedback
+        /// </summary>
+        public LightAddresses Addresses => _addresses;
+
+        /// <summary>
+        /// Current state of the light
+        /// </summary>
+        public LightState CurrentState
+        {
+            get => _currentState;
+            protected set => _currentState = value;
+        }
+
+        /// <summary>
+        /// Saved state for restoration after tests
+        /// </summary>
+        public LightState? SavedState
+        {
+            get => _savedState;
+            protected set => _savedState = value;
+        }
 
         /// <summary>
         /// Creates a new Light instance
@@ -16,12 +44,15 @@ namespace KnxModel
         /// <param name="name">Human-readable name</param>
         /// <param name="subGroup">KNX sub-group number</param>
         /// <param name="knxService">KNX service for communication</param>
-        public Light(string id, string name, string subGroup, IKnxService knxService)
-            : base(id, name, subGroup, knxService, TimeSpan.FromSeconds(5))
+        public Light(string id, string name, string subGroup, IKnxService knxService, TimeSpan? timeout = null)
+            : base(id, name, subGroup, knxService, timeout == null ? _defaultTimeout : timeout)
         {
+            _addresses = CreateAddresses();
+            _currentState = CreateDefaultState();
+            StartListeningToFeedback();
         }
 
-        protected override LightAddresses CreateAddresses()
+        protected virtual LightAddresses CreateAddresses()
         {
             return new LightAddresses(
                 Control: KnxAddressConfiguration.CreateLightControlAddress(SubGroup),
@@ -31,7 +62,7 @@ namespace KnxModel
             );
         }
 
-        protected override LightState CreateDefaultState()
+        protected virtual LightState CreateDefaultState()
         {
             // Initialize with default state
             return new LightState(
@@ -41,7 +72,7 @@ namespace KnxModel
             );
         }
 
-        protected override async Task<LightState> ReadCurrentStateAsync()
+        protected virtual async Task<LightState> ReadCurrentStateAsync()
         {
             var isOn = await ReadStateAsync();
             var isLocked = await ReadLockStateAsync();
@@ -67,24 +98,58 @@ namespace KnxModel
             }
         }
 
+        #region Abstract implementations for LockableKnxDeviceBase
+
+        protected override string GetLockControlAddress() => Addresses.LockControl;
+        protected override string GetLockFeedbackAddress() => Addresses.LockFeedback;
+
+        protected override void UpdateCurrentStateLock(bool isLocked)
+        {
+            CurrentState = CurrentState with { IsLocked = isLocked, LastUpdated = DateTime.Now };
+        }
+
+        protected override bool GetCurrentLockState() => CurrentState.IsLocked;
+
+        #endregion
+
+        public override async Task InitializeAsync()
+        {
+            try
+            {
+                CurrentState = await ReadCurrentStateAsync();
+                Console.WriteLine($"Initialized light {Id}: {ToString()}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to initialize light {Id}, using default state: {ex.Message}");
+                CurrentState = CreateDefaultState();
+            }
+        }
+
+        public override void SaveCurrentState()
+        {
+            SavedState = CurrentState;
+            SaveCurrentStateMessage();
+        }
+
+        protected virtual void SaveCurrentStateMessage()
+        {
+            Console.WriteLine($"Saved current state for light {Id} - State: {(CurrentState.IsOn ? "ON" : "OFF")}");
+        }
+
         public override async Task RestoreSavedStateAsync()
         {
             if (SavedState == null)
             {
-                throw new InvalidOperationException($"No saved state available for light {Id}. Call SaveCurrentStateAsync() first.");
+                throw new InvalidOperationException($"No saved state available for light {Id}. Call SaveCurrentState() first.");
             }
 
-            Console.WriteLine($"Restoring light {Id} to saved state - State: {(SavedState.IsOn ? "ON" : "OFF")}");
+            RestoreSavedStateMessage();
 
             try
             {
-                // Restore state
-                if (CurrentState.IsOn != SavedState.IsOn)
-                {
-                    await SetStateAsync(SavedState.IsOn);
-                }
-
-                Console.WriteLine($"Light {Id} successfully restored to saved state");
+                await PerformStateRestoration();
+                RestoreSuccessMessage();
             }
             catch (Exception ex)
             {
@@ -93,9 +158,28 @@ namespace KnxModel
             }
         }
 
-        #region LockableKnxDevice Implementation
+        protected virtual void RestoreSavedStateMessage()
+        {
+            Console.WriteLine($"Restoring light {Id} to saved state - State: {(SavedState!.IsOn ? "ON" : "OFF")}");
+        }
 
-        public override LightState UpdateLockState(bool isLocked) => 
+        protected virtual async Task PerformStateRestoration()
+        {
+            // Restore state
+            if (CurrentState.IsOn != SavedState!.IsOn)
+            {
+                await SetStateAsync(SavedState.IsOn);
+            }
+        }
+
+        protected virtual void RestoreSuccessMessage()
+        {
+            Console.WriteLine($"Light {Id} successfully restored to saved state");
+        }
+
+        #region Lock Implementation
+
+        public virtual LightState UpdateLockState(bool isLocked) => 
             CurrentState with { IsLocked = isLocked, LastUpdated = DateTime.Now };
 
         #endregion
@@ -106,9 +190,9 @@ namespace KnxModel
             
             await SetBitFunctionAsync(
                 Addresses.Control,
-                targetValue: isOn,
-                stateSelector: () => CurrentState.IsOn == isOn,
-                timeout: timeout
+                isOn,
+                () => CurrentState.IsOn == isOn,
+                timeout
             );
         }
 
@@ -153,18 +237,12 @@ namespace KnxModel
             );
         }
 
-        private async Task RefreshCurrentStateAsync()
+        public async Task RefreshStateAsync()
         {
             try
             {
-                var isOn = await ReadStateAsync();
-                var isLocked = await ReadLockStateAsync();
-
-                CurrentState = new LightState(
-                    IsOn: isOn,
-                    IsLocked: isLocked,
-                    LastUpdated: DateTime.Now
-                );
+                CurrentState = await ReadCurrentStateAsync();
+                Console.WriteLine($"Refreshed state for light {Id}: {ToString()}");
             }
             catch (Exception ex)
             {
@@ -173,14 +251,14 @@ namespace KnxModel
             }
         }
 
-        // Note: StartListeningToFeedback and StopListeningToFeedback are now handled by base class
-        // Note: OnKnxGroupMessageReceived is now handled by ProcessKnxMessage in base class
-
         public override string ToString()
         {
             return $"Light {Id} ({Name}) - State: {(CurrentState.IsOn ? "ON" : "OFF")}, Lock: {(CurrentState.IsLocked ? "LOCKED" : "UNLOCKED")}";
         }
 
-        // Note: Dispose is now handled by base class
+        public override void Dispose()
+        {
+            StopListeningToFeedback();
+        }
     }
 }

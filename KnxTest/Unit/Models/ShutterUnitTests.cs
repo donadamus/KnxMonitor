@@ -67,7 +67,7 @@ namespace KnxTest.Unit.Models
             _shutter.CurrentState.Position.Should().Be(expectedPosition);
             _shutter.CurrentState.IsLocked.Should().BeTrue();
             _shutter.CurrentState.MovementState.Should().Be(ShutterMovementState.Inactive);
-            _shutter.CurrentState.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(5));
+            _shutter.CurrentState.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(1));
         }
 
         [Fact]
@@ -253,7 +253,7 @@ namespace KnxTest.Unit.Models
                           .ReturnsAsync(false);
 
             // Act
-            await _shutter.StopAsync();
+            await _shutter.StopAsync(TimeSpan.Zero);
 
             // Assert
             _mockKnxService.Verify(s => s.WriteGroupValue(_shutter.Addresses.StopControl, true), Times.Once);

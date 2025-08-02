@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace KnxModel
@@ -9,6 +10,8 @@ namespace KnxModel
     /// </summary>
     public class Dimmer : Light, IDimmer
     {
+        private static readonly TimeSpan _defaultTimeout = TimeSpan.FromSeconds(10);
+
         private DimmerAddresses _dimmerAddresses = null!; // Initialized in CreateAddresses() called by base constructor
 
         /// <summary>
@@ -17,25 +20,7 @@ namespace KnxModel
         public new DimmerAddresses Addresses => _dimmerAddresses;
 
         /// <summary>
-        /// Override base Addresses property to return dimmer addresses
-        /// This ensures that inherited Light methods use the correct dimmer addresses
-        /// since DimmerAddresses now inherits from LightAddresses
-        /// </summary>
-        protected override LightAddresses CreateAddresses()
-        {
-            // Create and store dimmer addresses
-            return _dimmerAddresses = new DimmerAddresses(
-                SwitchControl: KnxAddressConfiguration.CreateDimmerSwitchControlAddress(SubGroup),
-                SwitchFeedback: KnxAddressConfiguration.CreateDimmerSwitchFeedbackAddress(SubGroup),
-                BrightnessControl: KnxAddressConfiguration.CreateDimmerBrightnessControlAddress(SubGroup),
-                BrightnessFeedback: KnxAddressConfiguration.CreateDimmerBrightnessFeedbackAddress(SubGroup),
-                LockControl: KnxAddressConfiguration.CreateDimmerLockAddress(SubGroup),
-                LockFeedback: KnxAddressConfiguration.CreateDimmerLockFeedbackAddress(SubGroup)
-            );
-        }
-
-        /// <summary>
-        /// Gets the current dimmer state (shadows base LightState)
+        /// Gets the current dimmer state
         /// </summary>
         public new DimmerState CurrentState 
         { 
@@ -44,7 +29,7 @@ namespace KnxModel
         }
 
         /// <summary>
-        /// Gets the saved dimmer state (shadows base LightState)
+        /// Gets the saved dimmer state
         /// </summary>
         public new DimmerState? SavedState 
         { 
@@ -59,10 +44,22 @@ namespace KnxModel
         /// <param name="name">Human-readable name</param>
         /// <param name="subGroup">KNX sub-group number</param>
         /// <param name="knxService">KNX service for communication</param>
-        public Dimmer(string id, string name, string subGroup, IKnxService knxService)
-            : base(id, name, subGroup, knxService)
+        public Dimmer(string id, string name, string subGroup, IKnxService knxService, TimeSpan? timeout = null)
+            : base(id, name, subGroup, knxService, timeout == null ? _defaultTimeout : timeout)
         {
-            // CurrentState is automatically set by base constructor via CreateDefaultState()
+        }
+
+        protected override LightAddresses CreateAddresses()
+        {
+            // Create and store dimmer addresses
+            return _dimmerAddresses = new DimmerAddresses(
+                SwitchControl: KnxAddressConfiguration.CreateDimmerSwitchControlAddress(SubGroup),
+                SwitchFeedback: KnxAddressConfiguration.CreateDimmerSwitchFeedbackAddress(SubGroup),
+                BrightnessControl: KnxAddressConfiguration.CreateDimmerBrightnessControlAddress(SubGroup),
+                BrightnessFeedback: KnxAddressConfiguration.CreateDimmerBrightnessFeedbackAddress(SubGroup),
+                LockControl: KnxAddressConfiguration.CreateDimmerLockAddress(SubGroup),
+                LockFeedback: KnxAddressConfiguration.CreateDimmerLockFeedbackAddress(SubGroup)
+            );
         }
 
         protected override LightState CreateDefaultState()
@@ -125,46 +122,28 @@ namespace KnxModel
             }
         }
 
-        public override LightState UpdateLockState(bool isLocked) 
+        protected override void SaveCurrentStateMessage()
         {
-            CurrentState = CurrentState with { IsLocked = isLocked, LastUpdated = DateTime.Now };
-            return new LightState(
-                IsOn: CurrentState.IsOn,
-                IsLocked: CurrentState.IsLocked,
-                LastUpdated: CurrentState.LastUpdated
-            );
-        }
-
-        public override async Task RestoreSavedStateAsync()
-        {
-            if (SavedState == null)
-            {
-                throw new InvalidOperationException($"No saved state available for dimmer {Id}. Call SaveCurrentState() first.");
-            }
-
-            Console.WriteLine($"Restoring dimmer {Id} to saved state - State: {(SavedState.IsOn ? "ON" : "OFF")}, Brightness: {SavedState.Brightness}%");
-
-            try
-            {
-                // Restore brightness first (this will also handle on/off state)
-                if (CurrentState.Brightness != SavedState.Brightness)
-                {
-                    await SetBrightnessAsync(SavedState.Brightness);
-                }
-
-                Console.WriteLine($"Dimmer {Id} successfully restored to saved state");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Failed to restore dimmer {Id} state: {ex.Message}");
-                throw;
-            }
-        }
-
-        public override void SaveCurrentState()
-        {
-            SavedState = CurrentState;
             Console.WriteLine($"Saved current state for dimmer {Id} - State: {(CurrentState.IsOn ? "ON" : "OFF")}, Brightness: {CurrentState.Brightness}%");
+        }
+
+        protected override void RestoreSavedStateMessage()
+        {
+            Console.WriteLine($"Restoring dimmer {Id} to saved state - State: {(SavedState!.IsOn ? "ON" : "OFF")}, Brightness: {SavedState.Brightness}%");
+        }
+
+        protected override async Task PerformStateRestoration()
+        {
+            // Restore brightness first (this will also handle on/off state)
+            if (CurrentState.Brightness != SavedState!.Brightness)
+            {
+                await SetBrightnessAsync(SavedState.Brightness);
+            }
+        }
+
+        protected override void RestoreSuccessMessage()
+        {
+            Console.WriteLine($"Dimmer {Id} successfully restored to saved state");
         }
 
         #region Brightness Control
@@ -242,49 +221,23 @@ namespace KnxModel
 
         #endregion
 
-        #region Lock Control (inherited from base class with dimmer addresses)
+        #region Lock Control (inherited from LockableKnxDeviceBase)
 
-        public override async Task<bool> ReadLockStateAsync()
+        protected override string GetLockControlAddress() => _dimmerAddresses.LockControl;
+        protected override string GetLockFeedbackAddress() => _dimmerAddresses.LockFeedback;
+
+        protected override void UpdateCurrentStateLock(bool isLocked)
         {
-            try
-            {
-                return await _knxService.RequestGroupValue<bool>(_dimmerAddresses.LockFeedback);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Failed to read lock state for dimmer {Id}: {ex.Message}");
-                throw;
-            }
+            CurrentState = CurrentState with { IsLocked = isLocked, LastUpdated = DateTime.Now };
         }
 
-        public override async Task<bool> WaitForLockStateAsync(bool targetLockState, TimeSpan? timeout = null)
-        {
-            Console.WriteLine($"Waiting for dimmer {Id} lock to become: {(targetLockState ? "LOCKED" : "UNLOCKED")}");
-            
-            return await WaitForConditionAsync(
-                condition: () => CurrentState.IsLocked == targetLockState,
-                timeout: timeout,
-                description: $"lock state {(targetLockState ? "LOCKED" : "UNLOCKED")}"
-            );
-        }
-
-        protected override async Task SetLockStateAsync(bool isLocked, TimeSpan? timeout = null)
-        {
-            Console.WriteLine($"{(isLocked ? "Locking" : "Unlocking")} dimmer {Id}");
-            
-            await SetBitFunctionAsync(
-                _dimmerAddresses.LockControl,
-                isLocked,
-                () => CurrentState.IsLocked == isLocked,
-                timeout
-            );
-        }
+        protected override bool GetCurrentLockState() => CurrentState.IsLocked;
 
         #endregion
 
         #region State Management
 
-        public async Task RefreshStateAsync()
+        public new async Task RefreshStateAsync()
         {
             try
             {

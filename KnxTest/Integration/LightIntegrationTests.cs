@@ -162,7 +162,7 @@ namespace KnxTest.Integration
 
                 // Act - Change state and wait
                 await light.SetStateAsync(targetState);
-                var success = await light.WaitForStateAsync(targetState, TimeSpan.FromSeconds(5));
+                var success = await light.WaitForStateAsync(targetState, TimeSpan.FromSeconds(2));
 
                 // Assert
                 success.Should().BeTrue($"Should successfully wait for state {targetState}");

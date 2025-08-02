@@ -41,7 +41,7 @@ namespace KnxModel
         /// <summary>
         /// Stop shutter movement
         /// </summary>
-        Task StopAsync();
+        Task StopAsync(TimeSpan? timeout = null);
 
         /// <summary>
         /// Read current position from KNX bus

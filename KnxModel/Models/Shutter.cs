@@ -6,9 +6,35 @@ namespace KnxModel
     /// <summary>
     /// Implementation of IShutter that manages a KNX shutter device
     /// </summary>
-    public class Shutter : LockableKnxDevice<ShutterState, ShutterAddresses>, IShutter
+    public class Shutter : LockableKnxDeviceBase, IShutter
     {
-        private readonly TimeSpan _defaultMoveTimeout = TimeSpan.FromSeconds(30);
+        private static readonly TimeSpan _defaultMoveTimeout = TimeSpan.FromSeconds(30);
+        private ShutterAddresses _addresses = null!; // Initialized in constructor
+        protected ShutterState _currentState = null!; // Initialized in constructor
+        protected ShutterState? _savedState;
+
+        /// <summary>
+        /// KNX addresses for shutter control and feedback
+        /// </summary>
+        public ShutterAddresses Addresses => _addresses;
+
+        /// <summary>
+        /// Current state of the shutter
+        /// </summary>
+        public ShutterState CurrentState
+        {
+            get => _currentState;
+            protected set => _currentState = value;
+        }
+
+        /// <summary>
+        /// Saved state for restoration after tests
+        /// </summary>
+        public ShutterState? SavedState
+        {
+            get => _savedState;
+            protected set => _savedState = value;
+        }
 
         /// <summary>
         /// Creates a new Shutter instance
@@ -17,12 +43,15 @@ namespace KnxModel
         /// <param name="name">Human-readable name</param>
         /// <param name="subGroup">KNX sub-group number (1-18)</param>
         /// <param name="knxService">KNX service for communication</param>
-        public Shutter(string id, string name, string subGroup, IKnxService knxService)
-            : base(id, name, subGroup, knxService, TimeSpan.FromSeconds(30))
+        public Shutter(string id, string name, string subGroup, IKnxService knxService, TimeSpan? timeout = null)
+            : base(id, name, subGroup, knxService, timeout == null ? _defaultMoveTimeout : timeout)
         {
+            _addresses = CreateAddresses();
+            _currentState = CreateDefaultState();
+            StartListeningToFeedback();
         }
 
-        protected override ShutterAddresses CreateAddresses()
+        protected virtual ShutterAddresses CreateAddresses()
         {
             // Calculate KNX addresses based on sub-group using centralized configuration
             return new ShutterAddresses(
@@ -37,7 +66,7 @@ namespace KnxModel
             );
         }
 
-        protected override ShutterState CreateDefaultState()
+        protected virtual ShutterState CreateDefaultState()
         {
             // Initialize with default state
             return new ShutterState(
@@ -48,14 +77,70 @@ namespace KnxModel
             );
         }
 
-        #region LockableKnxDevice Implementation
+        public override async Task InitializeAsync()
+        {
+            try
+            {
+                CurrentState = await ReadCurrentStateAsync();
+                Console.WriteLine($"Initialized shutter {Id}: {ToString()}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to initialize shutter {Id}, using default state: {ex.Message}");
+                CurrentState = CreateDefaultState();
+            }
+        }
 
-        public override ShutterState UpdateLockState(bool isLocked) => 
+        public override void SaveCurrentState()
+        {
+            SavedState = CurrentState;
+            Console.WriteLine($"Saved current state for shutter {Id} - Position: {CurrentState.Position}%");
+        }
+
+        public override async Task RestoreSavedStateAsync()
+        {
+            if (SavedState == null)
+            {
+                throw new InvalidOperationException($"No saved state available for shutter {Id}. Call SaveCurrentState() first.");
+            }
+
+            Console.WriteLine($"Restoring shutter {Id} to saved state - Position: {SavedState.Position}%");
+
+            try
+            {
+                // Restore position
+                if (Math.Abs(CurrentState.Position - SavedState.Position) > 1.0f) // Allow 1% tolerance
+                {
+                    await SetPositionAsync(SavedState.Position);
+                }
+
+                Console.WriteLine($"Shutter {Id} successfully restored to saved state");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to restore shutter {Id} state: {ex.Message}");
+                throw;
+            }
+        }
+
+        #region Lock Implementation (inherited from LockableKnxDeviceBase)
+
+        public virtual ShutterState UpdateLockState(bool isLocked) => 
             CurrentState with { IsLocked = isLocked, LastUpdated = DateTime.Now };
+
+        protected override string GetLockControlAddress() => Addresses.LockControl;
+        protected override string GetLockFeedbackAddress() => Addresses.LockFeedback;
+
+        protected override void UpdateCurrentStateLock(bool isLocked)
+        {
+            CurrentState = CurrentState with { IsLocked = isLocked, LastUpdated = DateTime.Now };
+        }
+
+        protected override bool GetCurrentLockState() => CurrentState.IsLocked;
 
         #endregion
 
-        protected override async Task<ShutterState> ReadCurrentStateAsync()
+        protected virtual async Task<ShutterState> ReadCurrentStateAsync()
         {
             var position = await ReadPositionAsync();
             var isLocked = await ReadLockStateAsync();
@@ -93,41 +178,19 @@ namespace KnxModel
             }
         }
 
-        public override async Task RestoreSavedStateAsync()
+        protected override void ProcessKnxMessage(KnxGroupEventArgs e)
         {
-            if (SavedState == null)
+            // Handle lock messages first
+            if (e.Destination == Addresses.LockFeedback)
             {
-                throw new InvalidOperationException($"No saved state available for shutter {Id}. Call SaveCurrentStateAsync() first.");
+                var isLocked = e.Value.AsBoolean();
+                CurrentState = CurrentState with { IsLocked = isLocked, LastUpdated = DateTime.Now };
+                Console.WriteLine($"Shutter {Id} lock state updated via feedback: {(isLocked ? "LOCKED" : "UNLOCKED")}");
             }
-
-            Console.WriteLine($"Restoring shutter {Id} to saved state - Position: {SavedState.Position}%, Locked: {SavedState.IsLocked}");
-
-            try
+            else
             {
-                // First unlock if currently locked
-                if (CurrentState.IsLocked)
-                {
-                    await SetLockAsync(false);
-                }
-
-                // Restore position (use mechanical precision tolerance)
-                if (Math.Abs(CurrentState.Position - SavedState.Position) > 1.0)
-                {
-                    await SetPositionAsync(SavedState.Position);
-                }
-
-                // Restore lock state
-                if (CurrentState.IsLocked != SavedState.IsLocked)
-                {
-                    await SetLockAsync(SavedState.IsLocked);
-                }
-
-                Console.WriteLine($"Shutter {Id} successfully restored to saved state");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Failed to restore shutter {Id} state: {ex.Message}");
-                throw;
+                // Handle device-specific messages
+                ProcessDeviceSpecificMessage(e);
             }
         }
 
@@ -166,13 +229,13 @@ namespace KnxModel
             }
         }
 
-        public async Task StopAsync()
+        public async Task StopAsync(TimeSpan? timeout = null)
         {
             Console.WriteLine($"Stopping shutter {Id}");
             _knxService.WriteGroupValue(Addresses.StopControl, true);
             
             // Wait for movement to actually stop (with reasonable timeout)
-            var success = await WaitForMovementStopAsync(TimeSpan.FromSeconds(5));
+            var success = await WaitForMovementStopAsync(timeout);
             if (!success)
             {
                 Console.WriteLine($"⚠️ WARNING: Shutter {Id} may not have stopped within expected time");
@@ -290,11 +353,14 @@ namespace KnxModel
             }
         }
 
-        // Note: StartListeningToFeedback, StopListeningToFeedback, OnKnxGroupMessageReceived and Dispose are now handled by base class
-
         public override string ToString()
         {
             return $"Shutter {Id} ({Name}) - Position: {CurrentState.Position}%, Locked: {CurrentState.IsLocked}, Movement: {CurrentState.MovementState}";
+        }
+
+        public override void Dispose()
+        {
+            StopListeningToFeedback();
         }
     }
 }
