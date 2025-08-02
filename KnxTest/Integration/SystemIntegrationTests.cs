@@ -299,21 +299,21 @@ namespace KnxTest.Integration
 
             try
             {
-                var initialLockState = shutter.CurrentState.IsLocked;
+                var initialLockState = shutter.CurrentState.Lock;
                 Console.WriteLine($"Shutter {shutterId} initial lock state: {(initialLockState ? "LOCKED" : "UNLOCKED")}");
 
                 // Act - Toggle lock state
                 await shutter.SetLockAsync(!initialLockState);
                 
                 // Assert - Check lock state changed on model
-                Assert.Equal(!initialLockState, shutter.CurrentState.IsLocked);
-                Console.WriteLine($"✓ Shutter {shutterId} lock successfully toggled to {(shutter.CurrentState.IsLocked ? "LOCKED" : "UNLOCKED")}");
+                Assert.Equal(!initialLockState, shutter.CurrentState.Lock);
+                Console.WriteLine($"✓ Shutter {shutterId} lock successfully toggled to {(shutter.CurrentState.Lock ? "LOCKED" : "UNLOCKED")}");
 
                 // Toggle back to original state
                 await shutter.SetLockAsync(initialLockState);
                 
-                Assert.Equal(initialLockState, shutter.CurrentState.IsLocked);
-                Console.WriteLine($"✓ Shutter {shutterId} lock successfully restored to {(shutter.CurrentState.IsLocked ? "LOCKED" : "UNLOCKED")}");
+                Assert.Equal(initialLockState, shutter.CurrentState.Lock);
+                Console.WriteLine($"✓ Shutter {shutterId} lock successfully restored to {(shutter.CurrentState.Lock ? "LOCKED" : "UNLOCKED")}");
             }
             finally
             {
@@ -348,7 +348,7 @@ namespace KnxTest.Integration
                 await shutter.SetLockAsync(true);
                 
                 // Verify lock is engaged
-                Assert.True(shutter.CurrentState.IsLocked);
+                Assert.True(shutter.CurrentState.Lock);
                 Console.WriteLine("✓ Lock successfully engaged");
 
                 // Step 2: Test UP movement while locked
@@ -380,7 +380,7 @@ namespace KnxTest.Integration
                 await shutter.SetLockAsync(false);
                 await Task.Delay(1000); // Wait for lock to disengage
                 
-                Assert.False(shutter.CurrentState.IsLocked);
+                Assert.False(shutter.CurrentState.Lock);
                 Console.WriteLine("✓ Lock successfully disengaged");
                 
                 // Quick movement test to verify shutter responds when unlocked

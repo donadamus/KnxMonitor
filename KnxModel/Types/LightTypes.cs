@@ -30,13 +30,27 @@ namespace KnxModel
     /// <param name="LastUpdated">When the state was last updated</param>
     public record LightState(
         bool IsOn,
-        bool IsLocked,
+        bool Lock,
         DateTime LastUpdated
     ) : ILockableState;
 
     public interface ILockableState
     {
-        bool IsLocked { get; }
+        bool Lock { get; }
         DateTime LastUpdated { get; }
     }
+
+    public enum Switch
+    {
+        Off,    // false in KNX
+        On,     // true in KNX
+        Unknown // state not known
+    }
+    public enum Lock
+    {
+        Off,    // false in KNX
+        On,     // true in KNX
+        Unknown // state not known
+    }
+
 }

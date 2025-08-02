@@ -65,7 +65,7 @@ namespace KnxTest.Unit.Models
 
             // Assert
             _shutter.CurrentState.Position.Should().Be(expectedPosition);
-            _shutter.CurrentState.IsLocked.Should().BeTrue();
+            _shutter.CurrentState.Lock.Should().BeTrue();
             _shutter.CurrentState.MovementState.Should().Be(ShutterMovementState.Inactive);
             _shutter.CurrentState.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(1));
         }
@@ -89,7 +89,7 @@ namespace KnxTest.Unit.Models
             // Assert
             _shutter.SavedState.Should().NotBeNull();
             _shutter.SavedState!.Position.Should().Be(expectedPosition);
-            _shutter.SavedState.IsLocked.Should().BeFalse();
+            _shutter.SavedState.Lock.Should().BeFalse();
             _shutter.SavedState.MovementState.Should().Be(ShutterMovementState.Inactive);
         }
 

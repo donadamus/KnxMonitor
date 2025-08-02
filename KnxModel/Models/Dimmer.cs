@@ -68,7 +68,7 @@ namespace KnxModel
             return new DimmerState(
                 IsOn: false,
                 Brightness: 0,
-                IsLocked: false,
+                Lock: false,
                 LastUpdated: DateTime.Now
             );
         }
@@ -87,7 +87,7 @@ namespace KnxModel
             return new DimmerState(
                 IsOn: isOn,
                 Brightness: brightness,
-                IsLocked: isLocked,
+                Lock: isLocked,
                 LastUpdated: DateTime.Now
             );
         }
@@ -228,10 +228,10 @@ namespace KnxModel
 
         protected override void UpdateCurrentStateLock(bool isLocked)
         {
-            CurrentState = CurrentState with { IsLocked = isLocked, LastUpdated = DateTime.Now };
+            CurrentState = CurrentState with { Lock = isLocked, LastUpdated = DateTime.Now };
         }
 
-        protected override bool GetCurrentLockState() => CurrentState.IsLocked;
+        protected override bool GetCurrentLockState() => CurrentState.Lock;
 
         #endregion
 
@@ -255,7 +255,7 @@ namespace KnxModel
 
         public override string ToString()
         {
-            return $"Dimmer {Id} ({Name}) - State: {(CurrentState.IsOn ? "ON" : "OFF")}, Brightness: {CurrentState.Brightness}%, Lock: {(CurrentState.IsLocked ? "LOCKED" : "UNLOCKED")}";
+            return $"Dimmer {Id} ({Name}) - State: {(CurrentState.IsOn ? "ON" : "OFF")}, Brightness: {CurrentState.Brightness}%, Lock: {(CurrentState.Lock ? "LOCKED" : "UNLOCKED")}";
         }
     }
 }

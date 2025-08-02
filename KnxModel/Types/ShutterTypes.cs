@@ -21,7 +21,7 @@ namespace KnxModel
     /// </summary>
     public record ShutterState(
         float Position,
-        bool IsLocked,
+        bool Lock,
         ShutterMovementState MovementState,
         DateTime LastUpdated
     ) : ILockableState;

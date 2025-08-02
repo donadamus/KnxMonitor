@@ -67,7 +67,7 @@ namespace KnxModel
             // Initialize with default state
             return new LightState(
                 IsOn: false,
-                IsLocked: false,
+                Lock: false,
                 LastUpdated: DateTime.Now
             );
         }
@@ -78,7 +78,7 @@ namespace KnxModel
             var isLocked = await ReadLockStateAsync();
             return new LightState(
                 IsOn: isOn,
-                IsLocked: isLocked,
+                Lock: isLocked,
                 LastUpdated: DateTime.Now
             );
         }
@@ -91,7 +91,7 @@ namespace KnxModel
                 var isOn = e.Value.AsBoolean();
                 CurrentState = new LightState(
                     IsOn: isOn, 
-                    IsLocked: CurrentState.IsLocked, 
+                    Lock: CurrentState.Lock, 
                     LastUpdated: DateTime.Now
                 );
                 Console.WriteLine($"Light {Id} state updated via feedback: {(isOn ? "ON" : "OFF")}");
@@ -105,10 +105,10 @@ namespace KnxModel
 
         protected override void UpdateCurrentStateLock(bool isLocked)
         {
-            CurrentState = CurrentState with { IsLocked = isLocked, LastUpdated = DateTime.Now };
+            CurrentState = CurrentState with { Lock = isLocked, LastUpdated = DateTime.Now };
         }
 
-        protected override bool GetCurrentLockState() => CurrentState.IsLocked;
+        protected override bool GetCurrentLockState() => CurrentState.Lock;
 
         #endregion
 
@@ -180,7 +180,7 @@ namespace KnxModel
         #region Lock Implementation
 
         public virtual LightState UpdateLockState(bool isLocked) => 
-            CurrentState with { IsLocked = isLocked, LastUpdated = DateTime.Now };
+            CurrentState with { Lock = isLocked, LastUpdated = DateTime.Now };
 
         #endregion
 
@@ -253,7 +253,7 @@ namespace KnxModel
 
         public override string ToString()
         {
-            return $"Light {Id} ({Name}) - State: {(CurrentState.IsOn ? "ON" : "OFF")}, Lock: {(CurrentState.IsLocked ? "LOCKED" : "UNLOCKED")}";
+            return $"Light {Id} ({Name}) - State: {(CurrentState.IsOn ? "ON" : "OFF")}, Lock: {(CurrentState.Lock ? "LOCKED" : "UNLOCKED")}";
         }
 
         public override void Dispose()

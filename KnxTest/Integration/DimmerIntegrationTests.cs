@@ -238,13 +238,13 @@ namespace KnxTest.Integration
                 
                 if (lockSuccess)
                 {
-                    _dimmer1.CurrentState.IsLocked.Should().BeTrue("Dimmer should be locked");
+                    _dimmer1.CurrentState.Lock.Should().BeTrue("Dimmer should be locked");
                     Console.WriteLine("✅ Lock successful");
 
                     // Unlock the dimmer
                     await _dimmer1.UnlockAsync();
                     await _dimmer1.WaitForLockStateAsync(false, TimeSpan.FromSeconds(3));
-                    _dimmer1.CurrentState.IsLocked.Should().BeFalse("Dimmer should be unlocked");
+                    _dimmer1.CurrentState.Lock.Should().BeFalse("Dimmer should be unlocked");
                     Console.WriteLine("✅ Unlock successful");
                 }
                 else
@@ -274,7 +274,7 @@ namespace KnxTest.Integration
 
                 // Lock the dimmer (use TimeSpan.Zero to skip feedback waiting)
                 await _dimmer1.SetLockAsync(true, TimeSpan.Zero);
-                Console.WriteLine($"Lock command sent, current lock state: {_dimmer1.CurrentState.IsLocked}");
+                Console.WriteLine($"Lock command sent, current lock state: {_dimmer1.CurrentState.Lock}");
 
                 // Try to turn on - should be prevented by lock
                 Console.WriteLine("Attempting to turn on locked dimmer...");
@@ -324,7 +324,7 @@ namespace KnxTest.Integration
 
                 // Lock the dimmer (use TimeSpan.Zero to skip feedback waiting)
                 await _dimmer1.SetLockAsync(true, TimeSpan.Zero);
-                Console.WriteLine($"Lock command sent, current lock state: {_dimmer1.CurrentState.IsLocked}");
+                Console.WriteLine($"Lock command sent, current lock state: {_dimmer1.CurrentState.Lock}");
 
                 // Try to change brightness - should be prevented by lock
                 Console.WriteLine("Attempting to change brightness of locked dimmer...");

@@ -71,7 +71,7 @@ namespace KnxModel
             // Initialize with default state
             return new ShutterState(
                 Position: 0.0f,
-                IsLocked: false,
+                Lock: false,
                 MovementState: ShutterMovementState.Unknown,
                 LastUpdated: DateTime.Now
             );
@@ -126,17 +126,17 @@ namespace KnxModel
         #region Lock Implementation (inherited from LockableKnxDeviceBase)
 
         public virtual ShutterState UpdateLockState(bool isLocked) => 
-            CurrentState with { IsLocked = isLocked, LastUpdated = DateTime.Now };
+            CurrentState with { Lock = isLocked, LastUpdated = DateTime.Now };
 
         protected override string GetLockControlAddress() => Addresses.LockControl;
         protected override string GetLockFeedbackAddress() => Addresses.LockFeedback;
 
         protected override void UpdateCurrentStateLock(bool isLocked)
         {
-            CurrentState = CurrentState with { IsLocked = isLocked, LastUpdated = DateTime.Now };
+            CurrentState = CurrentState with { Lock = isLocked, LastUpdated = DateTime.Now };
         }
 
-        protected override bool GetCurrentLockState() => CurrentState.IsLocked;
+        protected override bool GetCurrentLockState() => CurrentState.Lock;
 
         #endregion
 
@@ -148,7 +148,7 @@ namespace KnxModel
 
             return new ShutterState(
                 Position: position,
-                IsLocked: isLocked,
+                Lock: isLocked,
                 MovementState: movementState,
                 LastUpdated: DateTime.Now
             );
@@ -184,7 +184,7 @@ namespace KnxModel
             if (e.Destination == Addresses.LockFeedback)
             {
                 var isLocked = e.Value.AsBoolean();
-                CurrentState = CurrentState with { IsLocked = isLocked, LastUpdated = DateTime.Now };
+                CurrentState = CurrentState with { Lock = isLocked, LastUpdated = DateTime.Now };
                 Console.WriteLine($"Shutter {Id} lock state updated via feedback: {(isLocked ? "LOCKED" : "UNLOCKED")}");
             }
             else
@@ -341,7 +341,7 @@ namespace KnxModel
 
                 CurrentState = new ShutterState(
                     Position: position,
-                    IsLocked: isLocked,
+                    Lock: isLocked,
                     MovementState: movementState,
                     LastUpdated: DateTime.Now
                 );
@@ -355,7 +355,7 @@ namespace KnxModel
 
         public override string ToString()
         {
-            return $"Shutter {Id} ({Name}) - Position: {CurrentState.Position}%, Locked: {CurrentState.IsLocked}, Movement: {CurrentState.MovementState}";
+            return $"Shutter {Id} ({Name}) - Position: {CurrentState.Position}%, Locked: {CurrentState.Lock}, Movement: {CurrentState.MovementState}";
         }
 
         public override void Dispose()

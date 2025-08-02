@@ -7,7 +7,7 @@ using Moq.Language.Flow;
 using KnxModel;
 using KnxService;
 
-namespace KnxTest.Unit
+namespace KnxTest.Unit.Models
 {
     public class DimmerUnitTests : IDisposable
     {
@@ -36,7 +36,7 @@ namespace KnxTest.Unit
             _dimmer.SubGroup.Should().Be("1");
             _dimmer.CurrentState.IsOn.Should().BeFalse();
             _dimmer.CurrentState.Brightness.Should().Be(0);
-            _dimmer.CurrentState.IsLocked.Should().BeFalse();
+            _dimmer.CurrentState.Lock.Should().BeFalse();
         }
 
         [Fact]
@@ -312,7 +312,7 @@ namespace KnxTest.Unit
             _dimmer.SavedState.Should().NotBeNull();
             _dimmer.SavedState.IsOn.Should().BeTrue();
             _dimmer.SavedState.Brightness.Should().Be(60);
-            _dimmer.SavedState.IsLocked.Should().BeFalse();
+            _dimmer.SavedState.Lock.Should().BeFalse();
         }
 
         [Fact]

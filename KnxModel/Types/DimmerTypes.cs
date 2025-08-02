@@ -32,7 +32,7 @@ namespace KnxModel
     public record DimmerState(
         bool IsOn,
         float Brightness,
-        bool IsLocked,
+        bool Lock,
         DateTime LastUpdated
-    ) : LightState(IsOn, IsLocked, LastUpdated);
+    ) : LightState(IsOn, Lock, LastUpdated);
 }

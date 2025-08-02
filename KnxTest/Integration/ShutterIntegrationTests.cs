@@ -67,7 +67,7 @@ namespace KnxTest.Integration
             shutter.SaveCurrentState();
             shutter.SavedState.Should().NotBeNull();
             shutter.SavedState!.Position.Should().Be(shutter.CurrentState.Position);
-            shutter.SavedState.IsLocked.Should().Be(shutter.CurrentState.IsLocked);
+            shutter.SavedState.Lock.Should().Be(shutter.CurrentState.Lock);
 
             // Modify shutter state (ensure different position)
             var originalPosition = shutter.CurrentState.Position;
@@ -226,7 +226,7 @@ namespace KnxTest.Integration
 
             try
             {
-                var initialLockState = shutter.CurrentState.IsLocked;
+                var initialLockState = shutter.CurrentState.Lock;
                 Console.WriteLine($"Shutter {shutterId} initial lock state: {initialLockState}");
 
                 // Toggle lock state
@@ -234,14 +234,14 @@ namespace KnxTest.Integration
                 await shutter.SetLockAsync(newLockState);
                 
                 // Verify state via feedback (natural device behavior)
-                shutter.CurrentState.IsLocked.Should().Be(newLockState, 
+                shutter.CurrentState.Lock.Should().Be(newLockState, 
                     $"Lock state should be {newLockState} via feedback");
 
                 // Toggle back
                 await shutter.SetLockAsync(initialLockState);
                 
                 // Verify restoration via feedback (natural device behavior)
-                shutter.CurrentState.IsLocked.Should().Be(initialLockState, 
+                shutter.CurrentState.Lock.Should().Be(initialLockState, 
                     $"Lock state should be restored to {initialLockState} via feedback");
 
                 Console.WriteLine($"Lock toggle test passed for shutter {shutterId}");
@@ -267,7 +267,7 @@ namespace KnxTest.Integration
             {
                 // Act & Assert - Use current state (natural device behavior)
                 var initialPosition = shutter.CurrentState.Position;
-                var initialLockState = shutter.CurrentState.IsLocked;
+                var initialLockState = shutter.CurrentState.Lock;
 
                 // Ensure shutter is locked
                 if (!initialLockState)
