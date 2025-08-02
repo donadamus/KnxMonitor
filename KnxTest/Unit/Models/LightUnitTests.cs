@@ -32,7 +32,7 @@ namespace KnxTest.Unit.Models
                           .Callback<string, bool>((addr, value) =>
                           {
                               // Simulate lock feedback if Light is ON simulate turning it OFF first
-                              if (_light.CurrentState.IsOn && value == true)
+                              if (_light.CurrentState.Switch.ToBool() && value == true)
                               {
                                   var lockFeedbackArgs = new KnxGroupEventArgs(_light.Addresses.Feedback, new KnxValue(false));
                                   _light.GetType().GetMethod("ProcessKnxMessage",
@@ -59,12 +59,9 @@ namespace KnxTest.Unit.Models
             // Assert
             // Verify final state - for business logic testing, assume lock means OFF
             _light.CurrentState.Lock.Should().Be(Lock.On);  // Light should be LOCKED
-            Assert.False(_light.CurrentState.IsOn);  // Light should be OFF after locking
+            _light.CurrentState.Switch.Should().Be(Switch.Off);  // Light should be OFF after locking
 
             await _light.SetLockAsync(Lock.Off);
-            //// Verify final state - for business logic testing, assume lock means OFF
-            //_light.CurrentState.Lock.Should().Be(Lock.Off);
-            //Assert.False(_light.CurrentState.IsOn);
             
         }
 
@@ -79,8 +76,8 @@ namespace KnxTest.Unit.Models
                           .ReturnsAsync(true); // Light starts LOCKED
 
             // Setup light to be ON and LOCKED initially
-            _light.GetType().GetProperty("CurrentState")?.SetValue(_light, 
-                new LightState(IsOn: true, Lock: Lock.On, LastUpdated: DateTime.Now));
+            //_light.GetType().GetProperty("CurrentState")?.SetValue(_light, 
+            //    new LightState(IsOn: true, Lock: Lock.On, LastUpdated: DateTime.Now));
 
             _mockKnxService.Setup(x => x.WriteGroupValue(_light.Addresses.LockControl, It.IsAny<bool>()))
                           .Callback<string, bool>((addr, value) =>
@@ -100,7 +97,7 @@ namespace KnxTest.Unit.Models
 
             // Assert
             // Verify final state
-            Assert.True(_light.CurrentState.IsOn);   // Light should remain ON
+            _light.CurrentState.Switch.Should().Be(Switch.On);   // Light should remain ON
             _light.CurrentState.Lock.Should().Be(Lock.Off); // Light should be UNLOCKED
         }
 
@@ -132,7 +129,7 @@ namespace KnxTest.Unit.Models
 
             // Assert
             // Verify final state
-            Assert.True(_light.CurrentState.IsOn);  // Light should remain ON
+            _light.CurrentState.Switch.Should().Be(Switch.On);  // Light should remain ON
             _light.CurrentState.Lock.Should().Be(Lock.On);  // Light should be LOCKED
         }
 
@@ -147,8 +144,8 @@ namespace KnxTest.Unit.Models
                           .ReturnsAsync(true); // Light starts LOCKED
 
             // Setup light to be OFF and LOCKED initially
-            _light.GetType().GetProperty("CurrentState")?.SetValue(_light, 
-                new LightState(IsOn: false, Lock: Lock.On, LastUpdated: DateTime.Now));
+            //_light.GetType().GetProperty("CurrentState")?.SetValue(_light, 
+            //    new LightState(Switch: false, Lock: Lock.On, LastUpdated: DateTime.Now));
 
             _mockKnxService.Setup(x => x.WriteGroupValue(_light.Addresses.LockControl, It.IsAny<bool>()))
                           .Callback<string, bool>((addr, value) =>
@@ -168,7 +165,7 @@ namespace KnxTest.Unit.Models
 
             // Assert
             // Verify final state
-            Assert.False(_light.CurrentState.IsOn);  // Light should remain OFF
+            _light.CurrentState.Switch.Should().Be(Switch.Off);  // Light should remain OFF
             _light.CurrentState.Lock.Should().Be(Lock.Off); // Light should be UNLOCKED
         }
 

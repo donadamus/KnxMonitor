@@ -30,9 +30,9 @@ namespace KnxModel
     /// <param name="IsLocked">Whether the dimmer is currently locked</param>
     /// <param name="LastUpdated">When the state was last updated</param>
     public record DimmerState(
-        bool IsOn,
+        Switch Switch,
         float Brightness,
         Lock Lock,
         DateTime LastUpdated
-    ) : LightState(IsOn, Lock, LastUpdated);
+    ) : LightState(Switch, Lock, LastUpdated);
 }

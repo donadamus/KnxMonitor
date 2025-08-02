@@ -27,7 +27,7 @@ namespace KnxModel
         /// Turn light on or off
         /// </summary>
         /// <param name="isOn">True to turn on, false to turn off</param>
-        Task SetStateAsync(bool isOn, TimeSpan? timeout = null);
+        Task SetStateAsync(Switch switchState, TimeSpan? timeout = null);
 
         /// <summary>
         /// Turn light on
@@ -47,7 +47,7 @@ namespace KnxModel
         /// <summary>
         /// Read current light state from KNX bus
         /// </summary>
-        Task<bool> ReadStateAsync();
+        Task<Switch> ReadStateAsync();
 
         /// <summary>
         /// Wait for light to reach target state
@@ -55,6 +55,6 @@ namespace KnxModel
         /// <param name="targetState">Target state to wait for</param>
         /// <param name="timeout">Maximum time to wait</param>
         /// <returns>True if state reached, false on timeout</returns>
-        Task<bool> WaitForStateAsync(bool targetState, TimeSpan? timeout = null);
+        Task<bool> WaitForStateAsync(Switch targetState, TimeSpan? timeout = null);
     }
 }

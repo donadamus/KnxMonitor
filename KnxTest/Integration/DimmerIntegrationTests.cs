@@ -76,13 +76,13 @@ namespace KnxTest.Integration
 
                 // Turn on
                 await _dimmer1.TurnOnAsync();
-                await _dimmer1.WaitForStateAsync(true, TimeSpan.FromSeconds(3));
-                _dimmer1.CurrentState.IsOn.Should().BeTrue("Dimmer should be ON");
+                await _dimmer1.WaitForStateAsync(Switch.On, TimeSpan.FromSeconds(3));
+                _dimmer1.CurrentState.Switch.Should().Be(Switch.On,"Dimmer should be ON");
 
                 // Turn off
                 await _dimmer1.TurnOffAsync();
-                await _dimmer1.WaitForStateAsync(false, TimeSpan.FromSeconds(3));
-                _dimmer1.CurrentState.IsOn.Should().BeFalse("Dimmer should be OFF");
+                await _dimmer1.WaitForStateAsync(Switch.Off, TimeSpan.FromSeconds(3));
+                _dimmer1.CurrentState.Switch.Should().Be(Switch.Off,"Dimmer should be OFF");
 
                 Console.WriteLine("✅ Switch control test passed");
             }
@@ -102,17 +102,17 @@ namespace KnxTest.Integration
 
                 // Start from OFF state
                 await _dimmer1.TurnOffAsync();
-                await _dimmer1.WaitForStateAsync(false, TimeSpan.FromSeconds(3));
+                await _dimmer1.WaitForStateAsync(Switch.Off, TimeSpan.FromSeconds(3));
 
                 // Toggle to ON
                 await _dimmer1.ToggleAsync();
-                await _dimmer1.WaitForStateAsync(true, TimeSpan.FromSeconds(3));
-                _dimmer1.CurrentState.IsOn.Should().BeTrue("Dimmer should be ON after toggle");
+                await _dimmer1.WaitForStateAsync(Switch.On, TimeSpan.FromSeconds(3));
+                _dimmer1.CurrentState.Switch.Should().Be(Switch.On,"Dimmer should be ON after toggle");
 
                 // Toggle to OFF
                 await _dimmer1.ToggleAsync();
-                await _dimmer1.WaitForStateAsync(false, TimeSpan.FromSeconds(3));
-                _dimmer1.CurrentState.IsOn.Should().BeFalse("Dimmer should be OFF after toggle");
+                await _dimmer1.WaitForStateAsync(Switch.Off, TimeSpan.FromSeconds(3));
+                _dimmer1.CurrentState.Switch.Should().Be(Switch.Off,"Dimmer should be OFF after toggle");
 
                 Console.WriteLine("✅ Toggle test passed");
             }
@@ -138,19 +138,19 @@ namespace KnxTest.Integration
                 await _dimmer1.SetBrightnessAsync(50);
                 await _dimmer1.WaitForBrightnessAsync(50, TimeSpan.FromSeconds(3));
                 _dimmer1.CurrentState.Brightness.Should().BeApproximately(50, 1, "Brightness should be 50%");
-                _dimmer1.CurrentState.IsOn.Should().BeTrue("Dimmer should be ON at 50%");
+                _dimmer1.CurrentState.Switch.Should().Be(Switch.On,"Dimmer should be ON at 50%");
 
                 // Test 100% brightness
                 await _dimmer1.SetBrightnessAsync(100);
                 await _dimmer1.WaitForBrightnessAsync(100, TimeSpan.FromSeconds(3));
                 _dimmer1.CurrentState.Brightness.Should().BeApproximately(100, 1, "Brightness should be 100%");
-                _dimmer1.CurrentState.IsOn.Should().BeTrue("Dimmer should be ON at 100%");
+                _dimmer1.CurrentState.Switch.Should().Be(Switch.On,"Dimmer should be ON at 100%");
 
                 // Test 0% brightness (should turn off)
                 await _dimmer1.SetBrightnessAsync(0);
                 await _dimmer1.WaitForBrightnessAsync(0, TimeSpan.FromSeconds(3));
                 _dimmer1.CurrentState.Brightness.Should().Be(0, "Brightness should be 0%");
-                _dimmer1.CurrentState.IsOn.Should().BeFalse("Dimmer should be OFF at 0%");
+                _dimmer1.CurrentState.Switch.Should().Be(Switch.Off,"Dimmer should be OFF at 0%");
 
                 Console.WriteLine("✅ Brightness control test passed");
             }
@@ -206,7 +206,7 @@ namespace KnxTest.Integration
 
                 // Read switch state
                 var switchState = await _dimmer1.ReadStateAsync();
-                switchState.Should().BeTrue("Switch state should be ON");
+                switchState.Should().Be(Switch.On, "Switch state should be ON");
 
                 // Read brightness
                 var brightness = await _dimmer1.ReadBrightnessAsync();
@@ -270,7 +270,7 @@ namespace KnxTest.Integration
 
                 // Set initial state
                 await _dimmer1.TurnOffAsync();
-                await _dimmer1.WaitForStateAsync(false, TimeSpan.FromSeconds(3));
+                await _dimmer1.WaitForStateAsync(Switch.Off, TimeSpan.FromSeconds(3));
 
                 // Lock the dimmer (use TimeSpan.Zero to skip feedback waiting)
                 await _dimmer1.SetLockAsync(Lock.On, TimeSpan.Zero);
@@ -284,7 +284,7 @@ namespace KnxTest.Integration
                 await Task.Delay(2000);
                 await _dimmer1.RefreshStateAsync();
 
-                if (_dimmer1.CurrentState.IsOn)
+                if (_dimmer1.CurrentState.Switch.ToBool())
                 {
                     Console.WriteLine("❌ FAILURE: Dimmer switch state changed while locked!");
                     Assert.Fail("Lock should prevent switch state changes");
@@ -298,8 +298,8 @@ namespace KnxTest.Integration
                 await _dimmer1.UnlockAsync();
                 await Task.Delay(1000);
                 await _dimmer1.TurnOnAsync();
-                await _dimmer1.WaitForStateAsync(true, TimeSpan.FromSeconds(3));
-                _dimmer1.CurrentState.IsOn.Should().BeTrue("Dimmer should work normally after unlock");
+                await _dimmer1.WaitForStateAsync(Switch.On, TimeSpan.FromSeconds(3));
+                _dimmer1.CurrentState.Switch.Should().Be(Switch.On,"Dimmer should work normally after unlock");
 
                 Console.WriteLine("🎉 Lock prevention test for switch control completed successfully");
             }

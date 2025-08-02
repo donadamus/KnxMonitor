@@ -6,13 +6,32 @@ namespace KnxModel
 
     public static class LockExtensions
     {
-        public static Lock OppositeLock(this Lock lockState) => lockState switch
+        public static Lock Opposite(this Lock lockState) => lockState switch
         {
             Lock.Off => Lock.On,
             Lock.On => Lock.Off,
             _ => Lock.Unknown
         };
-    }
+
+        public static Switch Opposite(this Switch switchState) => switchState switch
+        {
+            Switch.Off => Switch.On,
+            Switch.On => Switch.Off,
+            _ => Switch.Unknown
+        };
+
+        public static Switch ToSwitch(this bool switchState) => switchState switch
+        {
+            true => Switch.On,
+            false => Switch.Off
+        };
+         public static bool ToBool(this Switch switchState) => switchState switch
+        {
+            Switch.On => true,
+            Switch.Off => false,
+            _ => false
+        };
+   }
     /// <summary>
     /// KNX addresses for light control and feedback
     /// </summary>
@@ -40,10 +59,19 @@ namespace KnxModel
     /// <param name="IsLocked">Whether the light is currently locked</param>
     /// <param name="LastUpdated">When the state was last updated</param>
     public record LightState(
-        bool IsOn,
+        Switch Switch,
         Lock Lock,
         DateTime LastUpdated
-    ) : ILockableState;
+    ) : LockState(Lock, LastUpdated);
+
+    public record LockState(
+        Lock Lock,
+        DateTime LastUpdated
+    ) : BaseState(LastUpdated), ILockableState;
+
+    public record BaseState(
+        DateTime LastUpdated
+    );
 
     public interface ILockableState
     {

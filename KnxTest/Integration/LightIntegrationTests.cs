@@ -53,22 +53,22 @@ namespace KnxTest.Integration
             // Act & Assert - Save state
             light.SaveCurrentState();
             light.SavedState.Should().NotBeNull();
-            light.SavedState!.IsOn.Should().Be(light.CurrentState.IsOn);
+            light.SavedState!.Switch.Should().Be(light.CurrentState.Switch);
 
             // Modify light state
-            var originalState = light.CurrentState.IsOn;
-            var testState = !originalState;
+            var originalState = light.CurrentState.Switch;
+            var testState = originalState.Opposite();
             
             await light.SetStateAsync(testState);
             
             // Verify state changed
-            light.CurrentState.IsOn.Should().Be(testState);
+            light.CurrentState.Switch.Should().Be(testState);
 
             // Restore original state
             await light.RestoreSavedStateAsync();
             
             // Verify restoration
-            light.CurrentState.IsOn.Should().Be(originalState);
+            light.CurrentState.Switch.Should().Be(originalState);
             
         }
 
@@ -84,24 +84,24 @@ namespace KnxTest.Integration
 
             try
             {
-                var initialState = light.CurrentState.IsOn;
-                Console.WriteLine($"Testing light {lightId} toggle from {(initialState ? "ON" : "OFF")}");
+                var initialState = light.CurrentState.Switch;
+                Console.WriteLine($"Testing light {lightId} toggle from {initialState}");
 
                 // Test toggle
                 await light.ToggleAsync();
                 
                 // Verify state changed via feedback (natural device behavior)
-                light.CurrentState.IsOn.Should().Be(!initialState, $"Light state should be toggled via feedback");
+                light.CurrentState.Switch.Should().Be(initialState.Opposite(), $"Light state should be toggled via feedback");
                 
-                Console.WriteLine($"Light {lightId} successfully toggled to {(light.CurrentState.IsOn ? "ON" : "OFF")}");
+                Console.WriteLine($"Light {lightId} successfully toggled to {light.CurrentState.Switch}");
 
                 // Toggle back
                 await light.ToggleAsync();
                 
                 // Verify state restored via feedback (natural device behavior)
-                light.CurrentState.IsOn.Should().Be(initialState, $"Light state should be restored via feedback");
+                light.CurrentState.Switch.Should().Be(initialState, $"Light state should be restored via feedback");
                 
-                Console.WriteLine($"Light {lightId} successfully toggled back to {(light.CurrentState.IsOn ? "ON" : "OFF")}");
+                Console.WriteLine($"Light {lightId} successfully toggled back to {light.CurrentState.Switch}");
             }
             finally
             {
@@ -122,21 +122,21 @@ namespace KnxTest.Integration
 
             try
             {
-                var initialState = light.CurrentState.IsOn;
-                Console.WriteLine($"Testing light {lightId} on/off from {(initialState ? "ON" : "OFF")}");
+                var initialState = light.CurrentState.Switch;
+                Console.WriteLine($"Testing light {lightId} on/off from {initialState}");
 
                 // Test turn ON
                 await light.TurnOnAsync();
                 
                 // Verify state via feedback (natural device behavior)
-                light.CurrentState.IsOn.Should().BeTrue("Light should be ON via feedback");
+                light.CurrentState.Switch.Should().Be(Switch.On,"Light should be ON via feedback");
                 Console.WriteLine($"Light {lightId} successfully turned ON");
 
                 // Test turn OFF
                 await light.TurnOffAsync();
                 
                 // Verify state via feedback (natural device behavior)
-                light.CurrentState.IsOn.Should().BeFalse("Light should be OFF via feedback");
+                light.CurrentState.Switch.Should().Be(Switch.Off,"Light should be OFF via feedback");
                 Console.WriteLine($"Light {lightId} successfully turned OFF");
             }
             finally
@@ -157,8 +157,8 @@ namespace KnxTest.Integration
 
             try
             {
-                var initialState = light.CurrentState.IsOn;
-                var targetState = !initialState;
+                var initialState = light.CurrentState.Switch;
+                var targetState = initialState.Opposite();
 
                 // Act - Change state and wait
                 await light.SetStateAsync(targetState);
@@ -166,7 +166,7 @@ namespace KnxTest.Integration
 
                 // Assert
                 success.Should().BeTrue($"Should successfully wait for state {targetState}");
-                light.CurrentState.IsOn.Should().Be(targetState);
+                light.CurrentState.Switch.Should().Be(targetState);
                 
                 Console.WriteLine($"Light {lightId} wait test passed");
             }
@@ -313,18 +313,18 @@ namespace KnxTest.Integration
             
             // Save initial state for cleanup
             light.SaveCurrentState();
-            var initialState = light.CurrentState.IsOn;
+            var initialState = light.CurrentState.Switch;
             var initialLockState = light.CurrentState.Lock;
             
             Console.WriteLine($"Testing lock functionality prevents state changes for light {lightId}");
-            Console.WriteLine($"Initial state: {(initialState ? "ON" : "OFF")}, Lock: {initialLockState}");
+            Console.WriteLine($"Initial state: {initialState}, Lock: {initialLockState}");
 
             try
             {
                 // Step 1: Ensure light is unlocked and set to known state
                 await light.SetLockAsync(Lock.Off);
-                await light.SetStateAsync(true); // Turn ON
-                light.CurrentState.IsOn.Should().BeTrue("Light should be ON when unlocked");
+                await light.SetStateAsync(Switch.On); // Turn ON
+                light.CurrentState.Switch.Should().Be(Switch.On,"Light should be ON when unlocked");
                 light.CurrentState.Lock.Should().Be(Lock.Off,"Light should be unlocked");
                 Console.WriteLine($"✅ Step 1: Light {lightId} set to ON and unlocked");
 
@@ -335,22 +335,22 @@ namespace KnxTest.Integration
                 // For lights, we don't wait for feedback - just assume the lock command was sent
                 // The real test is whether the lock actually prevents state changes
                 Console.WriteLine($"✅ Step 2: Lock command sent to light {lightId}, testing if it prevents state changes");
-                var stateBeforeLockTest = light.CurrentState.IsOn;
+                var stateBeforeLockTest = light.CurrentState.Switch;
 
                 // Step 3: Now test if lock actually prevents state changes
                 Console.WriteLine($"Step 3: Testing if lock prevents state changes...");
                 
                 // Try to turn OFF while locked
-                await light.SetStateAsync(false);
+                await light.SetStateAsync(Switch.Off);
                 
                 // Check if state changed (it shouldn't have)
-                bool stateChangedWhileLocked = light.CurrentState.IsOn != stateBeforeLockTest;
+                bool stateChangedWhileLocked = light.CurrentState.Switch != stateBeforeLockTest;
                 
                 if (stateChangedWhileLocked)
                 {
                     Console.WriteLine($"❌ FAILURE: Light {lightId} state changed while locked! Lock is not preventing state changes.");
-                    Console.WriteLine($"State before lock test: {(stateBeforeLockTest ? "ON" : "OFF")}, State after attempting change: {(light.CurrentState.IsOn ? "ON" : "OFF")}");
-                    light.CurrentState.IsOn.Should().Be(stateBeforeLockTest, 
+                    Console.WriteLine($"State before lock test: {stateBeforeLockTest}, State after attempting change: {light.CurrentState.Switch}");
+                    light.CurrentState.Switch.Should().Be(stateBeforeLockTest, 
                         "Light state should NOT change when locked - lock should prevent state changes");
                 }
                 else
@@ -364,11 +364,11 @@ namespace KnxTest.Integration
                 Console.WriteLine($"✅ Step 4: Light {lightId} unlocked");
 
                 // Step 5: Verify state can be changed after unlocking
-                var targetState = !light.CurrentState.IsOn;
+                var targetState = light.CurrentState.Switch.Opposite();
                 await light.SetStateAsync(targetState);
-                light.CurrentState.IsOn.Should().Be(targetState, 
+                light.CurrentState.Switch.Should().Be(targetState, 
                     "Light state should change normally after unlocking");
-                Console.WriteLine($"✅ Step 5: Light {lightId} state changed to {(targetState ? "ON" : "OFF")} after unlocking");
+                Console.WriteLine($"✅ Step 5: Light {lightId} state changed to {targetState} after unlocking");
 
                 Console.WriteLine($"🎉 Lock prevention test completed successfully for light {lightId}");
             }

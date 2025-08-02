@@ -24,7 +24,7 @@ namespace KnxModel
         Lock Lock,
         ShutterMovementState MovementState,
         DateTime LastUpdated
-    ) : ILockableState;
+    ) : LockState(Lock, LastUpdated);
 
     /// <summary>
     /// Direction of shutter movement

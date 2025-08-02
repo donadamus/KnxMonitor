@@ -66,7 +66,7 @@ namespace KnxModel
         {
             // Return DimmerState which inherits from LightState  
             return new DimmerState(
-                IsOn: false,
+                Switch: Switch.Unknown,
                 Brightness: 0,
                 Lock: Lock.Unknown,
                 LastUpdated: DateTime.Now
@@ -81,13 +81,13 @@ namespace KnxModel
 
         private async Task<DimmerState> ReadCurrentDimmerStateAsync()
         {
-            var isOn = await ReadStateAsync();
+            var switchState = await ReadStateAsync();
             var brightness = await ReadBrightnessAsync();
-            var isLocked = await ReadLockStateAsync();
+            var lockState = await ReadLockStateAsync();
             return new DimmerState(
-                IsOn: isOn,
+                Switch: switchState,
                 Brightness: brightness,
-                Lock: isLocked,
+                Lock: lockState,
                 LastUpdated: DateTime.Now
             );
         }
@@ -97,19 +97,19 @@ namespace KnxModel
             // Handle dimmer-specific messages
             if (e.Destination == _dimmerAddresses.SwitchFeedback)
             {
-                var isOn = e.Value.AsBoolean();
+                var switchState = e.Value.AsBoolean().ToSwitch();
                 CurrentState = CurrentState with { 
-                    IsOn = isOn, 
+                    Switch = switchState, 
                     LastUpdated = DateTime.Now 
                 };
-                Console.WriteLine($"Dimmer {Id} switch state updated via feedback: {(isOn ? "ON" : "OFF")}");
+                Console.WriteLine($"Dimmer {Id} switch state updated via feedback: {switchState}");
             }
             else if (e.Destination == _dimmerAddresses.BrightnessFeedback)
             {
                 var brightness = e.Value.AsPercentageValue();
                 var isOn = brightness > 0;
                 CurrentState = CurrentState with { 
-                    IsOn = isOn,
+                    Switch = isOn.ToSwitch(),
                     Brightness = brightness, 
                     LastUpdated = DateTime.Now 
                 };
@@ -124,12 +124,12 @@ namespace KnxModel
 
         protected override void SaveCurrentStateMessage()
         {
-            Console.WriteLine($"Saved current state for dimmer {Id} - State: {(CurrentState.IsOn ? "ON" : "OFF")}, Brightness: {CurrentState.Brightness}%");
+            Console.WriteLine($"Saved current state for dimmer {Id} - State: {CurrentState.Switch}, Brightness: {CurrentState.Brightness}%");
         }
 
         protected override void RestoreSavedStateMessage()
         {
-            Console.WriteLine($"Restoring dimmer {Id} to saved state - State: {(SavedState!.IsOn ? "ON" : "OFF")}, Brightness: {SavedState.Brightness}%");
+            Console.WriteLine($"Restoring dimmer {Id} to saved state - State: {SavedState!.Switch}, Brightness: {SavedState.Brightness}%");
         }
 
         protected override async Task PerformStateRestoration()
@@ -255,7 +255,7 @@ namespace KnxModel
 
         public override string ToString()
         {
-            return $"Dimmer {Id} ({Name}) - State: {(CurrentState.IsOn ? "ON" : "OFF")}, Brightness: {CurrentState.Brightness}%, Lock: {CurrentState.Lock}";
+            return $"Dimmer {Id} ({Name}) - State: {CurrentState.Switch}, Brightness: {CurrentState.Brightness}%, Lock: {CurrentState.Lock}";
         }
     }
 }

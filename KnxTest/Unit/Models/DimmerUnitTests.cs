@@ -27,7 +27,7 @@ namespace KnxTest.Unit.Models
             _dimmer.Id.Should().Be("DIM1");
             _dimmer.Name.Should().Be("Test Dimmer");
             _dimmer.SubGroup.Should().Be("1");
-            _dimmer.CurrentState.IsOn.Should().BeFalse();
+            _dimmer.CurrentState.Switch.Should().Be(Switch.Unknown);
             _dimmer.CurrentState.Brightness.Should().Be(0);
             _dimmer.CurrentState.Lock.Should().Be(Lock.Unknown);
         }
@@ -64,7 +64,7 @@ namespace KnxTest.Unit.Models
             _mockKnxService.Setup(s => s.WriteGroupValue(_dimmer.Addresses.SwitchControl, true));
 
             // Act
-            await _dimmer.SetStateAsync(true, TimeSpan.Zero);
+            await _dimmer.SetStateAsync(Switch.On, TimeSpan.Zero);
 
             // Assert
         }
@@ -85,7 +85,13 @@ namespace KnxTest.Unit.Models
         public async Task TurnOffAsync_ShouldCallSetStateWithFalse()
         {
             // Arrange
-            _mockKnxService.Setup(s => s.WriteGroupValue(_dimmer.Addresses.SwitchControl, false));
+            _mockKnxService.Setup(s => s.WriteGroupValue(_dimmer.Addresses.SwitchControl, false))
+                .Callback<string, bool>((address, value) =>
+                {
+                    // Simulate feedback response for switch state
+                    var feedbackArgs = new KnxGroupEventArgs(_dimmer.Addresses.SwitchFeedback, new KnxValue(value));
+                    _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, feedbackArgs);
+                });
 
             // Act
             await _dimmer.TurnOffAsync();
@@ -104,19 +110,28 @@ namespace KnxTest.Unit.Models
             var result = await _dimmer.ReadStateAsync();
 
             // Assert
-            result.Should().BeTrue();
+            result.Should().Be(Switch.On);
         }
 
         [Fact]
         public async Task ToggleAsync_WhenOff_ShouldTurnOn()
         {
             // Arrange - dimmer starts OFF
-            _mockKnxService.Setup(s => s.WriteGroupValue(_dimmer.Addresses.SwitchControl, true));
+            _mockKnxService.Setup(s => s.WriteGroupValue(_dimmer.Addresses.SwitchControl, It.IsAny<bool>()))
+                .Callback<string, bool>((address, value) =>
+                {
+                    // Simulate feedback response for switch state
+                    var feedbackArgs = new KnxGroupEventArgs(_dimmer.Addresses.SwitchFeedback, new KnxValue(value));
+                    _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, feedbackArgs);
+                });
 
             // Act
-            await _dimmer.ToggleAsync(TimeSpan.Zero);
+            await _dimmer.TurnOffAsync();
+            _dimmer.CurrentState.Switch.Should().Be(Switch.Off);
 
-            // Assert
+            await _dimmer.ToggleAsync();
+
+            _dimmer.CurrentState.Switch.Should().Be(Switch.On);
         }
 
         #endregion
@@ -131,8 +146,6 @@ namespace KnxTest.Unit.Models
 
             // Act
             await _dimmer.SetBrightnessAsync(50, TimeSpan.Zero);
-
-            // Assert
         }
 
         [Fact]
@@ -143,8 +156,6 @@ namespace KnxTest.Unit.Models
 
             // Act
             await _dimmer.SetBrightnessAsync(0);
-
-            // Assert
         }
 
         [Fact]
@@ -155,8 +166,6 @@ namespace KnxTest.Unit.Models
 
             // Act
             await _dimmer.SetBrightnessAsync(100, TimeSpan.Zero);
-
-            // Assert
         }
 
         [Fact]
@@ -241,8 +250,6 @@ namespace KnxTest.Unit.Models
 
             // Act
             await _dimmer.LockAsync(TimeSpan.Zero);
-
-            // Assert
         }
 
         [Fact]
@@ -252,9 +259,7 @@ namespace KnxTest.Unit.Models
             _mockKnxService.Setup(s => s.WriteGroupValue(_dimmer.Addresses.LockControl, false));
 
             // Act
-            await _dimmer.UnlockAsync();
-
-            // Assert
+            await _dimmer.UnlockAsync(TimeSpan.Zero);
         }
 
         [Fact]
@@ -291,7 +296,7 @@ namespace KnxTest.Unit.Models
 
             // Assert
             _dimmer.SavedState.Should().NotBeNull();
-            _dimmer.SavedState.IsOn.Should().BeTrue();
+            _dimmer.SavedState.Switch.Should().Be(Switch.On);
             _dimmer.SavedState.Brightness.Should().Be(60);
             _dimmer.SavedState.Lock.Should().Be(Lock.Off);
         }
@@ -330,8 +335,6 @@ namespace KnxTest.Unit.Models
             await _dimmer.RestoreSavedStateAsync();
             _dimmer.CurrentState.Brightness.Should().Be(50);
 
-
-            // Assert
         }
 
         [Fact]
@@ -352,7 +355,7 @@ namespace KnxTest.Unit.Models
             var result = _dimmer.ToString();
 
             // Assert
-            result.Should().Be("Dimmer DIM1 (Test Dimmer) - State: OFF, Brightness: 0%, Lock: Unknown");
+            result.Should().Be("Dimmer DIM1 (Test Dimmer) - State: Unknown, Brightness: 0%, Lock: Unknown");
         }
 
         #endregion

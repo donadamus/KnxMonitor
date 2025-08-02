@@ -66,7 +66,7 @@ namespace KnxModel
         {
             // Initialize with default state
             return new LightState(
-                IsOn: false,
+                Switch: Switch.Unknown,
                 Lock: Lock.Unknown,
                 LastUpdated: DateTime.Now
             );
@@ -77,7 +77,7 @@ namespace KnxModel
             var isOn = await ReadStateAsync();
             var isLocked = await ReadLockStateAsync();
             return new LightState(
-                IsOn: isOn,
+                Switch: isOn,
                 Lock: isLocked,
                 LastUpdated: DateTime.Now
             );
@@ -88,13 +88,13 @@ namespace KnxModel
             // Handle light-specific (non-lock) messages
             if (e.Destination == Addresses.Feedback)
             {
-                var isOn = e.Value.AsBoolean();
+                var switchState = e.Value.AsBoolean().ToSwitch();
                 CurrentState = new LightState(
-                    IsOn: isOn, 
+                    Switch: switchState, 
                     Lock: CurrentState.Lock, 
                     LastUpdated: DateTime.Now
                 );
-                Console.WriteLine($"Light {Id} state updated via feedback: {(isOn ? "ON" : "OFF")}");
+                Console.WriteLine($"Light {Id} state updated via feedback: {switchState}");
             }
         }
 
@@ -134,7 +134,7 @@ namespace KnxModel
 
         protected virtual void SaveCurrentStateMessage()
         {
-            Console.WriteLine($"Saved current state for light {Id} - State: {(CurrentState.IsOn ? "ON" : "OFF")}");
+            Console.WriteLine($"Saved current state for light {Id} - State: {CurrentState.Switch}");
         }
 
         public override async Task RestoreSavedStateAsync()
@@ -160,15 +160,15 @@ namespace KnxModel
 
         protected virtual void RestoreSavedStateMessage()
         {
-            Console.WriteLine($"Restoring light {Id} to saved state - State: {(SavedState!.IsOn ? "ON" : "OFF")}");
+            Console.WriteLine($"Restoring light {Id} to saved state - State: {SavedState!.Switch}");
         }
 
         protected virtual async Task PerformStateRestoration()
         {
             // Restore state
-            if (CurrentState.IsOn != SavedState!.IsOn)
+            if (CurrentState.Switch != SavedState!.Switch)
             {
-                await SetStateAsync(SavedState.IsOn);
+                await SetStateAsync(SavedState.Switch);
             }
         }
 
@@ -184,40 +184,41 @@ namespace KnxModel
 
         #endregion
 
-        public virtual async Task SetStateAsync(bool isOn, TimeSpan? timeout = null)
+        public virtual async Task SetStateAsync(Switch switchState, TimeSpan? timeout = null)
         {
-            Console.WriteLine($"{(isOn ? "Turning ON" : "Turning OFF")} light {Id}");
+            Console.WriteLine($"{switchState} light {Id}");
             
             await SetBitFunctionAsync(
                 Addresses.Control,
-                isOn,
-                () => CurrentState.IsOn == isOn,
+                switchState.ToBool(),
+                () => CurrentState.Switch == switchState,
                 timeout
             );
         }
 
         public virtual async Task TurnOnAsync(TimeSpan? timeout = null)
         {
-            await SetStateAsync(true, timeout);
+            await SetStateAsync(Switch.On, timeout);
         }
 
         public virtual async Task TurnOffAsync(TimeSpan? timeout = null)
         {
-            await SetStateAsync(false, timeout);
+            await SetStateAsync(Switch.Off, timeout);
         }
 
         public virtual async Task ToggleAsync(TimeSpan? timeout = null)
         {
-            var newState = !CurrentState.IsOn;
-            Console.WriteLine($"Toggling light {Id} to {(newState ? "ON" : "OFF")}");
+            var newState = CurrentState.Switch.Opposite();
+            Console.WriteLine($"Toggling light {Id} to {newState}");
             await SetStateAsync(newState, timeout);
         }
 
-        public virtual async Task<bool> ReadStateAsync()
+        public virtual async Task<Switch> ReadStateAsync()
         {
             try
             {
-                return await _knxService.RequestGroupValue<bool>(Addresses.Feedback);
+                var value = await _knxService.RequestGroupValue<bool>(Addresses.Feedback);
+                return value.ToSwitch();
             }
             catch (Exception ex)
             {
@@ -226,14 +227,14 @@ namespace KnxModel
             }
         }
 
-        public virtual async Task<bool> WaitForStateAsync(bool targetState, TimeSpan? timeout = null)
+        public virtual async Task<bool> WaitForStateAsync(Switch targetState, TimeSpan? timeout = null)
         {
-            Console.WriteLine($"Waiting for light {Id} to become: {(targetState ? "ON" : "OFF")}");
+            Console.WriteLine($"Waiting for light {Id} to become: {targetState}");
             
             return await WaitForConditionAsync(
-                condition: () => CurrentState.IsOn == targetState,
+                condition: () => CurrentState.Switch == targetState,
                 timeout: timeout,
-                description: $"state {(targetState ? "ON" : "OFF")}"
+                description: $"state {targetState}"
             );
         }
 
@@ -253,7 +254,7 @@ namespace KnxModel
 
         public override string ToString()
         {
-            return $"Light {Id} ({Name}) - State: {(CurrentState.IsOn ? "ON" : "OFF")}, Lock: {CurrentState.Lock}";
+            return $"Light {Id} ({Name}) - State: {CurrentState.Switch}, Lock: {CurrentState.Lock}";
         }
 
         public override void Dispose()

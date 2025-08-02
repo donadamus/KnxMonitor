@@ -43,15 +43,15 @@ namespace KnxTest.Integration
 
             try
             {
-                var initialState = light.CurrentState.IsOn;
-                Console.WriteLine($"Testing light {lightId} toggle from {(initialState ? "ON" : "OFF")}");
+                var initialState = light.CurrentState.Switch;
+                Console.WriteLine($"Testing light {lightId} toggle from {initialState}");
 
                 // Act + Assert (1): Toggle to opposite state
                 await light.ToggleAsync();
                 
                 // Model automatically updates state from KNX feedback
-                Assert.Equal(!initialState, light.CurrentState.IsOn);
-                Console.WriteLine($"✓ Light {lightId} successfully toggled to {(light.CurrentState.IsOn ? "ON" : "OFF")}");
+                Assert.Equal(initialState.Opposite(), light.CurrentState.Switch);
+                Console.WriteLine($"✓ Light {lightId} successfully toggled to {light.CurrentState.Switch}");
 
                 // Wait for state to stabilize
 
@@ -60,8 +60,8 @@ namespace KnxTest.Integration
                 
                 // Model automatically updates state from KNX feedback
                 await Task.Delay(1000); // Give time for feedback
-                Assert.Equal(initialState, light.CurrentState.IsOn);
-                Console.WriteLine($"✓ Light {lightId} successfully restored to {(light.CurrentState.IsOn ? "ON" : "OFF")}");
+                Assert.Equal(initialState, light.CurrentState.Switch);
+                Console.WriteLine($"✓ Light {lightId} successfully restored to {light.CurrentState.Switch}");
             }
             finally
             {
@@ -102,8 +102,8 @@ namespace KnxTest.Integration
             try
             {
                 // Read initial state from model (updated during InitializeAsync)
-                var initialState = light.CurrentState.IsOn;
-                Console.WriteLine($"Light {lightId} initial state: {(initialState ? "ON" : "OFF")}");
+                var initialState = light.CurrentState.Switch;
+                Console.WriteLine($"Light {lightId} initial state: {initialState}");
 
             }
             finally
@@ -303,10 +303,10 @@ namespace KnxTest.Integration
                 Console.WriteLine($"Shutter {shutterId} initial lock state: {initialLockState}");
 
                 // Act - Toggle lock state
-                await shutter.SetLockAsync(initialLockState.OppositeLock());
+                await shutter.SetLockAsync(initialLockState.Opposite());
                 
                 // Assert - Check lock state changed on model
-                Assert.Equal(initialLockState.OppositeLock(), shutter.CurrentState.Lock);
+                Assert.Equal(initialLockState.Opposite(), shutter.CurrentState.Lock);
                 Console.WriteLine($"✓ Shutter {shutterId} lock successfully toggled to {shutter.CurrentState.Lock}");
 
                 // Toggle back to original state
