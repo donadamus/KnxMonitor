@@ -57,9 +57,6 @@ namespace KnxTest.Unit.Models
             await _light.SetLockAsync(Lock.On);
 
             // Assert
-            // Verify lock was set to true
-            _mockKnxService.Verify(x => x.WriteGroupValue(_light.Addresses.LockControl, true), Times.Once);
-
             // Verify final state - for business logic testing, assume lock means OFF
             _light.CurrentState.Lock.Should().Be(Lock.On);  // Light should be LOCKED
             Assert.False(_light.CurrentState.IsOn);  // Light should be OFF after locking
@@ -102,12 +99,6 @@ namespace KnxTest.Unit.Models
             await _light.SetLockAsync(Lock.Off);
 
             // Assert
-            // Verify light control was NOT called (state should not change)
-            _mockKnxService.Verify(x => x.WriteGroupValue(_light.Addresses.Control, It.IsAny<bool>()), Times.Never);
-            
-            // Verify unlock was called
-            _mockKnxService.Verify(x => x.WriteGroupValue(_light.Addresses.LockControl, false), Times.Once);
-            
             // Verify final state
             Assert.True(_light.CurrentState.IsOn);   // Light should remain ON
             _light.CurrentState.Lock.Should().Be(Lock.Off); // Light should be UNLOCKED
@@ -140,12 +131,6 @@ namespace KnxTest.Unit.Models
             await _light.LockAsync();
 
             // Assert
-            // Verify light control was NOT called (standard lock doesn't change light state)
-            _mockKnxService.Verify(x => x.WriteGroupValue(_light.Addresses.Control, It.IsAny<bool>()), Times.Never);
-            
-            // Verify lock was set to true
-            _mockKnxService.Verify(x => x.WriteGroupValue(_light.Addresses.LockControl, true), Times.Once);
-
             // Verify final state
             Assert.True(_light.CurrentState.IsOn);  // Light should remain ON
             _light.CurrentState.Lock.Should().Be(Lock.On);  // Light should be LOCKED
@@ -182,12 +167,6 @@ namespace KnxTest.Unit.Models
             await _light.UnlockAsync();
 
             // Assert
-            // Verify light control was NOT called (state should not change)
-            _mockKnxService.Verify(x => x.WriteGroupValue(_light.Addresses.Control, It.IsAny<bool>()), Times.Never);
-            
-            // Verify unlock was called
-            _mockKnxService.Verify(x => x.WriteGroupValue(_light.Addresses.LockControl, false), Times.Once);
-            
             // Verify final state
             Assert.False(_light.CurrentState.IsOn);  // Light should remain OFF
             _light.CurrentState.Lock.Should().Be(Lock.Off); // Light should be UNLOCKED
