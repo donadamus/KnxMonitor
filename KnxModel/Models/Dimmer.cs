@@ -17,27 +17,20 @@ namespace KnxModel
         public new DimmerAddresses Addresses => _dimmerAddresses;
 
         /// <summary>
-        /// Override base Addresses property to map dimmer addresses to light addresses
+        /// Override base Addresses property to return dimmer addresses
         /// This ensures that inherited Light methods use the correct dimmer addresses
+        /// since DimmerAddresses now inherits from LightAddresses
         /// </summary>
         protected override LightAddresses CreateAddresses()
         {
             // Create and store dimmer addresses
-            _dimmerAddresses = new DimmerAddresses(
+            return _dimmerAddresses = new DimmerAddresses(
                 SwitchControl: KnxAddressConfiguration.CreateDimmerSwitchControlAddress(SubGroup),
                 SwitchFeedback: KnxAddressConfiguration.CreateDimmerSwitchFeedbackAddress(SubGroup),
                 BrightnessControl: KnxAddressConfiguration.CreateDimmerBrightnessControlAddress(SubGroup),
                 BrightnessFeedback: KnxAddressConfiguration.CreateDimmerBrightnessFeedbackAddress(SubGroup),
                 LockControl: KnxAddressConfiguration.CreateDimmerLockAddress(SubGroup),
                 LockFeedback: KnxAddressConfiguration.CreateDimmerLockFeedbackAddress(SubGroup)
-            );
-            
-            // Return mapped addresses for base class compatibility
-            return new LightAddresses(
-                Control: _dimmerAddresses.SwitchControl,
-                Feedback: _dimmerAddresses.SwitchFeedback,
-                LockControl: _dimmerAddresses.LockControl,
-                LockFeedback: _dimmerAddresses.LockFeedback
             );
         }
 

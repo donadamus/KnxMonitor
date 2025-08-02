@@ -3,10 +3,11 @@ using System;
 namespace KnxModel
 {
     /// <summary>
-    /// KNX addresses for dimmer control and feedback
+    /// Addresses for controlling a KNX dimmer device
+    /// Extends LightAddresses with brightness control addresses
     /// </summary>
-    /// <param name="SwitchControl">Address for controlling the dimmer switch state (on/off)</param>
-    /// <param name="SwitchFeedback">Address for receiving dimmer switch state feedback</param>
+    /// <param name="SwitchControl">Address for controlling the dimmer switch state (maps to Control)</param>
+    /// <param name="SwitchFeedback">Address for receiving dimmer switch state feedback (maps to Feedback)</param>
     /// <param name="BrightnessControl">Address for controlling the dimmer brightness (0-100%)</param>
     /// <param name="BrightnessFeedback">Address for receiving dimmer brightness feedback</param>
     /// <param name="LockControl">Address for controlling the dimmer lock state</param>
@@ -18,7 +19,7 @@ namespace KnxModel
         string BrightnessFeedback,
         string LockControl,
         string LockFeedback
-    ) : ILockableAddress;
+    ) : LightAddresses(SwitchControl, SwitchFeedback, LockControl, LockFeedback);
 
     /// <summary>
     /// Current state of a KNX dimmer
