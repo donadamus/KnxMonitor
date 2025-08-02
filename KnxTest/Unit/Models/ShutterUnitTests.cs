@@ -351,6 +351,96 @@ namespace KnxTest.Unit.Models
             result.Should().BeTrue();
         }
 
+        #region Additional Tests
+
+        [Fact]
+        public async Task ReadPositionAsync_ShouldReturnCorrectValue()
+        {
+            // Arrange
+            _mockKnxService.Setup(x => x.RequestGroupValue<float>(_shutter.Addresses.PositionFeedback))
+                          .ReturnsAsync(75);
+
+            // Act
+            var result = await _shutter.ReadPositionAsync();
+
+            // Assert
+            result.Should().Be(75);
+        }
+
+        [Fact]
+        public async Task LockAsync_ShouldSendCorrectCommand()
+        {
+            // Arrange
+            _mockKnxService.Setup(s => s.WriteGroupValue(_shutter.Addresses.LockControl, true));
+
+            // Act
+            await _shutter.LockAsync(TimeSpan.Zero);
+
+            // Assert - verification handled by VerifyAll in base class
+        }
+
+        [Fact]
+        public async Task UnlockAsync_ShouldSendCorrectCommand()
+        {
+            // Arrange
+            _mockKnxService.Setup(s => s.WriteGroupValue(_shutter.Addresses.LockControl, false));
+
+            // Act
+            await _shutter.UnlockAsync(TimeSpan.Zero);
+
+            // Assert - verification handled by VerifyAll in base class
+        }
+
+        [Fact]
+        public async Task OpenAsync_ShouldSetPositionToZero()
+        {
+            // Arrange
+            _mockKnxService.Setup(s => s.WriteGroupValue(_shutter.Addresses.PositionControl, 0.0f));
+
+            // Act
+            await _shutter.OpenAsync();
+
+            // Assert - verification handled by VerifyAll in base class
+        }
+
+        [Fact]
+        public async Task CloseAsync_ShouldSetPositionToHundred()
+        {
+            // Arrange
+            _mockKnxService.Setup(s => s.WriteGroupValue(_shutter.Addresses.PositionControl, 100.0f))
+                .Callback<string, float>((address, positionValue) =>
+                            {
+                                // Simulate KNX feedback response with the same value that was written
+                                var feedbackArgs = new KnxGroupEventArgs(_shutter.Addresses.PositionFeedback, new KnxValue((double)positionValue));
+                                _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, feedbackArgs);
+                            });
+
+            // Act
+            await _shutter.CloseAsync();
+            _shutter.CurrentState.Position.Should().Be(100.0f);
+            // Assert - verification handled by VerifyAll in base class
+        }
+
+        [Fact]
+        public async Task MoveToPresetAsync_ShouldSetCorrectPosition()
+        {
+            // Arrange
+            _mockKnxService.Setup(s => s.WriteGroupValue(_shutter.Addresses.PositionControl, 25.0f))
+                .Callback<string, float>((address, positionValue) =>
+                            {
+                                // Simulate KNX feedback response with the same value that was written
+                                var feedbackArgs = new KnxGroupEventArgs(_shutter.Addresses.PositionFeedback, new KnxValue((double)positionValue));
+                                _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, feedbackArgs);
+                            });
+
+            // Act
+            await _shutter.MoveToPresetAsync("Quarter Open", 25.0f);
+            _shutter.CurrentState.Position.Should().Be(25.0f);
+            // Assert - verification handled by VerifyAll in base class
+        }
+
+        #endregion
+
         [Fact]
         public void ToString_ReturnsFormattedString()
         {

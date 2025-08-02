@@ -346,6 +346,94 @@ namespace KnxTest.Unit.Models
 
         #endregion
 
+        #region Wait Methods Tests
+
+        [Fact]
+        public async Task WaitForBrightnessAsync_WhenBrightnessMatches_ShouldReturnTrue()
+        {
+            // Arrange - set current brightness to 50%
+            var feedbackArgs = new KnxGroupEventArgs(_dimmer.Addresses.BrightnessFeedback, new KnxValue(50));
+            _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, feedbackArgs);
+
+            // Act
+            var result = await _dimmer.WaitForBrightnessAsync(50, TimeSpan.FromMilliseconds(100));
+
+            // Assert
+            result.Should().BeTrue();
+        }
+
+        #endregion
+
+        #region Additional Toggle Tests
+
+        [Fact]
+        public async Task ToggleAsync_WhenOn_ShouldTurnOff()
+        {
+            // Arrange
+            _mockKnxService.Setup(s => s.WriteGroupValue(_dimmer.Addresses.SwitchControl, It.IsAny<bool>()))
+                .Callback<string, bool>((address, value) =>
+                {
+                    // Simulate feedback response for switch state
+                    var feedbackArgs = new KnxGroupEventArgs(_dimmer.Addresses.SwitchFeedback, new KnxValue(value));
+                    _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, feedbackArgs);
+                });
+
+            // Act - first turn ON, then toggle to OFF
+            await _dimmer.TurnOnAsync();
+            _dimmer.CurrentState.Switch.Should().Be(Switch.On);
+
+            await _dimmer.ToggleAsync();
+
+            // Assert
+            _dimmer.CurrentState.Switch.Should().Be(Switch.Off);
+        }
+
+        #endregion
+
+        #region Initialization Tests
+
+        [Fact]
+        public async Task InitializeAsync_ShouldReadCurrentStateFromKnx()
+        {
+            // Arrange
+            _mockKnxService.Setup(x => x.RequestGroupValue<bool>(_dimmer.Addresses.SwitchFeedback))
+                          .ReturnsAsync(true);
+            _mockKnxService.Setup(x => x.RequestGroupValue<float>(_dimmer.Addresses.BrightnessFeedback))
+                          .ReturnsAsync(75);
+            _mockKnxService.Setup(x => x.RequestGroupValue<bool>(_dimmer.Addresses.LockFeedback))
+                          .ReturnsAsync(false);
+
+            // Act
+            await _dimmer.InitializeAsync();
+
+            // Assert
+            _dimmer.CurrentState.Switch.Should().Be(Switch.On);
+            _dimmer.CurrentState.Brightness.Should().Be(75);
+            _dimmer.CurrentState.Lock.Should().Be(Lock.Off);
+        }
+
+        [Fact]
+        public async Task RefreshStateAsync_ShouldUpdateCurrentState()
+        {
+            // Arrange
+            _mockKnxService.Setup(x => x.RequestGroupValue<bool>(_dimmer.Addresses.SwitchFeedback))
+                          .ReturnsAsync(false);
+            _mockKnxService.Setup(x => x.RequestGroupValue<float>(_dimmer.Addresses.BrightnessFeedback))
+                          .ReturnsAsync(25);
+            _mockKnxService.Setup(x => x.RequestGroupValue<bool>(_dimmer.Addresses.LockFeedback))
+                          .ReturnsAsync(true);
+
+            // Act
+            await _dimmer.RefreshStateAsync();
+
+            // Assert
+            _dimmer.CurrentState.Switch.Should().Be(Switch.Off);
+            _dimmer.CurrentState.Brightness.Should().Be(25);
+            _dimmer.CurrentState.Lock.Should().Be(Lock.On);
+        }
+
+        #endregion
+
         #region ToString Tests
 
         [Fact]
