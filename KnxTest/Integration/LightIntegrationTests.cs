@@ -7,40 +7,18 @@ using Xunit;
 
 namespace KnxTest.Integration
 {
-    public class DimmTests : LightIntegrationTests
+    [Collection("KnxService collection")]
+    public class LightIntegrationTests : IDisposable
     {
-
-        public static IEnumerable<object[]> LightIds
+        public static IEnumerable<object[]> LightIdsFromConfig
         {
             get
             {
-                var config = LightFactory.LightConfigurations;
-                return config.Where(k => k.Value.Name.Contains("Office"))
+                var config = LightFactory.LightConfigurations; 
+                return config//.Where(k => k.Value.Name.Contains("Office"))
                     .Select(k => new object[] { k.Key });
             }
         }
-
-
-        public new static IEnumerable<object[]> LightIdsFromConfig => LightIds;
-
-        public DimmTests(KnxServiceFixture fixture) : base(fixture)
-        {
-        }
-    }
-
-
-    [Collection("KnxService collection")]
-    public abstract class LightIntegrationTests : IDisposable
-    {
-        public static IEnumerable<object[]> LightIdsFromConfig => throw new NotImplementedException();
-        //{
-        //    get
-        //    {
-        //        var config = LightFactory.LightConfigurations; 
-        //        return config//.Where(k => k.Value.Name.Contains("Office"))
-        //            .Select(k => new object[] { k.Key });
-        //    }
-        //}
 
 
         private static IKnxService _knxServiceMock = new Moq.Mock<IKnxService>().Object;
