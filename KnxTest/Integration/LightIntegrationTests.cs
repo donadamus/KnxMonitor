@@ -15,8 +15,14 @@ namespace KnxTest.Integration
             get
             {
                 var config = LightFactory.LightConfigurations; 
-                return config//.Where(k => k.Value.Name.Contains("Office"))
+                var res = config.Where(k => k.Value.Name.Contains("Office"))
                     .Select(k => new object[] { k.Key });
+
+                var config2 = DimmerFactory.DimmerConfigurations;
+                var res2 = config2//.Where(k => k.Value.Name.Contains("Office"))
+                    .Select(k => new object[] { k.Key });
+
+                return res.Concat(res2);
             }
         }
 
@@ -33,7 +39,7 @@ namespace KnxTest.Integration
         }
 
         [Theory]
-        [MemberData(nameof(LightIdsFromConfig), MemberType = typeof(LightIntegrationTests))]
+        [MemberData(nameof(LightIdsFromConfig))]
 
         public async Task OK_CanInitializeLightAndReadState(string lightId)
         {

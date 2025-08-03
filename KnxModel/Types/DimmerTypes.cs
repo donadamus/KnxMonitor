@@ -35,4 +35,13 @@ namespace KnxModel
         Lock Lock,
         DateTime LastUpdated
     ) : LightState(Switch, Lock, LastUpdated);
+
+
+
+    public enum KnxDeviceType
+    {
+        Dimmer, // Represents a KNX dimmer device
+        Light,  // Represents a KNX light device
+        Shutter // Represents a KNX shutter device
+    }
 }

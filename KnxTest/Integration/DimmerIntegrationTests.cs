@@ -9,16 +9,33 @@ namespace KnxTest.Integration
     [Collection("KnxService collection")]
     public class DimmerIntegrationTests : IDisposable
     {
-        private readonly IKnxService _knxService;
-        private readonly Dimmer _dimmer1;
-        private readonly Dimmer _dimmer2;
 
-        public DimmerIntegrationTests()
+        public static IEnumerable<object[]> DimmerIdsFromConfig
         {
-            _knxService = new KnxService.KnxService();
+            get
+            {
+                var config = DimmerFactory.DimmerConfigurations;
+                return config//.Where(k => k.Value.Name.Contains("Office"))
+                    .Select(k => new object[] { k.Key });
+            }
+        }
+
+
+        private static IKnxService _knxServiceMock = new Moq.Mock<IKnxService>().Object;
+        private readonly IKnxService _knxService;
+
+        private static readonly IDimmer _defaulDimmer = new Dimmer("L11", "Test Light 11", "1", _knxServiceMock);
+        private IDimmer _dimmer = _defaulDimmer;
+
+        public DimmerIntegrationTests(KnxServiceFixture fixture)
+        {
+            _knxService = fixture.KnxService;
             _dimmer1 = new Dimmer("DIM1", "Test Dimmer 1", "1", _knxService);
             _dimmer2 = new Dimmer("DIM2", "Test Dimmer 2", "2", _knxService);
         }
+
+        private readonly Dimmer _dimmer1;
+        private readonly Dimmer _dimmer2;
 
         public void Dispose()
         {
@@ -33,12 +50,20 @@ namespace KnxTest.Integration
                 _dimmer2?.TurnOffAsync().Wait();
                 _dimmer2?.Dispose();
 
-                _knxService?.Dispose();
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Cleanup failed: {ex.Message}");
             }
+
+            if (_dimmer != _defaulDimmer)
+            {
+                _dimmer.RestoreSavedStateAsync().GetAwaiter().GetResult();
+                _dimmer.Dispose();
+            }
+
+
+
         }
 
         #region Address Configuration Tests
@@ -64,6 +89,25 @@ namespace KnxTest.Integration
         }
 
         #endregion
+
+
+
+        [Theory]
+        [MemberData(nameof(DimmerIdsFromConfig))]
+
+        public async Task OK_CanInitializeLightAndReadState(string lightId)
+        {
+            // Act
+            await _dimmer.InitializeAsync();
+
+            // Assert
+            _dimmer.CurrentState.Should().NotBeNull($"Light {lightId} should have a valid current state after initialization");
+            _dimmer.CurrentState.Switch.Should().NotBe(Switch.Unknown, $"Light {lightId} should have a known switch state after initialization");
+            _dimmer.CurrentState.Lock.Should().NotBe(Lock.Unknown, $"Light {lightId} should have a known lock state after initialization");
+            _dimmer.CurrentState.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromMinutes(1),
+                $"Light {lightId} last updated time should be close to now after initialization");
+        }
+
 
         #region Switch Control Tests
 
