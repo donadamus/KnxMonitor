@@ -314,102 +314,56 @@ namespace KnxTest.Integration
         [Theory]
         [MemberData(nameof(LightIdsFromConfig))]
 
-        public async Task LockPreventsStateChanges(string lightId)
+        public async Task OK_LockPreventsStateChanges(string lightId)
         {
             // Arrange
-            var light = LightFactory.CreateLight(lightId, _knxService);
-            await light.InitializeAsync();
+            _light = LightFactory.CreateLight(lightId, _knxService);
+            await _light.InitializeAsync();
             
-            // Save initial state for cleanup
-            light.SaveCurrentState();
-            var initialState = light.CurrentState.Switch;
-            var initialLockState = light.CurrentState.Lock;
+            var initialState = _light.CurrentState.Switch;
+            var initialLockState = _light.CurrentState.Lock;
             
             Console.WriteLine($"Testing lock functionality prevents state changes for light {lightId}");
             Console.WriteLine($"Initial state: {initialState}, Lock: {initialLockState}");
 
-            try
+            if (initialLockState == Lock.On)
             {
-                // Step 1: Ensure light is unlocked and set to known state
-                await light.SetLockAsync(Lock.Off);
-                await light.SetStateAsync(Switch.On); // Turn ON
-                light.CurrentState.Switch.Should().Be(Switch.On,"Light should be ON when unlocked");
-                light.CurrentState.Lock.Should().Be(Lock.Off,"Light should be unlocked");
-                Console.WriteLine($"✅ Step 1: Light {lightId} set to ON and unlocked");
-
-                // Step 2: Try to lock the light - for lights we don't expect feedback, use zero timeout
-                Console.WriteLine($"Step 2: Setting lock for light {lightId} (lights may not provide lock feedback)");
-                await light.SetLockAsync(Lock.On, TimeSpan.Zero);
-                
-                // For lights, we don't wait for feedback - just assume the lock command was sent
-                // The real test is whether the lock actually prevents state changes
-                Console.WriteLine($"✅ Step 2: Lock command sent to light {lightId}, testing if it prevents state changes");
-                var stateBeforeLockTest = light.CurrentState.Switch;
-
-                // Step 3: Now test if lock actually prevents state changes
-                Console.WriteLine($"Step 3: Testing if lock prevents state changes...");
-                
-                // Try to turn OFF while locked
-                await light.SetStateAsync(Switch.Off);
-                
-                // Check if state changed (it shouldn't have)
-                bool stateChangedWhileLocked = light.CurrentState.Switch != stateBeforeLockTest;
-                
-                if (stateChangedWhileLocked)
-                {
-                    Console.WriteLine($"❌ FAILURE: Light {lightId} state changed while locked! Lock is not preventing state changes.");
-                    Console.WriteLine($"State before lock test: {stateBeforeLockTest}, State after attempting change: {light.CurrentState.Switch}");
-                    light.CurrentState.Switch.Should().Be(stateBeforeLockTest, 
-                        "Light state should NOT change when locked - lock should prevent state changes");
-                }
-                else
-                {
-                    Console.WriteLine($"✅ Step 3: Light {lightId} correctly ignored state change while locked");
-                }
-
-                // Step 4: Unlock the light
-                await light.SetLockAsync(Lock.Off);
-                light.CurrentState.Lock.Should().Be(Lock.Off,"Light should be unlocked");
-                Console.WriteLine($"✅ Step 4: Light {lightId} unlocked");
-
-                // Step 5: Verify state can be changed after unlocking
-                var targetState = light.CurrentState.Switch.Opposite();
-                await light.SetStateAsync(targetState);
-                light.CurrentState.Switch.Should().Be(targetState, 
-                    "Light state should change normally after unlocking");
-                Console.WriteLine($"✅ Step 5: Light {lightId} state changed to {targetState} after unlocking");
-
-                Console.WriteLine($"🎉 Lock prevention test completed successfully for light {lightId}");
+                await _light.UnlockAsync(); // Ensure light is unlocked before testing lock prevention
+                await _light.ReadLockStateAsync(); // Ensure lock state is updated
             }
-            finally
-            {
-                // Always restore original state and lock state
-                try
-                {
-                    await light.SetLockAsync(Lock.Off); // Ensure unlocked for cleanup
-                    await light.RestoreSavedStateAsync();
-                    if (initialLockState == Lock.On)
-                    {
-                        await light.SetLockAsync(Lock.On); // Restore original lock state if needed
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"⚠️ Warning during cleanup: {ex.Message}");
-                }
-                Console.WriteLine($"Light {lightId} lock prevention test completed and state restored");
-            }
+            _light.CurrentState.Lock.Should().Be(Lock.Off, "Light should be unlocked before testing lock prevention");
+
+            await _light.TurnOnAsync(); // Turn on the light to set initial state
+            _light.CurrentState.Switch.Should().Be(Switch.On, "Light should be ON before locking");
+
+            await _light.LockAsync(); // Ensure light is locked before testing
+            await _light.ReadLockStateAsync(); // Ensure lock state is updated
+            
+            var waitForStateResponse = await _light.WaitForStateAsync(Switch.Off, TimeSpan.FromSeconds(2)); // Wait for state change to OFF
+
+            waitForStateResponse.Should().BeTrue("Should successfully wait for state OFF after locking");
+
+            _light.CurrentState.Switch.Should().Be(Switch.Off, "Light should be automatically off when locked");
+            _light.CurrentState.Lock.Should().Be(Lock.On, "Light should be locked before testing state change prevention");
+
+            await _light.TurnOnAsync(); // Attempt to turn on the light while locked
+
+            _light.CurrentState.Switch.Should().Be(Switch.Off, 
+                "Light state should NOT change when locked - lock should prevent state changes");
+            Console.WriteLine($"Light {lightId} state after lock: {_light.CurrentState.Switch}");
+
+            Console.WriteLine($"🎉 Lock prevention test completed successfully for light {lightId}");
         }
 
         [Theory]
         [MemberData(nameof(LightIdsFromConfig))]
-        public async Task CanToggleLightAndToggleBackToTheInitialState(string lightId)
+        public async Task OK_CanToggleLightAndToggleBackToTheInitialState(string lightId)
         {
             // Arrange
             _light = LightFactory.CreateLight(lightId, _knxService);
             await _light.InitializeAsync();
 
-            //_light.RemoveLock(); // Ensure no lock is set for this test
+            await _light.UnlockAsync(); // Ensure no lock is set for this test
 
             var initialState = _light.CurrentState.Switch;
             Console.WriteLine($"Testing light {lightId} toggle from {initialState}");

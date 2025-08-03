@@ -56,5 +56,6 @@ namespace KnxModel
         /// <param name="timeout">Maximum time to wait</param>
         /// <returns>True if state reached, false on timeout</returns>
         Task<bool> WaitForStateAsync(Switch targetState, TimeSpan? timeout = null);
+        
     }
 }

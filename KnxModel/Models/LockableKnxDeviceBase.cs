@@ -76,13 +76,21 @@ namespace KnxModel
 
         protected virtual async Task SetLockStateAsync(Lock lockState, TimeSpan? timeout = null)
         {
+            var completionCondition = () => GetCurrentLockState().Lock == lockState;
+
+            if (completionCondition())
+            {
+                Console.WriteLine($"Lock state for {GetType().Name.ToLower()} {Id} is already {lockState}. No action taken.");
+                return;
+            }
+
             Console.WriteLine($"{lockState} {GetType().Name.ToLower()} {Id}");
-            
+
             var addresses = GetLockableAddresses();
             await SetBitFunctionAsync(
                 addresses.LockControl,
                 lockState == Lock.On,
-                () => GetCurrentLockState().Lock == lockState,
+                completionCondition,
                 timeout
             );
         }
