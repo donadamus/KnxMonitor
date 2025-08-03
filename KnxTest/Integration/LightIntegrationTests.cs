@@ -8,9 +8,24 @@ using Xunit;
 namespace KnxTest.Integration
 {
     [Collection("KnxService collection")]
-    public class LightIntegrationTests
+    public class LightIntegrationTests : IDisposable
     {
+        public static IEnumerable<object[]> LightIdsFromConfig
+        {
+            get
+            {
+                var config = LightFactory.LightConfigurations; 
+                return config//.Where(k => k.Value.Name.Contains("Office"))
+                    .Select(k => new object[] { k.Key });
+            }
+        }
+
+
+        private static IKnxService _knxServiceMock = new Moq.Mock<IKnxService>().Object;
         private readonly IKnxService _knxService;
+
+        private static readonly Light _defaultLight = new Light("L11", "Test Light 11", "1", _knxServiceMock);
+        private ILight _light = _defaultLight;
 
         public LightIntegrationTests(KnxServiceFixture fixture)
         {
@@ -18,11 +33,8 @@ namespace KnxTest.Integration
         }
 
         [Theory]
-        [InlineData("L11")]  // Light 11
-        [InlineData("L12")]  // Light 12
-        [InlineData("L13")]  // Light 13
-        [InlineData("L14")]  // Light 14
-        [InlineData("L15")]  // Light 15
+        [MemberData(nameof(LightIdsFromConfig))]
+
         public async Task CanInitializeLightAndReadState(string lightId)
         {
             // Arrange
@@ -40,10 +52,8 @@ namespace KnxTest.Integration
         }
 
         [Theory]
-        [InlineData("L11")]
-        [InlineData("L13")]
-        [InlineData("L15")]
-        [InlineData("L08")]
+        [MemberData(nameof(LightIdsFromConfig))]
+
         public async Task CanSaveAndRestoreLightState(string lightId)
         {
             // Arrange
@@ -73,8 +83,8 @@ namespace KnxTest.Integration
         }
 
         [Theory]
-        [InlineData("L12")]
-        [InlineData("L14")]
+        [MemberData(nameof(LightIdsFromConfig))]
+
         public async Task CanToggleLightState(string lightId)
         {
             // Arrange
@@ -111,8 +121,8 @@ namespace KnxTest.Integration
         }
 
         [Theory]
-        [InlineData("L11")]
-        [InlineData("L15")]
+        [MemberData(nameof(LightIdsFromConfig))]
+
         public async Task CanTurnOnAndOff(string lightId)
         {
             // Arrange
@@ -147,7 +157,8 @@ namespace KnxTest.Integration
         }
 
         [Theory]
-        [InlineData("L13")]
+        [MemberData(nameof(LightIdsFromConfig))]
+
         public async Task WaitForStateAsync_ReturnsCorrectly(string lightId)
         {
             // Arrange
@@ -195,8 +206,8 @@ namespace KnxTest.Integration
         }
 
         [Theory]
-        [InlineData("L11", "11", "Light 11")]
-        [InlineData("L15", "15", "Light 15")]
+        [MemberData(nameof(LightIdsFromConfig))]
+
         public void LightModel_HasCorrectConfiguration(string lightId, string expectedSubGroup, string expectedName)
         {
             // Act
@@ -219,9 +230,8 @@ namespace KnxTest.Integration
         }
 
         [Theory]
-        [InlineData("L11")]
-        [InlineData("L13")]
-        [InlineData("L15")]
+        [MemberData(nameof(LightIdsFromConfig))]
+
         public async Task CanSetAndReadLightLockState(string lightId)
         {
             // Arrange
@@ -262,8 +272,8 @@ namespace KnxTest.Integration
         }
 
         [Theory]
-        [InlineData("L11", Lock.On)]
-        [InlineData("L13", Lock.Off)]
+        [MemberData(nameof(LightIdsFromConfig))]
+
         public async Task CanWaitForLightLockState(string lightId, Lock targetLockState)
         {
             // Arrange
@@ -302,9 +312,8 @@ namespace KnxTest.Integration
         }
 
         [Theory]
-        [InlineData("L12")]
-        [InlineData("L14")]
-        [InlineData("L25")]
+        [MemberData(nameof(LightIdsFromConfig))]
+
         public async Task LockPreventsStateChanges(string lightId)
         {
             // Arrange
@@ -389,6 +398,58 @@ namespace KnxTest.Integration
                     Console.WriteLine($"⚠️ Warning during cleanup: {ex.Message}");
                 }
                 Console.WriteLine($"Light {lightId} lock prevention test completed and state restored");
+            }
+        }
+
+        [Theory]
+        [MemberData(nameof(LightIdsFromConfig))]
+        public async Task CanToggleLightAndToggleBackToTheInitialState(string lightId)
+        {
+            // Arrange
+            _light = LightFactory.CreateLight(lightId, _knxService);
+            await _light.InitializeAsync();
+
+            //_light.RemoveLock(); // Ensure no lock is set for this test
+
+            var initialState = _light.CurrentState.Switch;
+            Console.WriteLine($"Testing light {lightId} toggle from {initialState}");
+
+            // Act + Assert (1): Toggle to opposite state
+            await _light.ToggleAsync();
+            _light.CurrentState.Switch.Should().Be(initialState.Opposite(), 
+                $"Light {lightId} should toggle to opposite state {initialState.Opposite()}");
+
+            Console.WriteLine($"✓ Light {lightId} successfully toggled to {_light.CurrentState.Switch}");
+
+            // Act + Assert (2): Toggle back to original state
+            await _light.ToggleAsync();
+            _light.CurrentState.Switch.Should().Be(initialState, 
+                $"Light {lightId} should toggle back to original state {initialState}");
+
+            Console.WriteLine($"✓ Light {lightId} successfully restored to {_light.CurrentState.Switch}");
+        }
+
+        [Theory]
+        [MemberData(nameof(LightIdsFromConfig))]
+        public async Task CanReadLightFeedback(string lightId)
+        {
+            // Arrange
+            _light = LightFactory.CreateLight(lightId, _knxService);
+            await _light.InitializeAsync();
+
+            // Read initial state from model (updated during InitializeAsync)
+            var initialState = _light.CurrentState.Switch;
+            Console.WriteLine($"Light {lightId} initial state: {initialState}");
+            _light.CurrentState.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromMinutes(1));
+
+        }
+
+        public void Dispose()
+        {
+            if (_light != _defaultLight)
+            {
+                _light.RestoreSavedStateAsync().GetAwaiter().GetResult();
+                _light.Dispose();
             }
         }
     }

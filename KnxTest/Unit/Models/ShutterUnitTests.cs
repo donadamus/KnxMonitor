@@ -98,6 +98,128 @@ namespace KnxTest.Unit.Models
         }
 
         [Fact]
+        public async Task RestoreSavedStateAsync_ShouldRestorePosition()
+        {
+            // Arrange - set up initial state: shutter at 75%, unlocked
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>(_shutter.Addresses.PositionFeedback)).ReturnsAsync(75f);
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.LockFeedback)).ReturnsAsync(false);
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.MovementStatusFeedback)).ReturnsAsync(false);
+
+            await _shutter.InitializeAsync();
+            _shutter.SaveCurrentState(); // Save state: 75%, unlocked
+
+            // Change position to 25%
+            var positionArgs = new KnxGroupEventArgs(_shutter.Addresses.PositionFeedback, new KnxValue(25f));
+            _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, positionArgs);
+
+            _shutter.CurrentState.Position.Should().Be(25f); // verify change
+
+            // Setup mock for position restoration
+            _mockKnxService.Setup(s => s.WriteGroupValue(_shutter.Addresses.PositionControl, 75f))
+                .Callback<string, float>((addr, value) =>
+                {
+                    var positionFeedback = new KnxGroupEventArgs(_shutter.Addresses.PositionFeedback, new KnxValue(value));
+                    _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, positionFeedback);
+                });
+
+            // Act
+            await _shutter.RestoreSavedStateAsync();
+
+            // Assert
+            _shutter.CurrentState.Position.Should().Be(75f); // position restored
+            _mockKnxService.Verify(s => s.WriteGroupValue(_shutter.Addresses.PositionControl, 75f), Times.Once());
+        }
+
+        [Fact]
+        public async Task RestoreSavedStateAsync_WhenLocked_ShouldTemporarilyUnlockAndRestore()
+        {
+            // Arrange - set up initial state: shutter at 80%, unlocked
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>(_shutter.Addresses.PositionFeedback)).ReturnsAsync(80f);
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.LockFeedback)).ReturnsAsync(false);
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.MovementStatusFeedback)).ReturnsAsync(false);
+
+            await _shutter.InitializeAsync();
+            _shutter.SaveCurrentState(); // Save state: 80%, unlocked
+
+            // Change position to 40% and lock the shutter
+            var positionArgs = new KnxGroupEventArgs(_shutter.Addresses.PositionFeedback, new KnxValue(40f));
+            _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, positionArgs);
+            
+            var lockArgs = new KnxGroupEventArgs(_shutter.Addresses.LockFeedback, new KnxValue(true)); // locked
+            _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, lockArgs);
+
+            // Verify current state is locked at 40%
+            _shutter.CurrentState.Position.Should().Be(40f);
+            _shutter.CurrentState.Lock.Should().Be(Lock.On);
+
+            // Setup mocks for restoration process
+            _mockKnxService.Setup(s => s.WriteGroupValue(_shutter.Addresses.LockControl, false)) // unlock
+                .Callback<string, bool>((addr, value) =>
+                {
+                    var unlockFeedback = new KnxGroupEventArgs(_shutter.Addresses.LockFeedback, new KnxValue(false));
+                    _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, unlockFeedback);
+                });
+
+            _mockKnxService.Setup(s => s.WriteGroupValue(_shutter.Addresses.PositionControl, 80f)) // restore position
+                .Callback<string, float>((addr, value) =>
+                {
+                    var positionFeedback = new KnxGroupEventArgs(_shutter.Addresses.PositionFeedback, new KnxValue(value));
+                    _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, positionFeedback);
+                });
+
+            _mockKnxService.Setup(s => s.WriteGroupValue(_shutter.Addresses.LockControl, false)) // restore lock (Off)
+                .Callback<string, bool>((addr, value) =>
+                {
+                    var lockFeedback = new KnxGroupEventArgs(_shutter.Addresses.LockFeedback, new KnxValue(value));
+                    _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, lockFeedback);
+                });
+
+            // Act
+            await _shutter.RestoreSavedStateAsync();
+
+            // Assert
+            _shutter.CurrentState.Position.Should().Be(80f); // position restored
+            _shutter.CurrentState.Lock.Should().Be(Lock.Off); // lock restored
+
+            // Verify that unlock was called before position restoration
+            _mockKnxService.Verify(s => s.WriteGroupValue(_shutter.Addresses.LockControl, false), Times.AtLeastOnce());
+            _mockKnxService.Verify(s => s.WriteGroupValue(_shutter.Addresses.PositionControl, 80f), Times.Once());
+        }
+
+        [Fact]
+        public async Task RestoreSavedStateAsync_ShouldRestoreLockState()
+        {
+            // Arrange - set up initial state: shutter at 50%, locked
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>(_shutter.Addresses.PositionFeedback)).ReturnsAsync(50f);
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.LockFeedback)).ReturnsAsync(true); // locked
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_shutter.Addresses.MovementStatusFeedback)).ReturnsAsync(false);
+
+            await _shutter.InitializeAsync();
+            _shutter.SaveCurrentState(); // Save state: 50%, locked
+
+            // Change to unlocked state
+            var lockArgs = new KnxGroupEventArgs(_shutter.Addresses.LockFeedback, new KnxValue(false)); // unlocked
+            _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, lockArgs);
+
+            _shutter.CurrentState.Lock.Should().Be(Lock.Off); // now unlocked
+
+            // Setup mock for lock restoration
+            _mockKnxService.Setup(s => s.WriteGroupValue(_shutter.Addresses.LockControl, true)) // restore lock (On)
+                .Callback<string, bool>((addr, value) =>
+                {
+                    var lockFeedback = new KnxGroupEventArgs(_shutter.Addresses.LockFeedback, new KnxValue(value));
+                    _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, lockFeedback);
+                });
+
+            // Act
+            await _shutter.RestoreSavedStateAsync();
+
+            // Assert
+            _shutter.CurrentState.Lock.Should().Be(Lock.On); // lock restored
+            _mockKnxService.Verify(s => s.WriteGroupValue(_shutter.Addresses.LockControl, true), Times.Once());
+        }
+
+        [Fact]
         public async Task SetPositionAsync_CallsKnxServiceWithCorrectAddress()
         {
             // Arrange

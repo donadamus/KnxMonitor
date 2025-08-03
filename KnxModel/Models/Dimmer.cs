@@ -124,12 +124,12 @@ namespace KnxModel
 
         protected override void SaveCurrentStateMessage()
         {
-            Console.WriteLine($"Saved current state for dimmer {Id} - State: {CurrentState.Switch}, Brightness: {CurrentState.Brightness}%");
+            Console.WriteLine($"Saved current state for dimmer {Id} - State: {CurrentState.Switch}, Brightness: {CurrentState.Brightness}%, Lock: {CurrentState.Lock}");
         }
 
         protected override void RestoreSavedStateMessage()
         {
-            Console.WriteLine($"Restoring dimmer {Id} to saved state - State: {SavedState!.Switch}, Brightness: {SavedState.Brightness}%");
+            Console.WriteLine($"Restoring dimmer {Id} to saved state - State: {SavedState!.Switch}, Brightness: {SavedState.Brightness}%, Lock: {SavedState.Lock}");
         }
 
         protected override async Task PerformStateRestoration()
@@ -137,7 +137,41 @@ namespace KnxModel
             // Restore brightness first (this will also handle on/off state)
             if (CurrentState.Brightness != SavedState!.Brightness)
             {
+                // Check if device is currently locked - if so, unlock it temporarily to allow state changes
+                if (CurrentState.Lock == Lock.On)
+                {
+                    Console.WriteLine($"Dimmer {Id} is locked, temporarily unlocking to allow brightness restoration");
+                    await SetLockAsync(Lock.Off);
+                }
+
                 await SetBrightnessAsync(SavedState.Brightness);
+                Console.WriteLine($"Dimmer {Id} brightness restored to: {SavedState.Brightness}%");
+            }
+        }
+
+        public override async Task RestoreSavedStateAsync()
+        {
+            if (SavedState == null)
+            {
+                throw new InvalidOperationException($"No saved state available for dimmer {Id}. Call SaveCurrentState() first.");
+            }
+
+            RestoreSavedStateMessage();
+
+            try
+            {
+                // First restore dimmer-specific state (brightness)
+                await PerformStateRestoration();
+                
+                // Then call base implementation to restore switch and lock states
+                await base.RestoreSavedStateAsync();
+                
+                RestoreSuccessMessage();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to restore dimmer {Id} state: {ex.Message}");
+                throw;
             }
         }
 
@@ -223,15 +257,14 @@ namespace KnxModel
 
         #region Lock Control (inherited from LockableKnxDeviceBase)
 
-        protected override string GetLockControlAddress() => _dimmerAddresses.LockControl;
-        protected override string GetLockFeedbackAddress() => _dimmerAddresses.LockFeedback;
+        protected override LockState? GetSavedLockState() => SavedState;
+        protected override LockState GetCurrentLockState() => CurrentState;
+        protected override LockableAddresses GetLockableAddresses() => _dimmerAddresses;
 
         protected override void UpdateCurrentStateLock(Lock lockState)
         {
             CurrentState = CurrentState with { Lock = lockState, LastUpdated = DateTime.Now };
         }
-
-        protected override Lock GetCurrentLockState() => CurrentState.Lock;
 
         #endregion
 

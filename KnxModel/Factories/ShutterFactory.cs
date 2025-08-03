@@ -43,14 +43,13 @@ namespace KnxModel
         /// <summary>
         /// Configuration for a shutter
         /// </summary>
-        private record ShutterConfig(string Name, string SubGroup);
+        public record ShutterConfig(string Name, string SubGroup);
 
         /// <summary>
         /// Predefined shutter configurations based on the KNX group addresses
         /// </summary>
-        private static readonly Dictionary<string, ShutterConfig> ShutterConfigurations = new()
+        public static readonly Dictionary<string, ShutterConfig> ShutterConfigurations = new()
         {
-            // New shutters (4/0/1 to 4/0/12)
             { "R1.1", new("Bathroom", "1") },
             { "R2.1", new("Master Bathroom", "2") },
             { "R3.1", new("Master Bedroom", "3") },
@@ -64,7 +63,6 @@ namespace KnxModel
             { "R7.3", new("Rafal's Room", "11") },
             { "R8.1", new("Hall", "12") },
 
-            // Existing shutters (4/0/13 to 4/0/18)
             { "R02.1", new("Kitchen", "13") },
             { "R02.2", new("Kitchen", "14") },
             { "R03.1", new("Dining Room", "15") },

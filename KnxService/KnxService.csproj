@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Knx.Falcon.Sdk" Version="6.3.7959" />
+    <PackageReference Include="System.Threading.RateLimiting" Version="9.0.7" />
   </ItemGroup>
 
   <ItemGroup>

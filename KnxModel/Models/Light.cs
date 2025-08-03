@@ -100,15 +100,14 @@ namespace KnxModel
 
         #region Abstract implementations for LockableKnxDeviceBase
 
-        protected override string GetLockControlAddress() => Addresses.LockControl;
-        protected override string GetLockFeedbackAddress() => Addresses.LockFeedback;
+        protected override LockState? GetSavedLockState() => SavedState;
+        protected override LockState GetCurrentLockState() => CurrentState;
+        protected override LockableAddresses GetLockableAddresses() => Addresses;
 
         protected override void UpdateCurrentStateLock(Lock lockState)
         {
             CurrentState = CurrentState with { Lock = lockState, LastUpdated = DateTime.Now };
         }
-
-        protected override Lock GetCurrentLockState() => CurrentState.Lock;
 
         #endregion
 
@@ -117,6 +116,7 @@ namespace KnxModel
             try
             {
                 CurrentState = await ReadCurrentStateAsync();
+                SaveCurrentState();
                 Console.WriteLine($"Initialized light {Id}: {ToString()}");
             }
             catch (Exception ex)
@@ -134,14 +134,14 @@ namespace KnxModel
 
         protected virtual void SaveCurrentStateMessage()
         {
-            Console.WriteLine($"Saved current state for light {Id} - State: {CurrentState.Switch}");
+            Console.WriteLine($"Saved current state for light {Id} - State: {CurrentState.Switch}, Lock: {CurrentState.Lock}");
         }
 
         public override async Task RestoreSavedStateAsync()
         {
             if (SavedState == null)
             {
-                throw new InvalidOperationException($"No saved state available for light {Id}. Call SaveCurrentState() first.");
+                return;
             }
 
             RestoreSavedStateMessage();
@@ -149,6 +149,10 @@ namespace KnxModel
             try
             {
                 await PerformStateRestoration();
+                
+                // Call base implementation to restore lock state
+                await base.RestoreSavedStateAsync();
+                
                 RestoreSuccessMessage();
             }
             catch (Exception ex)
@@ -160,7 +164,7 @@ namespace KnxModel
 
         protected virtual void RestoreSavedStateMessage()
         {
-            Console.WriteLine($"Restoring light {Id} to saved state - State: {SavedState!.Switch}");
+            Console.WriteLine($"Restoring light {Id} to saved state - State: {SavedState!.Switch}, Lock: {SavedState.Lock}");
         }
 
         protected virtual async Task PerformStateRestoration()
@@ -168,6 +172,13 @@ namespace KnxModel
             // Restore state
             if (CurrentState.Switch != SavedState!.Switch)
             {
+                // Check if device is currently locked - if so, unlock it temporarily to allow state changes
+                if (CurrentState.Lock == Lock.On)
+                {
+                    Console.WriteLine($"Light {Id} is locked, temporarily unlocking to allow switch state restoration");
+                    await SetLockAsync(Lock.Off);
+                }
+
                 await SetStateAsync(SavedState.Switch);
             }
         }

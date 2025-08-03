@@ -94,7 +94,7 @@ namespace KnxModel
         public override void SaveCurrentState()
         {
             SavedState = CurrentState;
-            Console.WriteLine($"Saved current state for shutter {Id} - Position: {CurrentState.Position}%");
+            Console.WriteLine($"Saved current state for shutter {Id} - Position: {CurrentState.Position}%, Lock: {CurrentState.Lock}");
         }
 
         public override async Task RestoreSavedStateAsync()
@@ -104,15 +104,26 @@ namespace KnxModel
                 throw new InvalidOperationException($"No saved state available for shutter {Id}. Call SaveCurrentState() first.");
             }
 
-            Console.WriteLine($"Restoring shutter {Id} to saved state - Position: {SavedState.Position}%");
+            Console.WriteLine($"Restoring shutter {Id} to saved state - Position: {SavedState.Position}%, Lock: {SavedState.Lock}");
 
             try
             {
-                // Restore position
+                // First restore shutter-specific state (position)
                 if (Math.Abs(CurrentState.Position - SavedState.Position) > 1.0f) // Allow 1% tolerance
                 {
+                    // Check if device is currently locked - if so, unlock it temporarily to allow state changes
+                    if (CurrentState.Lock == Lock.On)
+                    {
+                        Console.WriteLine($"Shutter {Id} is locked, temporarily unlocking to allow position restoration");
+                        await SetLockAsync(Lock.Off);
+                    }
+
                     await SetPositionAsync(SavedState.Position);
+                    Console.WriteLine($"Shutter {Id} position restored to: {SavedState.Position}%");
                 }
+
+                // Then call base implementation to restore lock state
+                await base.RestoreSavedStateAsync();
 
                 Console.WriteLine($"Shutter {Id} successfully restored to saved state");
             }
@@ -125,18 +136,17 @@ namespace KnxModel
 
         #region Lock Implementation (inherited from LockableKnxDeviceBase)
 
-        public virtual ShutterState UpdateLockState(Lock lockState) => 
-            CurrentState with { Lock = lockState, LastUpdated = DateTime.Now };
-
-        protected override string GetLockControlAddress() => Addresses.LockControl;
-        protected override string GetLockFeedbackAddress() => Addresses.LockFeedback;
+        protected override LockState? GetSavedLockState() => SavedState;
+        protected override LockState GetCurrentLockState() => CurrentState;
+        protected override LockableAddresses GetLockableAddresses() => _addresses;
 
         protected override void UpdateCurrentStateLock(Lock lockState)
         {
             CurrentState = CurrentState with { Lock = lockState, LastUpdated = DateTime.Now };
         }
 
-        protected override Lock GetCurrentLockState() => CurrentState.Lock;
+        public virtual ShutterState UpdateLockState(Lock lockState) => 
+            CurrentState with { Lock = lockState, LastUpdated = DateTime.Now };
 
         #endregion
 

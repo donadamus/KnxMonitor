@@ -4,12 +4,14 @@ using Knx.Falcon.Configuration;
 using Knx.Falcon.Sdk;
 using KnxModel;
 using System.ComponentModel.DataAnnotations;
+using System.Threading.RateLimiting;
 
 namespace KnxService
 {
     public class KnxService : IKnxService
     {
 
+        private readonly KnxRateLimiterManager _knxRateLimiter;
         private readonly KnxBus _knxBus;
         public KnxService()
         {
@@ -20,6 +22,7 @@ namespace KnxService
             };
 
             _knxBus = new KnxBus(parameters);
+            _knxRateLimiter = new KnxRateLimiterManager();
             Console.WriteLine($"KnxService: Attempting to connect to {parameters.HostAddress}...");
             Connect();
         }
@@ -114,6 +117,7 @@ namespace KnxService
         {
             var groupAddress = new GroupAddress(address);
             var groupValue = new GroupValue(value);
+            _knxRateLimiter.WaitAsync(KnxOperationType.WriteGroupValue).GetAwaiter().GetResult();
             _knxBus.WriteGroupValue(groupAddress, groupValue);
         }
 
@@ -128,6 +132,7 @@ namespace KnxService
             // Use 1-byte percentage like int version - most KNX devices expect this format
             var knxRawValue = (byte)(percentage * 2.55f); // Convert 0.0-100.0% to 0-255 KNX range
             var groupValue = new GroupValue(knxRawValue);
+            _knxRateLimiter.WaitAsync(KnxOperationType.WriteGroupValue).GetAwaiter().GetResult();
             _knxBus.WriteGroupValue(groupAddress, groupValue);
         }
 
@@ -143,6 +148,7 @@ namespace KnxService
             var groupAddress = new GroupAddress(address);
             try
             {
+                _knxRateLimiter.WaitAsync(KnxOperationType.ReadGroupValueAsync).GetAwaiter().GetResult();
                 var result = await _knxBus.ReadGroupValueAsync(groupAddress, TimeSpan.FromSeconds(2), MessagePriority.Low);
 
                 Console.WriteLine($"RequestGroupValue<{typeof(T).Name}>({address}): {result?.TypedValue?.GetType().Name} = {result?.TypedValue}");

@@ -344,6 +344,95 @@ namespace KnxTest.Unit.Models
             await Assert.ThrowsAsync<InvalidOperationException>(() => _dimmer.RestoreSavedStateAsync());
         }
 
+        [Fact]
+        public async Task RestoreSavedStateAsync_WhenLocked_ShouldTemporarilyUnlockAndRestore()
+        {
+            // Arrange - set up initial state: dimmer at 60%, unlocked
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_dimmer.Addresses.SwitchFeedback)).ReturnsAsync(true);
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>(_dimmer.Addresses.BrightnessFeedback)).ReturnsAsync(60f);
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_dimmer.Addresses.LockFeedback)).ReturnsAsync(false);
+
+            await _dimmer.InitializeAsync();
+            _dimmer.SaveCurrentState(); // Save state: 60%, unlocked
+
+            // Change brightness to 30% and lock the dimmer
+            var brightnessArgs = new KnxGroupEventArgs(_dimmer.Addresses.BrightnessFeedback, new KnxValue(30));
+            _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, brightnessArgs);
+            
+            var lockArgs = new KnxGroupEventArgs(_dimmer.Addresses.LockFeedback, new KnxValue(true)); // locked
+            _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, lockArgs);
+
+            // Verify current state is locked at 30%
+            _dimmer.CurrentState.Brightness.Should().Be(30);
+            _dimmer.CurrentState.Lock.Should().Be(Lock.On);
+
+            // Setup mocks for restoration process
+            _mockKnxService.Setup(s => s.WriteGroupValue(_dimmer.Addresses.LockControl, false)) // unlock
+                .Callback<string, bool>((addr, value) =>
+                {
+                    var unlockFeedback = new KnxGroupEventArgs(_dimmer.Addresses.LockFeedback, new KnxValue(false));
+                    _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, unlockFeedback);
+                });
+
+            _mockKnxService.Setup(s => s.WriteGroupValue(_dimmer.Addresses.BrightnessControl, 60f)) // restore brightness
+                .Callback<string, float>((addr, value) =>
+                {
+                    var brightnessFeedback = new KnxGroupEventArgs(_dimmer.Addresses.BrightnessFeedback, new KnxValue(value));
+                    _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, brightnessFeedback);
+                });
+
+            _mockKnxService.Setup(s => s.WriteGroupValue(_dimmer.Addresses.LockControl, false)) // restore lock (Off)
+                .Callback<string, bool>((addr, value) =>
+                {
+                    var lockFeedback = new KnxGroupEventArgs(_dimmer.Addresses.LockFeedback, new KnxValue(value));
+                    _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, lockFeedback);
+                });
+
+            // Act
+            await _dimmer.RestoreSavedStateAsync();
+
+            // Assert
+            _dimmer.CurrentState.Brightness.Should().Be(60); // brightness restored
+            _dimmer.CurrentState.Lock.Should().Be(Lock.Off); // lock restored
+
+            // Verify that unlock was called before brightness restoration
+            _mockKnxService.Verify(s => s.WriteGroupValue(_dimmer.Addresses.LockControl, false), Times.AtLeastOnce());
+            _mockKnxService.Verify(s => s.WriteGroupValue(_dimmer.Addresses.BrightnessControl, 60f), Times.Once());
+        }
+
+        [Fact]
+        public async Task RestoreSavedStateAsync_ShouldRestoreLockState()
+        {
+            // Arrange - set up initial state: dimmer at 50%, locked
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_dimmer.Addresses.SwitchFeedback)).ReturnsAsync(true);
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>(_dimmer.Addresses.BrightnessFeedback)).ReturnsAsync(50f);
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_dimmer.Addresses.LockFeedback)).ReturnsAsync(true); // locked
+
+            await _dimmer.InitializeAsync();
+            _dimmer.SaveCurrentState(); // Save state: 50%, locked
+
+            // Change to unlocked state
+            var lockArgs = new KnxGroupEventArgs(_dimmer.Addresses.LockFeedback, new KnxValue(false)); // unlocked
+            _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, lockArgs);
+
+            _dimmer.CurrentState.Lock.Should().Be(Lock.Off); // now unlocked
+
+            // Setup mock for lock restoration
+            _mockKnxService.Setup(s => s.WriteGroupValue(_dimmer.Addresses.LockControl, true)) // restore lock (On)
+                .Callback<string, bool>((addr, value) =>
+                {
+                    var lockFeedback = new KnxGroupEventArgs(_dimmer.Addresses.LockFeedback, new KnxValue(value));
+                    _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, lockFeedback);
+                });
+
+            // Act
+            await _dimmer.RestoreSavedStateAsync();
+
+            // Assert
+            _dimmer.CurrentState.Lock.Should().Be(Lock.On); // lock restored
+            _mockKnxService.Verify(s => s.WriteGroupValue(_dimmer.Addresses.LockControl, true), Times.Once());
+        }
+
         #endregion
 
         #region Wait Methods Tests

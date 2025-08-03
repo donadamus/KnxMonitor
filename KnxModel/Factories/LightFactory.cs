@@ -43,38 +43,40 @@ namespace KnxModel
         /// <summary>
         /// Configuration for a light
         /// </summary>
-        private record LightConfig(string Name, string SubGroup);
+        public record LightConfig(string Name, string SubGroup);
 
         /// <summary>
         /// Predefined light configurations based on the KNX group addresses
         /// Maps from the test data in UnitTest1.cs
         /// </summary>
-        private static readonly Dictionary<string, LightConfig> LightConfigurations = new()
+        public static readonly Dictionary<string, LightConfig> LightConfigurations = new()
         {
-            // Based on test data: subGroups 11, 12, 13, 14, 15
-            ["L11"] = new("Light 11", "11"),
-            ["L12"] = new("Light 12", "12"),
-            ["L13"] = new("Light 13", "13"),
-            ["L14"] = new("Light 14", "14"),
-            ["L15"] = new("Light 15", "15"),
-            ["L25"] = new("Light 25", "25"),
+            ["L01.1"] = new("Hall, Celling Light", "1"),
+            ["L02.1"] = new("Kitchen, Celling Light", "2"),
+            ["L02.2"] = new("Kitchen, Bar Light", "3"),
+            ["L03.1"] = new("Dining Room, Celling Light", "4"),
+            ["L03.2"] = new("Dining Room Hall, Celling Light", "5"),
+            ["L04.1"] = new("Living Room, Celling Light 1", "6"),
+            ["L04.2"] = new("Living Room, Celling Light 2", "7"),
+            ["L05.1"] = new("Office, Celling Light", "8"),
+            ["L06.1"] = new("Pantry, Celling Light", "9"),
+            ["L07.1"] = new("Bathroom, Celling Light", "10"),
+            ["L07.2"] = new("Bathroom, Mirror Light", "11"),
+           // ["L08"] = new("Master Bedroom", "08"),
+           // ["L09"] = new("Master Bathroom", "09"),
+           // ["L10"] = new("Guest Room", "10"),
+           // ["L16"] = new("Kinga's Room", "16"),
+           // ["L17"] = new("Rafal's Room", "17"),
+           // ["L18"] = new("Bathroom", "18"),
+           // ["L19"] = new("Garage", "19"),
+           // ["L20"] = new("Outdoor Front", "20")
+           //["L11"] = new("Light 11", "11"),
+           // ["L12"] = new("Light 12", "12"),
+           // ["L13"] = new("Light 13", "13"),
+           // ["L14"] = new("Light 14", "14"),
+           // ["L15"] = new("Light 15", "15"),
+           // ["L25"] = new("Light 25", "25"),
 
-            // Additional lights based on common KNX patterns
-            ["L01"] = new("Kitchen Main", "01"),
-            ["L02"] = new("Kitchen Counter", "02"),
-            ["L03"] = new("Dining Room", "03"),
-            ["L04"] = new("Living Room Main", "04"),
-            ["L05"] = new("Living Room Accent", "05"),
-            ["L06"] = new("Office", "06"),
-            ["L07"] = new("Hall", "07"),
-            ["L08"] = new("Master Bedroom", "08"),
-            ["L09"] = new("Master Bathroom", "09"),
-            ["L10"] = new("Guest Room", "10"),
-            ["L16"] = new("Kinga's Room", "16"),
-            ["L17"] = new("Rafal's Room", "17"),
-            ["L18"] = new("Bathroom", "18"),
-            ["L19"] = new("Garage", "19"),
-            ["L20"] = new("Outdoor Front", "20")
         };
     }
 }

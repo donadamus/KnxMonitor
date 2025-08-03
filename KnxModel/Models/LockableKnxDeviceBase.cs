@@ -13,6 +13,52 @@ namespace KnxModel
         {
         }
 
+        /// <summary>
+        /// Gets the saved lock state for restoration. Must be implemented by derived classes.
+        /// </summary>
+        protected abstract LockState? GetSavedLockState();
+
+        /// <summary>
+        /// Gets the current lock state. Must be implemented by derived classes.
+        /// </summary>
+        protected abstract LockState GetCurrentLockState();
+
+        /// <summary>
+        /// Gets the lockable addresses for this device. Must be implemented by derived classes.
+        /// </summary>
+        protected abstract LockableAddresses GetLockableAddresses();
+
+        /// <summary>
+        /// Restores the lock state from saved state. Override in derived classes to add additional state restoration.
+        /// Always call base.RestoreSavedStateAsync() to ensure lock state is restored.
+        /// </summary>
+        public override async Task RestoreSavedStateAsync()
+        {
+            await RestoreLockStateAsync();
+        }
+
+        /// <summary>
+        /// Restores lock state from saved state using LockState record.
+        /// </summary>
+        protected virtual async Task RestoreLockStateAsync()
+        {
+            var savedLockState = GetSavedLockState();
+            if (savedLockState == null)
+            {
+                Console.WriteLine($"No saved lock state available for {GetType().Name.ToLower()} {Id}");
+                return;
+            }
+
+            var currentLockState = GetCurrentLockState();
+            
+            // Restore lock state if different and not unknown
+            if (currentLockState.Lock != savedLockState.Lock && savedLockState.Lock != Lock.Unknown)
+            {
+                await SetLockAsync(savedLockState.Lock);
+                Console.WriteLine($"{GetType().Name} {Id} lock restored to: {savedLockState.Lock}");
+            }
+        }
+
         public async Task SetLockAsync(Lock lockState, TimeSpan? timeout = null)
         {
             await SetLockStateAsync(lockState, timeout);
@@ -28,34 +74,15 @@ namespace KnxModel
             await SetLockAsync(Lock.Off, timeout);
         }
 
-        /// <summary>
-        /// Gets the KNX address for lock control - must be implemented by derived classes
-        /// </summary>
-        protected abstract string GetLockControlAddress();
-
-        /// <summary>
-        /// Gets the KNX address for lock feedback - must be implemented by derived classes
-        /// </summary>
-        protected abstract string GetLockFeedbackAddress();
-
-        /// <summary>
-        /// Updates the current state with lock information - must be implemented by derived classes
-        /// </summary>
-        protected abstract void UpdateCurrentStateLock(Lock lockState);
-
-        /// <summary>
-        /// Gets the current lock state from the device state - must be implemented by derived classes
-        /// </summary>
-        protected abstract Lock GetCurrentLockState();
-
         protected virtual async Task SetLockStateAsync(Lock lockState, TimeSpan? timeout = null)
         {
             Console.WriteLine($"{lockState} {GetType().Name.ToLower()} {Id}");
             
+            var addresses = GetLockableAddresses();
             await SetBitFunctionAsync(
-                GetLockControlAddress(),
+                addresses.LockControl,
                 lockState == Lock.On,
-                () => GetCurrentLockState() == lockState,
+                () => GetCurrentLockState().Lock == lockState,
                 timeout
             );
         }
@@ -64,7 +91,8 @@ namespace KnxModel
         {
             try
             {
-                var lockState = await _knxService.RequestGroupValue<bool>(GetLockFeedbackAddress());
+                var addresses = GetLockableAddresses();
+                var lockState = await _knxService.RequestGroupValue<bool>(addresses.LockFeedback);
                 return lockState ? Lock.On : Lock.Off;
             }
             catch (Exception ex)
@@ -79,7 +107,7 @@ namespace KnxModel
             Console.WriteLine($"Waiting for {GetType().Name.ToLower()} {Id} lock to become: {lockState}");
             
             return await WaitForConditionAsync(
-                condition: () => GetCurrentLockState() == lockState,
+                condition: () => GetCurrentLockState().Lock == lockState,
                 timeout: timeout,
                 description: $"lock state {lockState}"
             );
@@ -88,7 +116,8 @@ namespace KnxModel
         protected override void ProcessKnxMessage(KnxGroupEventArgs e)
         {
             // Handle lock messages first
-            if (e.Destination == GetLockFeedbackAddress())
+            var addresses = GetLockableAddresses();
+            if (e.Destination == addresses.LockFeedback)
             {
                 var isLocked = e.Value.AsBoolean();
                 var lockState = isLocked ? Lock.On : Lock.Off;
@@ -101,6 +130,11 @@ namespace KnxModel
                 ProcessDeviceSpecificMessage(e);
             }
         }
+
+        /// <summary>
+        /// Updates the current state with lock information - must be implemented by derived classes
+        /// </summary>
+        protected abstract void UpdateCurrentStateLock(Lock lockState);
 
         /// <summary>
         /// Process device-specific KNX messages - override in derived classes

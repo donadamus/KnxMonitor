@@ -450,6 +450,91 @@ namespace KnxTest.Unit.Models
             _light.CurrentState.Switch.Should().Be(Switch.On);
         }
 
+        [Fact]
+        public async Task RestoreSavedStateAsync_WhenLocked_ShouldTemporarilyUnlockAndRestore()
+        {
+            // Arrange - set initial state: light on, unlocked
+            var feedbackArgs = new KnxGroupEventArgs(_light.Addresses.Feedback, new KnxValue(true));
+            _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, feedbackArgs);
+            
+            _light.SaveCurrentState(); // Save state: On, unlocked
+
+            // Change to off and locked
+            var offFeedbackArgs = new KnxGroupEventArgs(_light.Addresses.Feedback, new KnxValue(false));
+            _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, offFeedbackArgs);
+            
+            var lockArgs = new KnxGroupEventArgs(_light.Addresses.LockFeedback, new KnxValue(true)); // locked
+            _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, lockArgs);
+
+            // Verify current state is locked and off
+            _light.CurrentState.Switch.Should().Be(Switch.Off);
+            _light.CurrentState.Lock.Should().Be(Lock.On);
+
+            // Setup mocks for restoration process
+            _mockKnxService.Setup(x => x.WriteGroupValue(_light.Addresses.LockControl, false)) // unlock
+                          .Callback<string, bool>((addr, value) =>
+                          {
+                              var unlockFeedback = new KnxGroupEventArgs(_light.Addresses.LockFeedback, new KnxValue(false));
+                              _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, unlockFeedback);
+                          });
+
+            _mockKnxService.Setup(x => x.WriteGroupValue(_light.Addresses.Control, true)) // restore switch
+                          .Callback<string, bool>((addr, value) =>
+                          {
+                              var restoreFeedbackArgs = new KnxGroupEventArgs(_light.Addresses.Feedback, new KnxValue(value));
+                              _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, restoreFeedbackArgs);
+                          });
+
+            _mockKnxService.Setup(x => x.WriteGroupValue(_light.Addresses.LockControl, false)) // restore lock (Off)
+                          .Callback<string, bool>((addr, value) =>
+                          {
+                              var lockFeedback = new KnxGroupEventArgs(_light.Addresses.LockFeedback, new KnxValue(value));
+                              _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, lockFeedback);
+                          });
+
+            // Act
+            await _light.RestoreSavedStateAsync();
+
+            // Assert
+            _light.CurrentState.Switch.Should().Be(Switch.On); // switch restored
+            _light.CurrentState.Lock.Should().Be(Lock.Off); // lock restored
+
+            // Verify that unlock was called before switch restoration
+            _mockKnxService.Verify(s => s.WriteGroupValue(_light.Addresses.LockControl, false), Times.AtLeastOnce());
+            _mockKnxService.Verify(s => s.WriteGroupValue(_light.Addresses.Control, true), Times.Once());
+        }
+
+        [Fact]
+        public async Task RestoreSavedStateAsync_ShouldRestoreLockState()
+        {
+            // Arrange - set initial state: light off, locked
+            var lockArgs = new KnxGroupEventArgs(_light.Addresses.LockFeedback, new KnxValue(true)); // locked
+            _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, lockArgs);
+
+            _light.SaveCurrentState(); // Save state: locked
+
+            // Change to unlocked
+            var unlockArgs = new KnxGroupEventArgs(_light.Addresses.LockFeedback, new KnxValue(false)); // unlocked
+            _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, unlockArgs);
+
+            _light.CurrentState.Lock.Should().Be(Lock.Off); // now unlocked
+
+            // Setup mock for lock restoration
+            _mockKnxService.Setup(x => x.WriteGroupValue(_light.Addresses.LockControl, true)) // restore lock (On)
+                          .Callback<string, bool>((addr, value) =>
+                          {
+                              var lockFeedback = new KnxGroupEventArgs(_light.Addresses.LockFeedback, new KnxValue(value));
+                              _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, lockFeedback);
+                          });
+
+            // Act
+            await _light.RestoreSavedStateAsync();
+
+            // Assert
+            _light.CurrentState.Lock.Should().Be(Lock.On); // lock restored
+            _mockKnxService.Verify(s => s.WriteGroupValue(_light.Addresses.LockControl, true), Times.Once());
+        }
+
         #endregion
 
     }
