@@ -7,7 +7,7 @@ using KnxModel;
 namespace KnxTest.Integration
 {
     [Collection("KnxService collection")]
-    public class DimmerIntegrationTests : IDisposable
+    public class OldDimmerIntegrationTests : IDisposable
     {
 
         public static IEnumerable<object[]> DimmerIdsFromConfig
@@ -27,7 +27,7 @@ namespace KnxTest.Integration
         private static readonly IDimmer _defaulDimmer = new Dimmer("L11", "Test Light 11", "1", _knxServiceMock);
         private IDimmer _dimmer = _defaulDimmer;
 
-        public DimmerIntegrationTests(KnxServiceFixture fixture)
+        public OldDimmerIntegrationTests(KnxServiceFixture fixture)
         {
             _knxService = fixture.KnxService;
             _dimmer1 = new Dimmer("DIM1", "Test Dimmer 1", "1", _knxService);
