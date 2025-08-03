@@ -66,6 +66,13 @@ namespace KnxModel
         /// </summary>
         public const int DIMMER_FEEDBACK_OFFSET = 100;
 
+        /// <summary>
+        /// Feedback offset for light locks - set to 0 because switch doesn't send automatic feedback
+        /// We treat write messages as feedback since lock uses the same address for control and status
+        /// Control: 1/2/11 -> Feedback: 1/2/11 (same address)
+        /// </summary>
+        public const int DIMMER_LOCK_FEEDBACK_OFFSET = 0;
+
         #endregion
 
         #region Shutter Control Configuration
@@ -164,7 +171,7 @@ namespace KnxModel
         /// <returns>Complete KNX address for dimmer lock feedback</returns>
         public static string CreateDimmerLockFeedbackAddress(string controlSubGroup)
         {
-            var feedbackSubGroup = (int.Parse(controlSubGroup) + DIMMER_FEEDBACK_OFFSET).ToString();
+            var feedbackSubGroup = (int.Parse(controlSubGroup) + DIMMER_LOCK_FEEDBACK_OFFSET).ToString();
             return $"{DIMMERS_MAIN_GROUP}/{DIMMERS_LOCK_MIDDLE_GROUP}/{feedbackSubGroup}";
         }
         
