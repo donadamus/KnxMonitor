@@ -28,6 +28,11 @@ namespace KnxModel
         /// </summary>
         protected abstract LockableAddresses GetLockableAddresses();
 
+        // Explicit interface implementation for ILockable
+        LockableAddresses ILockable.Addresses => GetLockableAddresses();
+        LockState ILockable.CurrentState => GetCurrentLockState();
+        LockState? ILockable.SavedState => GetSavedLockState();
+
         /// <summary>
         /// Restores the lock state from saved state. Override in derived classes to add additional state restoration.
         /// Always call base.RestoreSavedStateAsync() to ensure lock state is restored.

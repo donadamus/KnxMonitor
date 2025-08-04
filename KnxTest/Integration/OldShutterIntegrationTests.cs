@@ -8,11 +8,11 @@ using Xunit;
 namespace KnxTest.Integration
 {
     [Collection("KnxService collection")]
-    public class ShutterIntegrationTests
+    public class OldShutterIntegrationTests
     {
         private readonly IKnxService _knxService;
 
-        public ShutterIntegrationTests(KnxServiceFixture fixture)
+        public OldShutterIntegrationTests(KnxServiceFixture fixture)
         {
             _knxService = fixture.KnxService;
         }

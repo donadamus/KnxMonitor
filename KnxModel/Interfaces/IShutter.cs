@@ -10,19 +10,19 @@ namespace KnxModel
     {
 
         /// <summary>
-        /// KNX addresses for shutter control and feedback
+        /// KNX addresses for shutter control and feedback (overrides ILockable.Addresses)
         /// </summary>
-        ShutterAddresses Addresses { get; }
+        new ShutterAddresses Addresses { get; }
 
         /// <summary>
-        /// Current state of the shutter
+        /// Current state of the shutter (overrides ILockable.CurrentState)
         /// </summary>
-        ShutterState CurrentState { get; }
+        new ShutterState CurrentState { get; }
 
         /// <summary>
-        /// Saved state for restoration after tests
+        /// Saved state for restoration after tests (overrides ILockable.SavedState)
         /// </summary>
-        ShutterState? SavedState { get; }
+        new ShutterState? SavedState { get; }
 
         /// <summary>
         /// Move shutter to absolute position (0.0-100.0%)

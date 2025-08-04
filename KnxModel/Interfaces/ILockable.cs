@@ -6,8 +6,24 @@ namespace KnxModel
     /// <summary>
     /// Interface for devices that support lock functionality
     /// </summary>
-    public interface ILockable
+    public interface ILockable : IKnxDevice
     {
+        /// <summary>
+        /// KNX addresses for lock control and feedback
+        /// </summary>
+        LockableAddresses Addresses { get; }
+        
+        /// <summary>
+        /// Current state of the lockable device
+        /// </summary>
+        LockState CurrentState { get; }
+        
+        /// <summary>
+        /// Saved state for restoration after tests
+        /// </summary>
+        LockState? SavedState { get; }
+
+
         /// <summary>
         /// Set device lock state
         /// </summary>

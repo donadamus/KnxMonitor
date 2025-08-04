@@ -9,19 +9,19 @@ namespace KnxModel
     public interface ILight : IKnxDevice, ILockable
     {
         /// <summary>
-        /// KNX addresses for light control and feedback
+        /// KNX addresses for light control and feedback (overrides ILockable.Addresses)
         /// </summary>
-        LightAddresses Addresses { get; }
+        new LightAddresses Addresses { get; }
 
         /// <summary>
-        /// Current state of the light
+        /// Current state of the light (overrides ILockable.CurrentState)
         /// </summary>
-        LightState CurrentState { get; }
+        new LightState CurrentState { get; }
 
         /// <summary>
-        /// Saved state for restoration after tests
+        /// Saved state for restoration after tests (overrides ILockable.SavedState)
         /// </summary>
-        LightState? SavedState { get; }
+        new LightState? SavedState { get; }
 
         /// <summary>
         /// Turn light on or off
