@@ -22,9 +22,9 @@ namespace KnxTest.Integration.Interfaces
         /// </summary>
         Task CanReadLockState(string deviceId);
 
-        ///// <summary>
-        ///// Tests that device automatically turns off when locked
-        ///// </summary>
-        //Task DeviceAutoOffWhenLocked(string deviceId);
+        /// <summary>
+        /// Tests that device automatically turns off when locked
+        /// </summary>
+        Task DeviceAutoOffWhenLocked(string deviceId);
     }
 }

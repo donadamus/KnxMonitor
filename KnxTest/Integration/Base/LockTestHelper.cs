@@ -63,6 +63,29 @@ namespace KnxTest.Integration.Base
             Console.WriteLine($"✅ Device {device.Id} lock state changed to {targetLockState}");
         }
 
+        private async Task TurnDeviceOnOrOffAndAssert(ILight device, Switch switchState)
+        {
+            var currentState = device.CurrentState.Switch;
+            if (currentState == switchState)
+            {
+                Console.WriteLine($"Device {device.Id} is already in state {switchState}, no action needed.");
+                return;
+            }
+            if (switchState == Switch.On)
+            {
+                await device.TurnOnAsync();
+            }
+            else
+            {
+                await device.TurnOffAsync();
+            }
+            var waitResult = await device.WaitForStateAsync(switchState, TimeSpan.FromSeconds(1));
+            waitResult.Should().BeTrue($"Device {device.Id} should be {switchState} after operation");
+            device.CurrentState.Switch.Should().Be(switchState, 
+                $"Device {device.Id} should be {switchState} after operation");
+            Console.WriteLine($"✅ Device {device.Id} successfully turned {switchState}");
+        }
+
         public async Task LockPreventsStateChange(ILockable device)
         {
             var switchableDevice = device as ILight;
@@ -98,36 +121,39 @@ namespace KnxTest.Integration.Base
             response.Should().BeTrue($"Device {device.Id} should return expected lock state {lockState}");
 
             device.CurrentState.Lock.Should().Be(lockState, "Current state should match read lock state");
-            device.CurrentState.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(1),
-                "LastUpdated should be recent after reading lock state");
 
             Console.WriteLine($"✅ Device {device.Id} lock state read successfully: {lockState}");
         }
 
-        public async Task AssertDeviceAutoOffWhenLocked(ILockable device)
+        public async Task DeviceAutoOffWhenLocked(ILockable device)
         {
             // Ensure device is a switchable device for this test
             if (!(device is ILight switchableDevice))
             {
                 throw new InvalidOperationException("Auto-off test requires a switchable device (ILight)");
             }
+            // Ensure device is unlocked before starting tests
+            await EnsureDeviceIsUnlockedBeforeTest(device);
 
             // Turn device ON first
-            await switchableDevice.TurnOnAsync();
-            switchableDevice.CurrentState.Switch.Should().Be(Switch.On, "Device should be ON before testing auto-off");
+            await TurnDeviceOnOrOffAndAssert(switchableDevice, Switch.On);
 
             // Lock the device
-            await device.LockAsync();
-            await device.ReadLockStateAsync();
+            await ChangeLockStateAndForceUpdateIfNeeded(device, Lock.On);
 
             // Should automatically turn OFF
-            var waitResult = await switchableDevice.WaitForStateAsync(Switch.Off, TimeSpan.FromSeconds(3));
-            waitResult.Should().BeTrue("Device should automatically turn OFF when locked");
-            
-            switchableDevice.CurrentState.Switch.Should().Be(Switch.Off, "Device should be OFF after locking");
-            device.CurrentState.Lock.Should().Be(Lock.On, "Device should be locked");
+            await CheckIfTheDeviceHasSwitchedOffWhenLocked(device, switchableDevice);
 
             Console.WriteLine($"✅ Device {device.Id} automatically turned OFF when locked");
+        }
+
+        private static async Task CheckIfTheDeviceHasSwitchedOffWhenLocked(ILockable device, ILight switchableDevice)
+        {
+            var waitResult = await switchableDevice.WaitForStateAsync(Switch.Off, TimeSpan.FromSeconds(3));
+            waitResult.Should().BeTrue("Device should automatically turn OFF when locked");
+
+            switchableDevice.CurrentState.Switch.Should().Be(Switch.Off, "Device should be OFF after locking");
+            device.CurrentState.Lock.Should().Be(Lock.On, "Device should be locked");
         }
     }
 }

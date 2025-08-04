@@ -57,6 +57,13 @@ namespace KnxTest.Integration
             await AssertCanReadLockState(deviceId);
         }
 
+        [Theory]
+        [MemberData(nameof(LightIdsFromConfig))]
+        public override async Task DeviceAutoOffWhenLocked(string deviceId)
+        {
+            await AssertDeviceAutoOffWhenLocked(deviceId);
+        }
+
         #endregion
 
         #region Light-Specific Switch Control Tests

@@ -17,6 +17,7 @@ namespace KnxTest.Integration.Base
         public abstract Task CanLockAndUnlock(string deviceId);
         public abstract Task LockPreventsStateChanges(string deviceId);
         public abstract Task CanReadLockState(string deviceId);
+        public abstract Task DeviceAutoOffWhenLocked(string deviceId);
         protected abstract Task InitializeDevice(string deviceId);
         /// <summary>
         /// Verifies that the specified device can be successfully locked and unlocked.
@@ -59,12 +60,20 @@ namespace KnxTest.Integration.Base
             await _lockTestHelper.CanReadLockState(_device);
         }
 
+        protected async Task AssertDeviceAutoOffWhenLocked(string deviceId)
+        {
+            // Arrange
+            await InitializeDevice(deviceId);
+
+            // Act & Assert
+            await _lockTestHelper.DeviceAutoOffWhenLocked(_device);
+        }
+
         public override void Dispose()
         {
             _device.RestoreSavedStateAsync().GetAwaiter().GetResult();
             _device.Dispose();
         }
 
-       
     }
 }

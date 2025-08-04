@@ -47,6 +47,14 @@ namespace KnxTest.Integration
         {
             await AssertCanReadLockState(deviceId);
         }
+
+        [Theory]
+        [MemberData(nameof(DimmerIdsFromConfig))]
+        public override async Task DeviceAutoOffWhenLocked(string deviceId)
+        {
+            // Dimmer specific test for auto-off when locked
+            await AssertDeviceAutoOffWhenLocked(deviceId);
+        }
         #endregion
 
     }
