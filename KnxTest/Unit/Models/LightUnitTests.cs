@@ -11,11 +11,11 @@ namespace KnxTest.Unit.Models
     public class LightUnitTests : BaseKnxDeviceUnitTests
     {
         
-        private readonly Light _light;
+        private readonly LightOld _light;
 
         public LightUnitTests() 
         {
-            _light = new Light("L1.1", "Test Light", "1", _mockKnxService.Object);
+            _light = new LightOld("L1.1", "Test Light", "1", _mockKnxService.Object);
         }
 
         [Fact]

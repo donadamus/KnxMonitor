@@ -8,7 +8,7 @@ namespace KnxModel
     /// Implementation of IDimmer that manages a KNX dimmer device
     /// Extends Light functionality with brightness control
     /// </summary>
-    public class Dimmer : Light, IDimmer
+    public class DimmerOld : LightOld, IDimmerOld
     {
         private static new readonly TimeSpan _defaultTimeout = TimeSpan.FromSeconds(10);
 
@@ -44,7 +44,7 @@ namespace KnxModel
         /// <param name="name">Human-readable name</param>
         /// <param name="subGroup">KNX sub-group number</param>
         /// <param name="knxService">KNX service for communication</param>
-        public Dimmer(string id, string name, string subGroup, IKnxService knxService, TimeSpan? timeout = null)
+        public DimmerOld(string id, string name, string subGroup, IKnxService knxService, TimeSpan? timeout = null)
             : base(id, name, subGroup, knxService, timeout == null ? _defaultTimeout : timeout)
         {
         }

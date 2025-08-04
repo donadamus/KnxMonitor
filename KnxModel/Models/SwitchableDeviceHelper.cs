@@ -1,0 +1,119 @@
+using System;
+using System.Threading.Tasks;
+
+namespace KnxModel
+{
+    /// <summary>
+    /// Helper class for implementing switchable device functionality
+    /// Handles switch state management and KNX communication for ISwitchable implementations
+    /// </summary>
+    public class SwitchableDeviceHelper : DeviceHelperBase
+    {
+        private readonly Func<ISwitchableAddress> _getAddresses;
+        private readonly Action<Switch> _updateSwitchState;
+        private readonly Func<Switch> _getCurrentSwitchState;
+
+        public SwitchableDeviceHelper(
+            IKnxService knxService,
+            string deviceId,
+            string deviceType,
+            Func<ISwitchableAddress> getAddresses,
+            Action<Switch> updateSwitchState,
+            Func<Switch> getCurrentSwitchState) : base(knxService, deviceId, deviceType)
+        {
+            _getAddresses = getAddresses ?? throw new ArgumentNullException(nameof(getAddresses));
+            _updateSwitchState = updateSwitchState ?? throw new ArgumentNullException(nameof(updateSwitchState));
+            _getCurrentSwitchState = getCurrentSwitchState ?? throw new ArgumentNullException(nameof(getCurrentSwitchState));
+        } 
+
+        /// <summary>
+        /// Processes KNX switch feedback messages
+        /// </summary>
+        public void ProcessSwitchMessage(KnxGroupEventArgs e)
+        {
+            var addresses = _getAddresses();
+            if (e.Destination == addresses.Feedback)
+            {
+                var isOn = e.Value.AsBoolean();
+                var switchState = isOn ? Switch.On : Switch.Off;
+                _updateSwitchState(switchState);
+                Console.WriteLine($"{_deviceType} {_deviceId} switch state updated via feedback: {switchState}");
+            }
+        }
+
+        /// <summary>
+        /// Turns the device on
+        /// </summary>
+        public async Task TurnOnAsync()
+        {
+            await SetSwitchStateAsync(Switch.On);
+        }
+
+        /// <summary>
+        /// Turns the device off
+        /// </summary>
+        public async Task TurnOffAsync()
+        {
+            await SetSwitchStateAsync(Switch.Off);
+        }
+
+        /// <summary>
+        /// Toggles the device state
+        /// </summary>
+        public async Task ToggleAsync()
+        {
+            var currentState = _getCurrentSwitchState();
+            var targetState = currentState switch
+            {
+                Switch.On => Switch.Off,
+                Switch.Off => Switch.On,
+                Switch.Unknown => Switch.On, // Default to On when unknown
+                _ => Switch.On
+            };
+            await SetSwitchStateAsync(targetState);
+        }
+
+        /// <summary>
+        /// Sets the switch state to the specified value
+        /// </summary>
+        public async Task SetSwitchStateAsync(Switch switchState)
+        {
+            await SetBitFunctionAsync(
+                address: _getAddresses().Control,
+                value: switchState == Switch.On,
+                condition: () => _getCurrentSwitchState() == switchState,
+                timeout: _defaultTimeout
+            );
+        }
+
+        /// <summary>
+        /// Reads the current switch state from KNX bus
+        /// </summary>
+        public async Task<Switch> ReadSwitchStateAsync()
+        {
+            try
+            {
+                var addresses = _getAddresses();
+                var switchState = await _knxService.RequestGroupValue<bool>(addresses.Feedback);
+                return switchState ? Switch.On : Switch.Off;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to read switch state for {_deviceType} {_deviceId}: {ex.Message}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Waits for the switch state to reach the specified value
+        /// </summary>
+        public async Task<bool> WaitForSwitchStateAsync(Switch switchState, TimeSpan timeout)
+        {
+            return await WaitForConditionAsync(
+                () => _getCurrentSwitchState() == switchState,
+                timeout,
+                $"switch state {switchState}"
+            );
+        }
+    }
+}

@@ -10,11 +10,11 @@ namespace KnxTest.Unit.Models
 {
     public class ShutterUnitTests : BaseKnxDeviceUnitTests
     {
-        private readonly IShutter _shutter;
+        private readonly IShutterOld _shutter;
 
         public ShutterUnitTests()
         {
-            _shutter = new Shutter("R1.1", "Test Bathroom", "1", _mockKnxService.Object);
+            _shutter = new ShutterOld("R1.1", "Test Bathroom", "1", _mockKnxService.Object);
         }
 
         [Fact]
@@ -39,10 +39,10 @@ namespace KnxTest.Unit.Models
         public void Constructor_ThrowsOnNullParameters()
         {
             // Assert
-            Assert.Throws<ArgumentNullException>(() => new Shutter(null!, "name", "1", _mockKnxService.Object));
-            Assert.Throws<ArgumentNullException>(() => new Shutter("id", null!, "1", _mockKnxService.Object));
-            Assert.Throws<ArgumentNullException>(() => new Shutter("id", "name", null!, _mockKnxService.Object));
-            Assert.Throws<ArgumentNullException>(() => new Shutter("id", "name", "1", null!));
+            Assert.Throws<ArgumentNullException>(() => new ShutterOld(null!, "name", "1", _mockKnxService.Object));
+            Assert.Throws<ArgumentNullException>(() => new ShutterOld("id", null!, "1", _mockKnxService.Object));
+            Assert.Throws<ArgumentNullException>(() => new ShutterOld("id", "name", null!, _mockKnxService.Object));
+            Assert.Throws<ArgumentNullException>(() => new ShutterOld("id", "name", "1", null!));
         }
 
         [Fact]

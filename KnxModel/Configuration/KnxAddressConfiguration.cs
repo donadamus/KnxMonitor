@@ -308,7 +308,62 @@ namespace KnxModel
             var feedbackSubGroup = (int.Parse(controlSubGroup) + SHUTTER_FEEDBACK_OFFSET).ToString();
             return $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_STOP_MIDDLE_GROUP}/{feedbackSubGroup}";
         }
-        
+
+        #endregion
+
+        #region Address Factory Methods
+
+        /// <summary>
+        /// Creates a complete LightAddresses object for a light device
+        /// </summary>
+        /// <param name="subGroup">Sub group number (e.g., "1", "2", etc.)</param>
+        /// <returns>Complete LightAddresses object</returns>
+        public static LightAddresses CreateLightAddresses(string subGroup)
+        {
+            return new LightAddresses(
+                Control: CreateLightControlAddress(subGroup),
+                Feedback: CreateLightFeedbackAddress(subGroup),
+                LockControl: CreateLightLockAddress(subGroup),
+                LockFeedback: CreateLightLockFeedbackAddress(subGroup)
+            );
+        }
+
+        /// <summary>
+        /// Creates a complete ShutterAddresses object for a shutter device
+        /// </summary>
+        /// <param name="subGroup">Sub group number (e.g., "1", "2", etc.)</param>
+        /// <returns>Complete ShutterAddresses object</returns>
+        public static ShutterAddresses CreateShutterAddresses(string subGroup)
+        {
+            return new ShutterAddresses(
+                MovementControl: CreateShutterMovementAddress(subGroup),
+                MovementFeedback: CreateShutterMovementFeedbackAddress(subGroup),
+                PositionControl: CreateShutterPositionAddress(subGroup),
+                PositionFeedback: CreateShutterPositionFeedbackAddress(subGroup),
+                LockControl: CreateShutterLockAddress(subGroup),
+                LockFeedback: CreateShutterLockFeedbackAddress(subGroup),
+                StopControl: CreateShutterStopAddress(subGroup),
+                MovementStatusFeedback: CreateShutterMovementStatusFeedbackAddress(subGroup)
+            );
+        }
+
+        /// <summary>
+        /// Creates a complete DimmerAddresses object for a dimmer device
+        /// </summary>
+        /// <param name="subGroup">Sub group number (e.g., "1", "2", etc.)</param>
+        /// <returns>Complete DimmerAddresses object</returns>
+        public static DimmerAddresses CreateDimmerAddresses(string subGroup)
+        {
+            return new DimmerAddresses(
+                SwitchControl: CreateDimmerSwitchControlAddress(subGroup),
+                SwitchFeedback: CreateDimmerSwitchFeedbackAddress(subGroup),
+                BrightnessControl: CreateDimmerBrightnessControlAddress(subGroup),
+                BrightnessFeedback: CreateDimmerBrightnessFeedbackAddress(subGroup),
+                LockControl: CreateDimmerLockAddress(subGroup),
+                LockFeedback: CreateDimmerLockFeedbackAddress(subGroup)
+            );
+        }
+
         #endregion
     }
 }

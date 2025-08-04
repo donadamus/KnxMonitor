@@ -11,8 +11,8 @@ service.GroupMessageReceived += (sender, args) =>
 };
 
 // Create test dimmers
-var dimmer1 = new Dimmer("DIM1", "Test Dimmer 1", "1", service);
-var dimmer2 = new Dimmer("DIM2", "Test Dimmer 2", "2", service);
+var dimmer1 = new DimmerOld("DIM1", "Test Dimmer 1", "1", service);
+var dimmer2 = new DimmerOld("DIM2", "Test Dimmer 2", "2", service);
 
 Console.WriteLine("=== KNX Dimmer Test ===");
 Console.WriteLine($"Created {dimmer1}");

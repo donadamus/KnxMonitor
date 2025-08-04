@@ -6,7 +6,7 @@ namespace KnxModel
     /// <summary>
     /// Abstract base class for KNX devices that support lock functionality without generics
     /// </summary>
-    public abstract class LockableKnxDeviceBase : KnxDeviceBase, ILockable
+    public abstract class LockableKnxDeviceBase : KnxDeviceBase, ILockableOld
     {
         protected LockableKnxDeviceBase(string id, string name, string subGroup, IKnxService knxService, TimeSpan? timeout = null)
             : base(id, name, subGroup, knxService, timeout)
@@ -29,9 +29,9 @@ namespace KnxModel
         protected abstract LockableAddresses GetLockableAddresses();
 
         // Explicit interface implementation for ILockable
-        LockableAddresses ILockable.Addresses => GetLockableAddresses();
-        LockState ILockable.CurrentState => GetCurrentLockState();
-        LockState? ILockable.SavedState => GetSavedLockState();
+        LockableAddresses ILockableOld.Addresses => GetLockableAddresses();
+        LockState ILockableOld.CurrentState => GetCurrentLockState();
+        LockState? ILockableOld.SavedState => GetSavedLockState();
 
         /// <summary>
         /// Restores the lock state from saved state. Override in derived classes to add additional state restoration.

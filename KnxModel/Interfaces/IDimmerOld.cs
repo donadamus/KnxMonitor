@@ -7,7 +7,7 @@ namespace KnxModel
     /// Interface for KNX dimmer devices that support both switch (on/off) and brightness control
     /// Extends ILight with additional brightness functionality
     /// </summary>
-    public interface IDimmer : ILight
+    public interface IDimmerOld : ILightOld
     {
         /// <summary>
         /// Gets the dimmer-specific addresses (overrides ILight.Addresses)

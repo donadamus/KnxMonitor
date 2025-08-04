@@ -120,6 +120,13 @@ namespace KnxService
             _knxRateLimiter.WaitAsync(KnxOperationType.WriteGroupValue).GetAwaiter().GetResult();
             _knxBus.WriteGroupValue(groupAddress, groupValue);
         }
+        public async Task WriteGroupValueAsync(string address, bool value)
+        {
+            var groupAddress = new GroupAddress(address);
+            var groupValue = new GroupValue(value);
+            await _knxRateLimiter.WaitAsync(KnxOperationType.WriteGroupValue);
+            await _knxBus.WriteGroupValueAsync(groupAddress, groupValue);
+        }
 
         public void WriteGroupValue(string address, float percentage)
         {

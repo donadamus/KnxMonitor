@@ -6,7 +6,7 @@ namespace KnxModel
     /// <summary>
     /// Interface representing a KNX shutter with all its operations and state management
     /// </summary>
-    public interface IShutter : IKnxDevice, ILockable
+    public interface IShutterOld : IKnxDeviceOld, ILockableOld
     {
 
         /// <summary>

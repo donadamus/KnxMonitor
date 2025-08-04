@@ -4,14 +4,11 @@ using System.Threading.Tasks;
 namespace KnxModel
 {
     /// <summary>
-    /// Base interface for all KNX devices
+    /// Base interface for all KNX devices - simplified version
     /// </summary>
-    public interface IKnxDevice : IDisposable
+    public interface IKnxDeviceBase : IIdentifable, IDisposable
     {
-        /// <summary>
-        /// Unique identifier for the device
-        /// </summary>
-        string Id { get; }
+
 
         /// <summary>
         /// Human-readable name of the device
@@ -22,6 +19,11 @@ namespace KnxModel
         /// The sub-group number used for KNX addresses
         /// </summary>
         string SubGroup { get; }
+
+        /// <summary>
+        /// When was the device state last updated
+        /// </summary>
+        DateTime LastUpdated { get; }
 
         /// <summary>
         /// Initializes the device by reading state from KNX bus

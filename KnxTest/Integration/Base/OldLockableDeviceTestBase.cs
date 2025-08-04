@@ -3,14 +3,14 @@ using KnxTest.Integration.Interfaces;
 
 namespace KnxTest.Integration.Base
 {
-    public abstract class LockableDeviceTestBase<T> : DeviceTestBase, ILockableDeviceTests
-        where T : ILockable
+    public abstract class OldLockableDeviceTestBase<T> : DeviceTestBase, ILockableDeviceTests
+        where T : ILockableOld
     {
         protected T _device; // Will be initialized in each test method
-        protected readonly LockTestHelper _lockTestHelper;
-        protected LockableDeviceTestBase(KnxServiceFixture fixture) : base(fixture)
+        protected readonly OldLockTestHelper _lockTestHelper;
+        protected OldLockableDeviceTestBase(KnxServiceFixture fixture) : base(fixture)
         {
-            _lockTestHelper = new LockTestHelper(_knxService);
+            _lockTestHelper = new OldLockTestHelper();
             _device = default!; // Initialize to default, will be set in derived classes
         }
         // Abstract methods for lock-specific tests

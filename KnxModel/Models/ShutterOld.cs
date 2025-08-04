@@ -6,7 +6,7 @@ namespace KnxModel
     /// <summary>
     /// Implementation of IShutter that manages a KNX shutter device
     /// </summary>
-    public class Shutter : LockableKnxDeviceBase, IShutter
+    public class ShutterOld : LockableKnxDeviceBase, IShutterOld
     {
         private static readonly TimeSpan _defaultMoveTimeout = TimeSpan.FromSeconds(30);
         private ShutterAddresses _addresses = null!; // Initialized in constructor
@@ -43,7 +43,7 @@ namespace KnxModel
         /// <param name="name">Human-readable name</param>
         /// <param name="subGroup">KNX sub-group number (1-18)</param>
         /// <param name="knxService">KNX service for communication</param>
-        public Shutter(string id, string name, string subGroup, IKnxService knxService, TimeSpan? timeout = null)
+        public ShutterOld(string id, string name, string subGroup, IKnxService knxService, TimeSpan? timeout = null)
             : base(id, name, subGroup, knxService, timeout == null ? _defaultMoveTimeout : timeout)
         {
             _addresses = CreateAddresses();

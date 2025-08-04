@@ -11,11 +11,11 @@ namespace KnxTest.Unit.Models
 {
     public class DimmerUnitTests : BaseKnxDeviceUnitTests
     {
-        private readonly Dimmer _dimmer;
+        private readonly DimmerOld _dimmer;
 
         public DimmerUnitTests()
         {
-            _dimmer = new Dimmer("DIM1", "Test Dimmer", "1", _mockKnxService.Object);
+            _dimmer = new DimmerOld("DIM1", "Test Dimmer", "1", _mockKnxService.Object);
         }
 
         #region Constructor Tests

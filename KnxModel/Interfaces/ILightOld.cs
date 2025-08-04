@@ -6,7 +6,7 @@ namespace KnxModel
     /// <summary>
     /// Interface representing a KNX light with all its operations and state management
     /// </summary>
-    public interface ILight : IKnxDevice, ILockable
+    public interface ILightOld : IKnxDeviceOld, ILockableOld
     {
         /// <summary>
         /// KNX addresses for light control and feedback (overrides ILockable.Addresses)

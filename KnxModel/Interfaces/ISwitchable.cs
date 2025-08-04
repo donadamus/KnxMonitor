@@ -1,12 +1,50 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System;
 using System.Threading.Tasks;
 
-namespace KnxModel.Interfaces
+namespace KnxModel
 {
-    internal interface ISwitchable : IKnxDevice
+
+    public interface IIdentifable
     {
+        /// <summary>
+        /// Unique identifier for the device
+        /// </summary>
+        string Id { get; }
+    }
+
+    /// <summary>
+    /// Interface for devices that can be switched ON/OFF
+    /// </summary>
+    public interface ISwitchable : IIdentifable
+    {
+        /// <summary>
+        /// Current switch state
+        /// </summary>
+        Switch CurrentSwitchState { get; }
+
+        /// <summary>
+        /// Turn the device ON
+        /// </summary>
+        Task TurnOnAsync(TimeSpan? timeout = null);
+
+        /// <summary>
+        /// Turn the device OFF
+        /// </summary>
+        Task TurnOffAsync(TimeSpan? timeout = null);
+
+        /// <summary>
+        /// Toggle between ON and OFF
+        /// </summary>
+        Task ToggleAsync(TimeSpan? timeout = null);
+
+        /// <summary>
+        /// Read current switch state from KNX bus
+        /// </summary>
+        Task<Switch> ReadSwitchStateAsync();
+
+        /// <summary>
+        /// Wait for specific switch state
+        /// </summary>
+        Task<bool> WaitForSwitchStateAsync(Switch targetState, TimeSpan timeout);
     }
 }

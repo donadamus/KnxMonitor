@@ -8,11 +8,11 @@ using Xunit;
 namespace KnxTest.Integration
 {
     [Collection("KnxService collection")]
-    public class OldShutterIntegrationTests
+    public class VeryOldShutterIntegrationTests
     {
         private readonly IKnxService _knxService;
 
-        public OldShutterIntegrationTests(KnxServiceFixture fixture)
+        public VeryOldShutterIntegrationTests(KnxServiceFixture fixture)
         {
             _knxService = fixture.KnxService;
         }
@@ -39,7 +39,7 @@ namespace KnxTest.Integration
         public async Task CanInitializeShutterAndReadState(string shutterId)
         {
             // Arrange
-            var shutter = ShutterFactory.CreateShutter(shutterId, _knxService);
+            var shutter = ShutterFactory.CreateShutterOld(shutterId, _knxService);
 
             // Act
             await shutter.InitializeAsync();
@@ -60,7 +60,7 @@ namespace KnxTest.Integration
         public async Task CanSaveAndRestoreShutterState(string shutterId)
         {
             // Arrange
-            var shutter = ShutterFactory.CreateShutter(shutterId, _knxService);
+            var shutter = ShutterFactory.CreateShutterOld(shutterId, _knxService);
             await shutter.InitializeAsync();
 
             // Act & Assert - Save state
@@ -99,7 +99,7 @@ namespace KnxTest.Integration
         public async Task CanMoveShutterInBothDirections(string shutterId)
         {
             // Arrange
-            var shutter = ShutterFactory.CreateShutter(shutterId, _knxService);
+            var shutter = ShutterFactory.CreateShutterOld(shutterId, _knxService);
             await shutter.InitializeAsync();
             shutter.SaveCurrentState();
 
@@ -177,7 +177,7 @@ namespace KnxTest.Integration
         public async Task CanSetAbsolutePosition(string shutterId)
         {
             // Arrange
-            var shutter = ShutterFactory.CreateShutter(shutterId, _knxService);
+            var shutter = ShutterFactory.CreateShutterOld(shutterId, _knxService);
             await shutter.InitializeAsync();
             shutter.SaveCurrentState();
 
@@ -220,7 +220,7 @@ namespace KnxTest.Integration
         public async Task CanToggleLockState(string shutterId)
         {
             // Arrange
-            var shutter = ShutterFactory.CreateShutter(shutterId, _knxService);
+            var shutter = ShutterFactory.CreateShutterOld(shutterId, _knxService);
             await shutter.InitializeAsync();
             shutter.SaveCurrentState();
 
@@ -259,7 +259,7 @@ namespace KnxTest.Integration
         public async Task LockPreventsMovement(string shutterId)
         {
             // Arrange
-            var shutter = ShutterFactory.CreateShutter(shutterId, _knxService);
+            var shutter = ShutterFactory.CreateShutterOld(shutterId, _knxService);
             await shutter.InitializeAsync();
             shutter.SaveCurrentState();
 
@@ -320,7 +320,7 @@ namespace KnxTest.Integration
         public void ShutterModel_HasCorrectConfiguration(string shutterId, string expectedSubGroup, string expectedName)
         {
             // Act
-            var shutter = ShutterFactory.CreateShutter(shutterId, _knxService);
+            var shutter = ShutterFactory.CreateShutterOld(shutterId, _knxService);
 
             // Assert
             shutter.Id.Should().Be(shutterId);
@@ -357,7 +357,7 @@ namespace KnxTest.Integration
         public async Task CanSetShutterAbsolutePositionAndReadFeedback(string shutterId)
         {
             // Arrange
-            var shutter = ShutterFactory.CreateShutter(shutterId, _knxService);
+            var shutter = ShutterFactory.CreateShutterOld(shutterId, _knxService);
             await shutter.InitializeAsync();
             shutter.SaveCurrentState();
 
@@ -430,7 +430,7 @@ namespace KnxTest.Integration
         public async Task CanMoveShutterUpAndDown(string shutterId)
         {
             // Arrange
-            var shutter = ShutterFactory.CreateShutter(shutterId, _knxService);
+            var shutter = ShutterFactory.CreateShutterOld(shutterId, _knxService);
             await shutter.InitializeAsync();
             shutter.SaveCurrentState();
 
@@ -516,7 +516,7 @@ namespace KnxTest.Integration
         public async Task CanToggleShutterLock(string shutterId)
         {
             // Arrange
-            var shutter = ShutterFactory.CreateShutter(shutterId, _knxService);
+            var shutter = ShutterFactory.CreateShutterOld(shutterId, _knxService);
             await shutter.InitializeAsync();
             shutter.SaveCurrentState();
 
@@ -558,7 +558,7 @@ namespace KnxTest.Integration
         public async Task ShutterDoesNotMoveWhenLocked(string shutterId)
         {
             // Arrange
-            var shutter = ShutterFactory.CreateShutter(shutterId, _knxService);
+            var shutter = ShutterFactory.CreateShutterOld(shutterId, _knxService);
             await shutter.InitializeAsync();
             shutter.SaveCurrentState();
             
@@ -659,7 +659,7 @@ namespace KnxTest.Integration
         public async Task CanReadShutterPosition(string shutterId)
         {
             // Arrange
-            var shutter = ShutterFactory.CreateShutter(shutterId, _knxService);
+            var shutter = ShutterFactory.CreateShutterOld(shutterId, _knxService);
 
             try
             {

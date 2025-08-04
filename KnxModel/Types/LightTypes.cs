@@ -44,13 +44,18 @@ namespace KnxModel
         string Feedback,
         string LockControl,
         string LockFeedback
-    ) : LockableAddresses(LockControl, LockFeedback), ILockableAddress;
+    ) : LockableAddresses(LockControl, LockFeedback), ISwitchableAddress;
 
 public record LockableAddresses(
         string LockControl,
         string LockFeedback
     ) : ILockableAddress;
 
+    public interface ISwitchableAddress
+    {
+        string Control { get; }
+        string Feedback { get; }
+    }
 
     public interface ILockableAddress
     {

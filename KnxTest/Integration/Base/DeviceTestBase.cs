@@ -24,4 +24,21 @@ namespace KnxTest.Integration.Base
 
         public abstract void Dispose();
     }
+
+    /// <summary>
+    /// Async version of DeviceTestBase for tests that require async cleanup
+    /// </summary>
+    public abstract class DeviceTestBaseNew : IAsyncDisposable
+    {
+        protected readonly IKnxService _knxService;
+
+        protected DeviceTestBaseNew(KnxServiceFixture fixture)
+        {
+            _knxService = fixture.KnxService;
+        }
+
+        // ===== ASYNC CLEANUP =====
+
+        public abstract ValueTask DisposeAsync();
+    }
 }

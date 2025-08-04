@@ -6,7 +6,7 @@ namespace KnxModel
     /// <summary>
     /// Abstract base class for all KNX devices without generics
     /// </summary>
-    public abstract class KnxDeviceBase : IKnxDevice
+    public abstract class KnxDeviceBase : IKnxDeviceOld
     {
         protected readonly IKnxService _knxService;
         protected readonly TimeSpan _defaultTimeout = TimeSpan.FromSeconds(5);

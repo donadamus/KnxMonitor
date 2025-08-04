@@ -6,7 +6,7 @@ namespace KnxModel
     /// <summary>
     /// Implementation of ILight that manages a KNX light device
     /// </summary>
-    public class Light : LockableKnxDeviceBase, ILight
+    public class LightOld : LockableKnxDeviceBase, ILightOld
     {
         private static new readonly TimeSpan _defaultTimeout = TimeSpan.FromSeconds(2);
 
@@ -44,7 +44,7 @@ namespace KnxModel
         /// <param name="name">Human-readable name</param>
         /// <param name="subGroup">KNX sub-group number</param>
         /// <param name="knxService">KNX service for communication</param>
-        public Light(string id, string name, string subGroup, IKnxService knxService, TimeSpan? timeout = null)
+        public LightOld(string id, string name, string subGroup, IKnxService knxService, TimeSpan? timeout = null)
             : base(id, name, subGroup, knxService, timeout == null ? _defaultTimeout : timeout)
         {
             _addresses = CreateAddresses();

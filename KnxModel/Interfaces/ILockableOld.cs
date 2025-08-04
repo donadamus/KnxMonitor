@@ -6,7 +6,7 @@ namespace KnxModel
     /// <summary>
     /// Interface for devices that support lock functionality
     /// </summary>
-    public interface ILockable : IKnxDevice
+    public interface ILockableOld : IKnxDeviceOld
     {
         /// <summary>
         /// KNX addresses for lock control and feedback

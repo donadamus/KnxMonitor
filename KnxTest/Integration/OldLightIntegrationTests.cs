@@ -1,256 +1,225 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using KnxModel;
-using KnxService;
-using System;
-using System.Threading.Tasks;
+using KnxTest.Integration.Base;
+using KnxTest.Integration.Interfaces;
 using Xunit;
 
 namespace KnxTest.Integration
 {
     [Collection("KnxService collection")]
-    public class OldLightIntegrationTests : IDisposable
+    public class OldLightIntegrationTests(KnxServiceFixture fixture) : OldLockableDeviceTestBase<ILightOld>(fixture)
     {
+        // Data source for tests - only pure lights (not dimmers)
         public static IEnumerable<object[]> LightIdsFromConfig
         {
             get
             {
-                var config = LightFactory.LightConfigurations; 
-                var res = config.Where(k => k.Value.Name.Contains("Office"))
-                    .Select(k => new object[] { k.Key });
-
-                var config2 = DimmerFactory.DimmerConfigurations;
-                var res2 = config2//.Where(k => k.Value.Name.Contains("Office"))
-                    .Select(k => new object[] { k.Key });
-
-                return res.Concat(res2);
+                var config = LightFactory.LightConfigurations;
+                return config.Where(x => !x.Value.Name.ToLower().Contains("dimmer"))
+                            .Select(k => new object[] { k.Key });
             }
         }
 
+        // ===== OWN DEVICE MANAGEMENT =====
 
-        private static IKnxService _knxServiceMock = new Moq.Mock<IKnxService>().Object;
-        private readonly IKnxService _knxService;
-
-        private static readonly Light _defaultLight = new Light("L11", "Test Light 11", "1", _knxServiceMock);
-        private ILight _light = _defaultLight;
-
-        public OldLightIntegrationTests(KnxServiceFixture fixture)
+        protected override async Task InitializeDevice(string deviceId)
         {
-            _knxService = fixture.KnxService;
+            _device = LightFactory.CreateLightOld(deviceId, _knxService);
+            await _device.InitializeAsync();
+            
+            Console.WriteLine($"Light {deviceId} initialized - Switch: {_device.CurrentState.Switch}, Lock: {_device.CurrentState.Lock}");
+        }
+
+        #region ILockableDeviceTests Implementation
+
+        [Theory]
+        [MemberData(nameof(LightIdsFromConfig))]
+        public override async Task CanLockAndUnlock(string deviceId)
+        {
+            await AssertCanLockAndUnlock(deviceId);
         }
 
         [Theory]
         [MemberData(nameof(LightIdsFromConfig))]
-
-        public async Task OK_CanInitializeLightAndReadState(string lightId)
+        public override async Task LockPreventsStateChanges(string deviceId)
         {
-            // Act
-            await InitializeLight(lightId);
-
-            // Assert
-            _light.CurrentState.Should().NotBeNull($"Light {lightId} should have a valid current state after initialization");
-            _light.CurrentState.Switch.Should().NotBe(Switch.Unknown, $"Light {lightId} should have a known switch state after initialization");
-            _light.CurrentState.Lock.Should().NotBe(Lock.Unknown, $"Light {lightId} should have a known lock state after initialization");
-            _light.CurrentState.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromMinutes(1), 
-                $"Light {lightId} last updated time should be close to now after initialization");
+            await AssertLockPreventsStateChanges(deviceId);
         }
 
         [Theory]
         [MemberData(nameof(LightIdsFromConfig))]
-
-        public async Task OK_CanTurnOnAndOff(string lightId)
+        public override async Task CanReadLockState(string deviceId)
         {
-            // Arrange
-            await InitializeLightAndEnsureLightIsUnlocked(lightId);
-
-            var initialState = _light.CurrentState.Switch;
-            initialState.Should().NotBe(Switch.Unknown, "Initial state should not be unknown");
-
-            if (initialState == Switch.On)
-            {
-                await _light.TurnOffAsync(); // Turn OFF
-                _light.CurrentState.Switch.Should().Be(Switch.Off, "Light should be OFF before testing ON/OFF");
-                Console.WriteLine($"Light {lightId} was successfully turned OFF");
-
-                await _light.TurnOnAsync(); // Turn ON
-                _light.CurrentState.Switch.Should().Be(Switch.On, "Light should be ON after initial turn ON");
-                Console.WriteLine($"Light {lightId} was successfully turned ON");
-            }
-            else
-            {
-                await _light.TurnOnAsync(); //Turn ON
-                _light.CurrentState.Switch.Should().Be(Switch.On, "Light should be ON after turn ON");
-                Console.WriteLine($"Light {lightId} was successfully turned ON");
-
-                await _light.TurnOffAsync(); // Turn OFF
-                _light.CurrentState.Switch.Should().Be(Switch.Off, "Light should be OFF after turn OFF");
-                Console.WriteLine($"Light {lightId} was successfully turned OFF");
-            }
-
-        }
-
-        [Fact]
-        public void OK_LightFactory_CanCreateAllLights()
-        {
-            // Act
-            var lights = LightFactory.CreateAllLights(_knxServiceMock);
-            var lightList = lights.ToList();
-
-            // Assert
-            lightList.Should().HaveCount(LightFactory.LightConfigurations.Count,
-                "All lights should be created based on the configuration");
-            lightList.Should().NotBeEmpty("There should be at least one light created");
-            lightList.Should().OnlyHaveUniqueItems("All lights should have unique IDs");
+            await AssertCanReadLockState(deviceId);
         }
 
         [Theory]
         [MemberData(nameof(LightIdsFromConfig))]
-
-        public void OK_LightModel_HasCorrectConfiguration(string lightId)
+        public override async Task DeviceAutoOffWhenLocked(string deviceId)
         {
-            // Act
-            _light = LightFactory.CreateLight(lightId, _knxServiceMock);
-
-            LightFactory.LightConfigurations.TryGetValue(lightId, out var config);
-            config.Should().NotBeNull($"Configuration for light {lightId} should exist");
-
-            var addressControl = KnxAddressConfiguration.CreateLightControlAddress(config.SubGroup);
-            var addressFeedback = KnxAddressConfiguration.CreateLightFeedbackAddress(config.SubGroup);
-            var addressLockControl = KnxAddressConfiguration.CreateLightLockAddress(config.SubGroup);
-            var addressLockFeedback = KnxAddressConfiguration.CreateLightLockFeedbackAddress(config.SubGroup);
-
-            // Assert addresses
-            _light.Addresses.Control.Should().Be(addressControl, $"Control address for light {lightId} should match");
-            _light.Addresses.Feedback.Should().Be(addressFeedback, $"Feedback address for light {lightId} should match");
-            _light.Addresses.LockControl.Should().Be(addressLockControl, $"Lock control address for light {lightId} should match");
-            _light.Addresses.LockFeedback.Should().Be(addressLockFeedback, $"Lock feedback address for light {lightId} should match");
-
-            // Assert light properties
-            _light.Id.Should().Be(lightId, $"Light ID should match {lightId}");
-            _light.Name.Should().Be(config.Name, $"Light name should match {config.Name}");
+            await AssertDeviceAutoOffWhenLocked(deviceId);
         }
+
+        #endregion
+
+        #region Light-Specific Switch Control Tests
 
         //[Theory]
         //[MemberData(nameof(LightIdsFromConfig))]
-
-        //public async Task OK_LockPreventsStateChanges(string lightId)
+        //public virtual async Task OK_CanInitializeAndReadState(string deviceId)
         //{
-        //    Console.WriteLine($"Testing lock functionality prevents state changes for light {lightId}");
+        //    // Act
+        //    await InitializeDevice(deviceId);
 
-        //    // Arrange
-        //    await InitializeLightAndEnsureLightIsUnlocked(lightId);
+        //    // Assert
+        //    _device.CurrentState.Should().NotBeNull($"Light {deviceId} should have valid current state");
+        //    _device.CurrentState.Switch.Should().NotBe(Switch.Unknown, $"Light {deviceId} should have known switch state");
+        //    _device.CurrentState.Lock.Should().NotBe(Lock.Unknown, $"Light {deviceId} should have known lock state");
+        //    _device.CurrentState.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromMinutes(1),
+        //        $"Light {deviceId} should have recent LastUpdated time");
 
-        //    await _light.TurnOnAsync(); // Turn on the light to set initial state
-        //    _light.CurrentState.Switch.Should().Be(Switch.On, "Light should be ON before locking");
-
-        //    await _light.LockAsync(); // Ensure light is locked before testing
-        //    await _light.ReadLockStateAsync(); // Ensure lock state is updated
-
-        //    var waitForStateResponse = await _light.WaitForStateAsync(Switch.Off, TimeSpan.FromSeconds(2)); // Wait for state change to OFF
-
-        //    waitForStateResponse.Should().BeTrue("Should successfully wait for state OFF after locking");
-
-        //    _light.CurrentState.Switch.Should().Be(Switch.Off, "Light should be automatically off when locked");
-        //    _light.CurrentState.Lock.Should().Be(Lock.On, "Light should be locked before testing state change prevention");
-
-        //    await _light.TurnOnAsync(); // Attempt to turn on the light while locked
-
-        //    _light.CurrentState.Switch.Should().Be(Switch.Off,
-        //        "Light state should NOT change when locked - lock should prevent state changes");
-        //    Console.WriteLine($"Light {lightId} state after lock: {_light.CurrentState.Switch}");
-
-        //    Console.WriteLine($"🎉 Lock prevention test completed successfully for light {lightId}");
+        //    Console.WriteLine($"✅ Light {deviceId} initialized successfully - Switch: {_device.CurrentState.Switch}, Lock: {_device.CurrentState.Lock}");
         //}
 
-        private async Task InitializeLightAndEnsureLightIsUnlocked(string lightId)
+        //[Theory]
+        //[MemberData(nameof(LightIdsFromConfig))]
+        //public virtual async Task OK_CanTurnOnAndOff(string deviceId)
+        //{
+        //    // Arrange
+        //    await InitializeDevice(deviceId);
+        //    await _lockTestHelper.EnsureDeviceIsUnlocked(_device);
+
+        //    // Test ON
+        //    await _device.TurnOnAsync();
+        //    _device.CurrentState.Switch.Should().Be(Switch.On, $"Light {deviceId} should be ON");
+        //    Console.WriteLine($"✅ Light {deviceId} turned ON successfully");
+
+        //    // Test OFF
+        //    await _device.TurnOffAsync();
+        //    _device.CurrentState.Switch.Should().Be(Switch.Off, $"Light {deviceId} should be OFF");
+        //    Console.WriteLine($"✅ Light {deviceId} turned OFF successfully");
+        //}
+
+        //[Theory]
+        //[MemberData(nameof(LightIdsFromConfig))]
+        //public virtual async Task OK_CanToggle(string deviceId)
+        //{
+        //    // Arrange
+        //    await InitializeDevice(deviceId);
+        //    await _lockTestHelper.EnsureDeviceIsUnlocked(_device);
+        //    var initialState = _device.CurrentState.Switch;
+
+        //    // Act & Assert - Toggle to opposite
+        //    await _device.ToggleAsync();
+        //    _device.CurrentState.Switch.Should().Be(initialState.Opposite(), 
+        //        $"Light {deviceId} should toggle to opposite state");
+
+        //    // Act & Assert - Toggle back
+        //    await _device.ToggleAsync();
+        //    _device.CurrentState.Switch.Should().Be(initialState, 
+        //        $"Light {deviceId} should toggle back to original state");
+
+        //    Console.WriteLine($"✅ Light {deviceId} toggle functionality works correctly");
+        //}
+
+        //[Theory]
+        //[MemberData(nameof(LightIdsFromConfig))]
+        //public virtual async Task OK_CanReadFeedbackAndCurrentStateIsUpdated(string deviceId)
+        //{
+        //    // Arrange
+        //    await InitializeDevice(deviceId);
+
+        //    // Act - Read state
+        //    var state = await _device.ReadStateAsync();
+
+        //    // Assert
+        //    state.Should().NotBe(Switch.Unknown, $"Light {deviceId} should return valid state");
+        //    _device.CurrentState.Switch.Should().Be(state, "Current state should match read state");
+        //    _device.CurrentState.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(1),
+        //        "LastUpdated should be recent after reading state");
+
+        //    // Act - Read lock state
+        //    var lockState = await _device.ReadLockStateAsync();
+
+        //    // Assert
+        //    lockState.Should().NotBe(Lock.Unknown, $"Light {deviceId} should return valid lock state");
+        //    _device.CurrentState.Lock.Should().Be(lockState, "Current lock state should match read lock state");
+
+        //    Console.WriteLine($"✅ Light {deviceId} feedback reading works correctly");
+        //}
+
+        #endregion
+
+        #region General Device State Management Tests
+
+        //[Theory]
+        //[MemberData(nameof(LightIdsFromConfig))]
+        //public virtual async Task OK_CanSaveAndRestoreState(string deviceId)
+        //{
+        //    // Arrange
+        //    await InitializeDevice(deviceId);
+        //    await _lockTestHelper.EnsureDeviceIsUnlocked(_device);
+
+        //    // Set specific state
+        //    await _device.TurnOnAsync();
+        //    _device.CurrentState.Switch.Should().Be(Switch.On, "Light should be ON before saving");
+
+        //    // Act - Save state
+        //    _device.SaveCurrentState();
+        //    var savedState = _device.SavedState?.Switch;
+
+        //    // Change state
+        //    await _device.TurnOffAsync();
+        //    _device.CurrentState.Switch.Should().Be(Switch.Off, "Light should be OFF after changing state");
+
+        //    // Act - Restore state
+        //    await _device.RestoreSavedStateAsync();
+
+        //    // Assert
+        //    _device.CurrentState.Switch.Should().Be(savedState ?? Switch.On, "Light should be restored to saved state");
+
+        //    Console.WriteLine($"✅ Light {deviceId} save and restore works correctly");
+        //}
+
+        //[Theory]
+        //[MemberData(nameof(LightIdsFromConfig))]
+        //public virtual async Task OK_HasCorrectAddressConfiguration(string deviceId)
+        //{
+        //    // Arrange
+        //    await InitializeDevice(deviceId);
+
+        //    // Get expected addresses from configuration
+        //    LightFactory.LightConfigurations.TryGetValue(deviceId, out var config);
+        //    config.Should().NotBeNull($"Configuration for light {deviceId} should exist");
+
+        //    var expectedControl = KnxAddressConfiguration.CreateLightControlAddress(config.SubGroup);
+        //    var expectedFeedback = KnxAddressConfiguration.CreateLightFeedbackAddress(config.SubGroup);
+        //    var expectedLockControl = KnxAddressConfiguration.CreateLightLockAddress(config.SubGroup);
+        //    var expectedLockFeedback = KnxAddressConfiguration.CreateLightLockFeedbackAddress(config.SubGroup);
+
+        //    // Assert addresses
+        //    _device.Addresses.Control.Should().Be(expectedControl, $"Control address for light {deviceId} should match");
+        //    _device.Addresses.Feedback.Should().Be(expectedFeedback, $"Feedback address for light {deviceId} should match");
+        //    _device.Addresses.LockControl.Should().Be(expectedLockControl, $"Lock control address for light {deviceId} should match");
+        //    _device.Addresses.LockFeedback.Should().Be(expectedLockFeedback, $"Lock feedback address for light {deviceId} should match");
+
+        //    // Assert device properties
+        //    _device.Id.Should().Be(deviceId, $"Light ID should match {deviceId}");
+        //    _device.Name.Should().Be(config.Name, $"Light name should match {config.Name}");
+
+        //    Console.WriteLine($"✅ Light {deviceId} address configuration is correct");
+        //}
+
+        public override void Dispose()
         {
-            // Initialize the default light and ensure it is unlocked
-            await InitializeLight(lightId);
-            await EnsureLightIsUnlockedBeforeTest();
+            _device?.RestoreSavedStateAsync().GetAwaiter().GetResult();
+            _device?.Dispose();
         }
 
-        private async Task InitializeLight(string lightId)
-        {
-            _light = LightFactory.CreateLight(lightId, _knxService);
-            await _light.InitializeAsync();
-
-            var initialState = _light.CurrentState.Switch;
-            var initialLockState = _light.CurrentState.Lock;
-
-            Console.WriteLine($"Initial state: {initialState}, Lock: {initialLockState}");
-        }
-
-        private void CreateLightWithoutInitializing(string lightId)
-        {
-            _light = LightFactory.CreateLight(lightId, _knxService);
-        }
-
-        private async Task EnsureLightIsUnlockedBeforeTest()
-        {
-            if (_light.CurrentState.Lock == Lock.On)
-            {
-                await _light.UnlockAsync(); // Ensure light is unlocked before testing lock prevention
-                await _light.ReadLockStateAsync(); // Ensure lock state is updated
-            }
-            _light.CurrentState.Lock.Should().Be(Lock.Off, "Light should be unlocked before testing lock prevention");
-        }
-
-        [Theory]
-        [MemberData(nameof(LightIdsFromConfig))]
-        public async Task OK_CanToggleLightAndToggleBackToTheInitialState(string lightId)
-        {
-            // Arrange
-            await InitializeLightAndEnsureLightIsUnlocked(lightId);
-
-            var initialState = _light.CurrentState.Switch;
-            Console.WriteLine($"Testing light {lightId} toggle from {initialState}");
-
-            // Act + Assert (1): Toggle to opposite state
-            await _light.ToggleAsync();
-            _light.CurrentState.Switch.Should().Be(initialState.Opposite(), 
-                $"Light {lightId} should toggle to opposite state {initialState.Opposite()}");
-
-            Console.WriteLine($"✓ Light {lightId} successfully toggled to {_light.CurrentState.Switch}");
-
-            // Act + Assert (2): Toggle back to original state
-            await _light.ToggleAsync();
-            _light.CurrentState.Switch.Should().Be(initialState, 
-                $"Light {lightId} should toggle back to original state {initialState}");
-
-            Console.WriteLine($"✓ Light {lightId} successfully restored to {_light.CurrentState.Switch}");
-        }
-
-        [Theory]
-        [MemberData(nameof(LightIdsFromConfig))]
-        public async Task OK_CanReadLightFeedbackAndCurrentStateIsUpdated(string lightId)
-        {
-            // Arrange
-            CreateLightWithoutInitializing(lightId);
-
-            var state = await _light.ReadStateAsync();
-            state.Should().NotBe(Switch.Unknown, 
-                $"Light {lightId} should return a known state when reading feedback");
-            _light.CurrentState.Switch.Should().Be(state, 
-                $"Light {lightId} current state should match the read state");
-            _light.CurrentState.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(1),
-                $"Light {lightId} last updated time should be close to now after reading feedback");
-
-            var lockState = await _light.ReadLockStateAsync();
-            lockState.Should().NotBe(Lock.Unknown, 
-                $"Light {lightId} should return a known lock state when reading feedback");
-            _light.CurrentState.Lock.Should().Be(lockState, 
-                $"Light {lightId} current lock state should match the read lock state");
-            _light.CurrentState.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(1),
-                $"Light {lightId} last updated time should be close to now after reading feedback");
-
-        }
-
-        public void Dispose()
-        {
-            if (_light != _defaultLight)
-            {
-                _light.RestoreSavedStateAsync().GetAwaiter().GetResult();
-                _light.Dispose();
-            }
-        }
+        #endregion
     }
 }
