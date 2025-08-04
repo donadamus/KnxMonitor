@@ -10,26 +10,9 @@ using Xunit;
 
 namespace KnxTest.Integration
 {
-    /// <summary>
-    /// Integration tests for Light devices focusing on lock functionality
-    /// 
-    /// Architecture Notes:
-    /// - Inherits from SwitchableDeviceTestBase for common switch control functionality
-    /// - Uses LockTestHelper composition pattern for lock-specific test methods
-    /// - Implements ILockableDeviceTests interface to ensure consistent lock testing
-    /// - This approach allows flexibility: some devices can test locks, others (critical devices) can skip them
-    /// 
-    /// Test Organization:
-    /// - ILockableDeviceTests Implementation: Tests implementing ILockableDeviceTests interface (using LockTestHelper)
-    /// - Light-Specific Switch Control Tests: Tests specific to ILight interface (ON/OFF/Toggle operations)
-    /// - General Device State Management Tests: Tests for state save/restore and configuration from base IKnxDevice
-    /// </summary>
     [Collection("KnxService collection")]
-    public class LightIntegrationTests : DeviceTestBase, ILockableDeviceTests
+    public class LightIntegrationTests(KnxServiceFixture fixture) : LockableDeviceTestBase<ILight>(fixture)
     {
-        private readonly LockTestHelper _lockTestHelper;
-        private ILight _device = null!; // Will be initialized in each test method
-
         // Data source for tests - only pure lights (not dimmers)
         public static IEnumerable<object[]> LightIdsFromConfig
         {
@@ -41,14 +24,9 @@ namespace KnxTest.Integration
             }
         }
 
-        public LightIntegrationTests(KnxServiceFixture fixture) : base(fixture)
-        {
-            _lockTestHelper = new LockTestHelper(_knxService);
-        }
-
         // ===== OWN DEVICE MANAGEMENT =====
 
-        private async Task InitializeDevice(string deviceId)
+        protected override async Task InitializeDevice(string deviceId)
         {
             _device = LightFactory.CreateLight(deviceId, _knxService);
             await _device.InitializeAsync();
@@ -60,48 +38,24 @@ namespace KnxTest.Integration
 
         [Theory]
         [MemberData(nameof(LightIdsFromConfig))]
-        public virtual async Task CanLockAndUnlock(string deviceId)
+        public override async Task CanLockAndUnlock(string deviceId)
         {
-            // Arrange
-            await InitializeDevice(deviceId);
-
-            // Act & Assert
-            await _lockTestHelper.CanLockAndUnlock(_device);
+            await AssertCanLockAndUnlock(deviceId);
         }
 
         [Theory]
         [MemberData(nameof(LightIdsFromConfig))]
-        public virtual async Task LockPreventsStateChanges(string deviceId)
+        public override async Task LockPreventsStateChanges(string deviceId)
         {
-            // Arrange
-            await InitializeDevice(deviceId);
-
-            // Act & Assert
-            await _lockTestHelper.LockPreventsStateChange(_device);
+            await AssertLockPreventsStateChanges(deviceId);
         }
 
-        //[Theory]
-        //[MemberData(nameof(LightIdsFromConfig))]
-        //public virtual async Task OK_CanReadLockState(string deviceId)
-        //{
-        //    // Arrange
-        //    await InitializeDevice(deviceId);
-
-        //    // Act & Assert
-        //    await _lockTestHelper.AssertLockStateCanBeRead(_device);
-        //}
-
-        //[Theory]
-        //[MemberData(nameof(LightIdsFromConfig))]
-        //public virtual async Task OK_DeviceAutoOffWhenLocked(string deviceId)
-        //{
-        //    // Arrange
-        //    await InitializeDevice(deviceId);
-        //    await _lockTestHelper.EnsureDeviceIsUnlocked(_device);
-
-        //    // Act & Assert
-        //    await _lockTestHelper.AssertDeviceAutoOffWhenLocked(_device);
-        //}
+        [Theory]
+        [MemberData(nameof(LightIdsFromConfig))]
+        public override async Task CanReadLockState(string deviceId)
+        {
+            await AssertCanReadLockState(deviceId);
+        }
 
         #endregion
 

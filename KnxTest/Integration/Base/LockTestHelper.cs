@@ -89,11 +89,14 @@ namespace KnxTest.Integration.Base
             Console.WriteLine($"✅ Device {device.Id} lock properly prevents state changes");
         }
 
-        public async Task AssertLockStateCanBeRead(ILockable device)
+        public async Task CanReadLockState(ILockable device)
         {
             var lockState = await device.ReadLockStateAsync();
-            
             lockState.Should().NotBe(Lock.Unknown, $"Device {device.Id} should return valid lock state");
+            
+            var response = await device.WaitForLockStateAsync(lockState, TimeSpan.FromSeconds(1));
+            response.Should().BeTrue($"Device {device.Id} should return expected lock state {lockState}");
+
             device.CurrentState.Lock.Should().Be(lockState, "Current state should match read lock state");
             device.CurrentState.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(1),
                 "LastUpdated should be recent after reading lock state");

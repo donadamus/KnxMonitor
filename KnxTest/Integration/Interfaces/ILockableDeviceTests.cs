@@ -17,10 +17,10 @@ namespace KnxTest.Integration.Interfaces
         /// </summary>
         Task LockPreventsStateChanges(string deviceId);
 
-        ///// <summary>
-        ///// Tests reading lock state from device
-        ///// </summary>
-        //Task CanReadLockState(string deviceId);
+        /// <summary>
+        /// Tests reading lock state from device
+        /// </summary>
+        Task CanReadLockState(string deviceId);
 
         ///// <summary>
         ///// Tests that device automatically turns off when locked

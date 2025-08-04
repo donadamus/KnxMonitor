@@ -6,10 +6,8 @@ using KnxTest.Integration.Interfaces;
 namespace KnxTest.Integration
 {
     [Collection("KnxService collection")]
-    public class DimmerIntegrationTests : DeviceTestBase, ILockableDeviceTests
+    public class DimmerIntegrationTests(KnxServiceFixture fixture) : LockableDeviceTestBase<IDimmer>(fixture)
     {
-        private readonly LockTestHelper _lockTestHelper;
-        private IDimmer _device = null!; // Will be initialized in each test method
         // Data source for tests - only pure dimmers (not lights)
         public static IEnumerable<object[]> DimmerIdsFromConfig
         {
@@ -20,11 +18,8 @@ namespace KnxTest.Integration
                             .Select(k => new object[] { k.Key });
             }
         }
-        public DimmerIntegrationTests(KnxServiceFixture fixture) : base(fixture)
-        {
-            _lockTestHelper = new LockTestHelper(_knxService);
-        }
-        private async Task InitializeDevice(string deviceId)
+
+        protected override async Task InitializeDevice(string deviceId)
         {
             _device = DimmerFactory.CreateDimmer(deviceId, _knxService);
             await _device.InitializeAsync();
@@ -34,27 +29,25 @@ namespace KnxTest.Integration
         #region ILockableDeviceTests Implementation
         [Theory]
         [MemberData(nameof(DimmerIdsFromConfig))]
-        public virtual async Task CanLockAndUnlock(string deviceId)
+        public override async Task CanLockAndUnlock(string deviceId)
         {
-            // Arrange
-            await InitializeDevice(deviceId);
-            // Act & Assert
-            await _lockTestHelper.CanLockAndUnlock(_device);
+            await AssertCanLockAndUnlock(deviceId);
         }
+
         [Theory]
         [MemberData(nameof(DimmerIdsFromConfig))]
-        public virtual async Task LockPreventsStateChanges(string deviceId)
+        public override async Task LockPreventsStateChanges(string deviceId)
         {
-            // Arrange
-            await InitializeDevice(deviceId);
-            // Act & Assert
-            await _lockTestHelper.LockPreventsStateChange(_device);
+            await AssertLockPreventsStateChanges(deviceId);
+        }
+
+        [Theory]
+        [MemberData(nameof(DimmerIdsFromConfig))]
+        public override async Task CanReadLockState(string deviceId)
+        {
+            await AssertCanReadLockState(deviceId);
         }
         #endregion
-        public override void Dispose()
-        {
-            _device?.RestoreSavedStateAsync().GetAwaiter().GetResult();
-            _device?.Dispose();
-        }
+
     }
 }
