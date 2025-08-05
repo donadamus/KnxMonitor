@@ -25,6 +25,6 @@ namespace KnxTest.Integration.Interfaces
         /// <summary>
         /// Tests that device automatically turns off when locked
         /// </summary>
-        Task DeviceAutoOffWhenLocked(string deviceId);
+        Task SwitchableDeviceTurnOffWhenLocked(string deviceId);
     }
 }

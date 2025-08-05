@@ -11,7 +11,7 @@ using Xunit;
 namespace KnxTest.Integration
 {
     [Collection("KnxService collection")]
-    public class OldLightIntegrationTests(KnxServiceFixture fixture) : OldLockableDeviceTestBase<ILightOld>(fixture)
+    public class OldLightOldIntegrationTests(KnxServiceFixture fixture) : OldLockableDeviceTestBase<ILightOld>(fixture)
     {
         // Data source for tests - only pure lights (not dimmers)
         public static IEnumerable<object[]> LightIdsFromConfig
@@ -59,9 +59,9 @@ namespace KnxTest.Integration
 
         [Theory]
         [MemberData(nameof(LightIdsFromConfig))]
-        public override async Task DeviceAutoOffWhenLocked(string deviceId)
+        public override async Task SwitchableDeviceTurnOffWhenLocked(string deviceId)
         {
-            await AssertDeviceAutoOffWhenLocked(deviceId);
+            await AssertSwitchableDeviceTurnOffWhenLocked(deviceId);
         }
 
         #endregion

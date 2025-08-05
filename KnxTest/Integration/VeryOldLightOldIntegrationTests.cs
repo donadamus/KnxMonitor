@@ -8,7 +8,7 @@ using Xunit;
 namespace KnxTest.Integration
 {
     [Collection("KnxService collection")]
-    public class VeryOldLightIntegrationTests : IDisposable
+    public class VeryOldLightOldIntegrationTests : IDisposable
     {
         public static IEnumerable<object[]> LightIdsFromConfig
         {
@@ -33,7 +33,7 @@ namespace KnxTest.Integration
         private static readonly LightOld _defaultLight = new LightOld("L11", "Test Light 11", "1", _knxServiceMock);
         private ILightOld _light = _defaultLight;
 
-        public VeryOldLightIntegrationTests(KnxServiceFixture fixture)
+        public VeryOldLightOldIntegrationTests(KnxServiceFixture fixture)
         {
             _knxService = fixture.KnxService;
         }

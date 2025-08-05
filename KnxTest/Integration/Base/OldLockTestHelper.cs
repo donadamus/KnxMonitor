@@ -118,7 +118,7 @@ namespace KnxTest.Integration.Base
             Console.WriteLine($"✅ Device {device.Id} lock state read successfully: {lockState}");
         }
 
-        public async Task DeviceAutoOffWhenLocked(ILockableOld device)
+        public async Task SwitchableDeviceTurnOffWhenLocked(ILockableOld device)
         {
             // Ensure device is a switchable device for this test
             if (!(device is ILightOld switchableDevice))

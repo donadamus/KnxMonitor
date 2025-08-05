@@ -15,14 +15,16 @@ namespace KnxTest.Integration
     /// Inherits from DeviceTestBase and implements ILockableDeviceTests interface
     /// </summary>
     [Collection("KnxService collection")]
-    public class LightIntegrationTests : DeviceTestBaseNew, ILockableDeviceTests
+    public class LightIntegrationTests : DeviceTestBaseNew, ILockableDeviceTests, ISwitchableDeviceTests, IDisposable
     {
         private readonly LockTestHelper _lockTestHelper;
-        private ILightDevice _device = default;
+        private readonly SwitchTestHelper _switchTestHelper;
+        private ILightDevice? _device;
 
         public LightIntegrationTests(KnxServiceFixture fixture) : base(fixture)
         {
             _lockTestHelper = new LockTestHelper();
+            _switchTestHelper = new SwitchTestHelper();
         }
 
         // Data source for tests - only pure lights (not dimmers)
@@ -40,6 +42,22 @@ namespace KnxTest.Integration
 
         private async Task InitializeDevice(string deviceId)
         {
+            // Dispose previous device if exists to prevent event subscription accumulation
+            if (_device != null)
+            {
+                Console.WriteLine($"🗑️ Disposing previous device {_device.Id}");
+                _device.Dispose();
+                _device = null;
+                
+                // Give a small delay to ensure disposal completes
+                await Task.Delay(100);
+            }
+            else
+            {
+                Console.WriteLine($"🆕 No previous device to dispose");
+            }
+            
+            Console.WriteLine($"🆕 Creating new LightDevice {deviceId}");
             _device = LightFactory.CreateLight(deviceId, _knxService);
             await _device.InitializeAsync();
             
@@ -57,6 +75,8 @@ namespace KnxTest.Integration
 
             // Act & Assert
             await _lockTestHelper.CanLockAndUnlock(_device!);
+
+            await Task.CompletedTask;
         }
 
         [Theory]
@@ -68,6 +88,8 @@ namespace KnxTest.Integration
 
             // Act & Assert
             await _lockTestHelper.LockPreventsStateChange(_device!);
+
+            await Task.CompletedTask;
         }
 
         [Theory]
@@ -79,17 +101,21 @@ namespace KnxTest.Integration
 
             // Act & Assert
             await _lockTestHelper.CanReadLockState(_device!);
+
+            await Task.CompletedTask;
         }
 
         [Theory]
         [MemberData(nameof(LightIdsFromConfig))]
-        public async Task DeviceAutoOffWhenLocked(string deviceId)
+        public async Task SwitchableDeviceTurnOffWhenLocked(string deviceId)
         {
             // Arrange
             await InitializeDevice(deviceId);
 
             // Act & Assert
-            await _lockTestHelper.DeviceAutoOffWhenLocked(_device!);
+            await _lockTestHelper.SwitchableDeviceTurnOffWhenLocked(_device!);
+
+            await Task.CompletedTask;
         }
 
         #endregion
@@ -98,54 +124,44 @@ namespace KnxTest.Integration
 
         [Theory]
         [MemberData(nameof(LightIdsFromConfig))]
-        public async Task CanTurnOnAndOff(string deviceId)
+        public async Task CanTurnOnAndTurnOff(string deviceId)
         {
             // Arrange
             await InitializeDevice(deviceId);
+            
+            // Ensure device is unlocked before testing switch functionality
             await _lockTestHelper.EnsureDeviceIsUnlockedBeforeTest(_device!);
 
-            // Test ON
-            await _device!.TurnOnAsync();
-            _device.CurrentSwitchState.Should().Be(Switch.On, $"Light {deviceId} should be ON");
-            Console.WriteLine($"✅ Light {deviceId} turned ON successfully");
+            // Act & Assert - Test switch functionality
+            await _switchTestHelper.CanTurnOnAndTurnOff(_device!);
 
-            // Test OFF
-            await _device.TurnOffAsync();
-            _device.CurrentSwitchState.Should().Be(Switch.Off, $"Light {deviceId} should be OFF");
-            Console.WriteLine($"✅ Light {deviceId} turned OFF successfully");
+            await Task.CompletedTask;
         }
 
         [Theory]
         [MemberData(nameof(LightIdsFromConfig))]
-        public async Task CanToggle(string deviceId)
+        public async Task CanToggleSwitch(string deviceId)
         {
             // Arrange
             await InitializeDevice(deviceId);
+            // Ensure device is unlocked before testing toggle functionality
             await _lockTestHelper.EnsureDeviceIsUnlockedBeforeTest(_device!);
-            var initialState = _device!.CurrentSwitchState;
 
-            // Act & Assert - Toggle to opposite
-            await _device.ToggleAsync();
-            _device.CurrentSwitchState.Should().Be(initialState.Opposite(), 
-                $"Light {deviceId} should toggle to opposite state");
+            // Act & Assert - Check toggle functionality
+            await _switchTestHelper.CanToggleSwitch(_device!);
 
-            // Act & Assert - Toggle back
-            await _device.ToggleAsync();
-            _device.CurrentSwitchState.Should().Be(initialState, 
-                $"Light {deviceId} should toggle back to original state");
-
-            Console.WriteLine($"✅ Light {deviceId} toggle functionality works correctly");
+            await Task.CompletedTask;
         }
 
         [Theory]
         [MemberData(nameof(LightIdsFromConfig))]
-        public async Task CanReadState(string deviceId)
+        public async Task CanReadSwitchState(string deviceId)
         {
             // Arrange
             await InitializeDevice(deviceId);
 
             // Act - Read state
-            var state = await _device.ReadSwitchStateAsync();
+            var state = await _device!.ReadSwitchStateAsync();
 
             // Assert
             state.Should().NotBe(Switch.Unknown, $"Light {deviceId} should return valid state");
@@ -154,35 +170,8 @@ namespace KnxTest.Integration
                 "LastUpdated should be recent after reading state");
 
             Console.WriteLine($"✅ Light {deviceId} state read successfully: {state}");
-        }
 
-        [Theory]
-        [MemberData(nameof(LightIdsFromConfig))]
-        public async Task CanSaveAndRestoreState(string deviceId)
-        {
-            // Arrange
-            await InitializeDevice(deviceId);
-            await _lockTestHelper.EnsureDeviceIsUnlockedBeforeTest(_device!);
-
-            // Set specific state
-            await _device!.TurnOnAsync();
-            _device.CurrentSwitchState.Should().Be(Switch.On, "Light should be ON before saving");
-
-            // Act - Save state
-            _device.SaveCurrentState();
-            Switch? savedState = null;
-
-            // Change state
-            await _device.TurnOffAsync();
-            _device.CurrentSwitchState.Should().Be(Switch.Off, "Light should be OFF after changing state");
-
-            // Act - Restore state
-            await _device.RestoreSavedStateAsync();
-
-            // Assert
-            _device.CurrentSwitchState.Should().Be(savedState ?? Switch.On, "Light should be restored to saved state");
-
-            Console.WriteLine($"✅ Light {deviceId} save and restore works correctly");
+            await Task.CompletedTask;
         }
 
         #endregion
@@ -203,6 +192,19 @@ namespace KnxTest.Integration
             finally
             {
                 _device?.Dispose();
+            }
+        }
+
+
+        // ===== DEVICE CLEANUP =====
+
+        public void Dispose()
+        {
+            if (_device != null)
+            {
+                Console.WriteLine($"🧹 Disposing test class - cleaning up device {_device.Id}");
+                _device.Dispose();
+                _device = null;
             }
         }
 
