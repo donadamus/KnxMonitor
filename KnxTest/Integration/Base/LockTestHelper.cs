@@ -100,6 +100,19 @@ namespace KnxTest.Integration.Base
                 $"Device {device.Id} should toggle to opposite state");
             Console.WriteLine($"✅ Device {device.Id} successfully toggled from {initialState} to {device.CurrentSwitchState}");
         }
+
+        internal async Task CanReadSwitchState(ISwitchable device)
+        {
+            var switchState = await device.ReadSwitchStateAsync();
+            switchState.Should().NotBe(Switch.Unknown, $"Device {device.Id} should return valid switch state");
+
+            var response = await device.WaitForSwitchStateAsync(switchState, TimeSpan.FromSeconds(1));
+            response.Should().BeTrue($"Device {device.Id} should return expected switch state {switchState}");
+
+            device.CurrentSwitchState.Should().Be(switchState, "Current state should match read switch state");
+
+            Console.WriteLine($"✅ Device {device.Id} switch state read successfully: {switchState}");
+        }
     }
 
 

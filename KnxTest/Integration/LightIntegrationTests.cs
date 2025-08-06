@@ -33,7 +33,7 @@ namespace KnxTest.Integration
             get
             {
                 var config = LightFactory.LightConfigurations;
-                return config.Where(x => x.Value.Name.ToLower().Contains("off"))
+                return config//.Where(x => x.Value.Name.ToLower().Contains("off"))
                             .Select(k => new object[] { k.Key });
             }
         }
@@ -149,16 +149,8 @@ namespace KnxTest.Integration
             // Arrange
             await InitializeDevice(deviceId);
 
-            // Act - Read state
-            var state = await _device!.ReadSwitchStateAsync();
-
-            // Assert
-            state.Should().NotBe(Switch.Unknown, $"Light {deviceId} should return valid state");
-            _device.CurrentSwitchState.Should().Be(state, "Current state should match read state");
-            _device.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(1),
-                "LastUpdated should be recent after reading state");
-
-            Console.WriteLine($"✅ Light {deviceId} state read successfully: {state}");
+            //Act $ Assert
+            await _switchTestHelper.CanReadSwitchState(_device!);
 
             await Task.CompletedTask;
         }

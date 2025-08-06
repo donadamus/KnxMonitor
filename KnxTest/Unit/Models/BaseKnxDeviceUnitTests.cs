@@ -33,5 +33,9 @@ namespace KnxTest.Unit.Models
             Dispose(true);
             GC.SuppressFinalize(this);
         }
+
+        public abstract void Constructor_SetsBasicProperties();
+
+
     }
 }

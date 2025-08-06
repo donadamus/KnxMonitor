@@ -11,12 +11,12 @@ namespace KnxTest.Unit.Models
     /// Comprehensive unit tests for ShutterDevice implementation
     /// Tests all interface functionality separately for clean separation of concerns
     /// </summary>
-    public class ShutterDeviceTests
+    public class ShutterDeviceTestsOld
     {
         private readonly Mock<IKnxService> _mockKnxService;
         private readonly ShutterDevice _shutterDevice;
 
-        public ShutterDeviceTests()
+        public ShutterDeviceTestsOld()
         {
             _mockKnxService = new Mock<IKnxService>();
             _shutterDevice = new ShutterDevice("shutter_001", "Living Room Shutter", "1", _mockKnxService.Object);
