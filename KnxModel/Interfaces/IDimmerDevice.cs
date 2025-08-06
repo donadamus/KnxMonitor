@@ -15,7 +15,7 @@ namespace KnxModel
         /// <summary>
         /// KNX addresses for this dimmer device
         /// </summary>
-        DimmerAddresses DimmerAddresses { get; }
+        //DimmerAddresses DimmerAddresses { get; }
         
         // No additional methods needed - everything comes from composed interfaces
         // Note: Percentage controls brightness, Switch controls ON/OFF

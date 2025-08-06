@@ -75,7 +75,7 @@ namespace KnxTest.Unit.Models
         public async Task TurnOnAsync_ShouldSendCorrectTelegram()
         {
             // Arrange
-            var address = _lightDevice.LightAddresses.Control;
+            var address = _lightDevice.Addresses.Control;
             _mockKnxService.Setup(s => s.WriteGroupValueAsync(address, true))
                           .Returns(Task.CompletedTask);
 
@@ -87,7 +87,7 @@ namespace KnxTest.Unit.Models
         public async Task TurnOffAsync_ShouldSendCorrectTelegram()
         {
             // Arrange
-            var address = _lightDevice.LightAddresses.Control;
+            var address = _lightDevice.Addresses.Control;
             _mockKnxService.Setup(s => s.WriteGroupValueAsync(address, false))
                           .Returns(Task.CompletedTask);
 
@@ -102,7 +102,7 @@ namespace KnxTest.Unit.Models
         public async Task ToggleAsync_ShouldSendCorrectTelegram(Switch initialState, bool expectedValue)
         {
             // Arrange
-            var address = _lightDevice.LightAddresses.Control;
+            var address = _lightDevice.Addresses.Control;
             _lightDevice.SetSwitchStateForTest(initialState);
             _mockKnxService.Setup(s => s.WriteGroupValueAsync(address, expectedValue))
                           .Returns(Task.CompletedTask);
@@ -114,7 +114,7 @@ namespace KnxTest.Unit.Models
         [Fact]
         public async Task LockAsync_ShouldSendCorrectTelegram()
         {
-            var address = _lightDevice.LightAddresses.LockControl;
+            var address = _lightDevice.Addresses.LockControl;
             _mockKnxService.Setup(s => s.WriteGroupValueAsync(address, true))
                           .Returns(Task.CompletedTask);
             await _lightDevice.LockAsync(TimeSpan.Zero);
@@ -123,7 +123,7 @@ namespace KnxTest.Unit.Models
         [Fact]
         public async Task UnlockAsync_ShouldSendCorrectTelegram()
         {
-            var address = _lightDevice.LightAddresses.LockControl;
+            var address = _lightDevice.Addresses.LockControl;
             _mockKnxService.Setup(s => s.WriteGroupValueAsync(address, false))
                           .Returns(Task.CompletedTask);
             await _lightDevice.UnlockAsync(TimeSpan.Zero);
@@ -134,7 +134,7 @@ namespace KnxTest.Unit.Models
         [InlineData(Lock.Off, false)] // Lock.Off -> false
         public async Task SetLockAsync_ShouldSendCorrectTelegram(Lock lockState, bool expectedValue)
         {
-            var address = _lightDevice.LightAddresses.LockControl;
+            var address = _lightDevice.Addresses.LockControl;
             _mockKnxService.Setup(s => s.WriteGroupValueAsync(address, expectedValue))
                           .Returns(Task.CompletedTask);
             await _lightDevice.SetLockAsync(lockState, TimeSpan.Zero);
@@ -151,7 +151,7 @@ namespace KnxTest.Unit.Models
         [InlineData(Switch.Off, false)] // Switch.Off -> false
         public void OnSwitchFeedback_ShouldUpdateState(Switch expectedSwitchState, bool feedback)
         {
-            var feedbackAddress = _lightDevice.LightAddresses.Feedback;
+            var feedbackAddress = _lightDevice.Addresses.Feedback;
             var feedbackArgs = new KnxGroupEventArgs(feedbackAddress, new KnxValue(feedback));
             // Act
             _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, feedbackArgs);
@@ -166,7 +166,7 @@ namespace KnxTest.Unit.Models
         public void OnLockFeedback_ShouldUpdateState(Lock expectedLock, bool feedback)
         {
             // TODO: Test lock feedback: true->Lock.On, false->Lock.Off
-            var feedbackAddress = _lightDevice.LightAddresses.LockFeedback;
+            var feedbackAddress = _lightDevice.Addresses.LockFeedback;
             var feedbackArgs = new KnxGroupEventArgs(feedbackAddress, new KnxValue(feedback));
             // Act
             _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, feedbackArgs);
@@ -180,7 +180,7 @@ namespace KnxTest.Unit.Models
             // TODO: Test that switch feedback updates state even when device is locked
             // This reflects real device state, integration tests will catch configuration issues
             _lightDevice.SetStateForTest(Switch.On, Lock.On);
-            var feedbackAddress = _lightDevice.LightAddresses.Feedback;
+            var feedbackAddress = _lightDevice.Addresses.Feedback;
             var feedbackArgs = new KnxGroupEventArgs(feedbackAddress, new KnxValue(false)); // Simulate switch off
             // Act
             _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, feedbackArgs);
@@ -193,7 +193,7 @@ namespace KnxTest.Unit.Models
         {
             // TODO: Test that lock feedback only affects lock state, not switch state
             _lightDevice.SetStateForTest(Switch.On, Lock.Off);
-            var feedbackAddress = _lightDevice.LightAddresses.LockFeedback;
+            var feedbackAddress = _lightDevice.Addresses.LockFeedback;
             var feedbackArgs = new KnxGroupEventArgs(feedbackAddress, new KnxValue(true)); // Simulate lock on
             // Act
             _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, feedbackArgs);
@@ -240,7 +240,7 @@ namespace KnxTest.Unit.Models
         public async Task ReadSwitchStateAsync_ShouldRequestCorrectAddress()
         {
             // TODO: Test that ReadSwitchStateAsync calls RequestGroupValue with switch feedback address
-            var address = _lightDevice.LightAddresses.Feedback;
+            var address = _lightDevice.Addresses.Feedback;
             _mockKnxService.Setup(s => s.RequestGroupValue<bool>(address))
                           .ReturnsAsync(true); // Simulate switch on feedback
             var result = await _lightDevice.ReadSwitchStateAsync();
@@ -251,7 +251,7 @@ namespace KnxTest.Unit.Models
         public async Task ReadLockStateAsync_ShouldRequestCorrectAddress()
         {
             // TODO: Test that ReadLockStateAsync calls RequestGroupValue with lock feedback address
-            var address = _lightDevice.LightAddresses.LockFeedback;
+            var address = _lightDevice.Addresses.LockFeedback;
             _mockKnxService.Setup(s => s.RequestGroupValue<bool>(address))
                           .ReturnsAsync(true); // Simulate lock on feedback
             var result = await _lightDevice.ReadLockStateAsync();
@@ -264,7 +264,7 @@ namespace KnxTest.Unit.Models
         public async Task ReadSwitchStateAsync_ShouldReturnCorrectValue(bool value, Switch switchState)
         {
             // TODO: Test ReadSwitchStateAsync returns correct enum: true->Switch.On, false->Switch.Off
-            var address = _lightDevice.LightAddresses.Feedback;
+            var address = _lightDevice.Addresses.Feedback;
             _mockKnxService.Setup(s => s.RequestGroupValue<bool>(address))
                           .ReturnsAsync(value); // Simulate switch feedback
             var result = await _lightDevice.ReadSwitchStateAsync();
@@ -277,7 +277,7 @@ namespace KnxTest.Unit.Models
         public async Task ReadLockStateAsync_ShouldReturnCorrectValue(bool value, Lock lockState)
         {
             // TODO: Test ReadLockStateAsync returns correct enum: true->Lock.On, false->Lock.Off
-            var address = _lightDevice.LightAddresses.LockFeedback;
+            var address = _lightDevice.Addresses.LockFeedback;
             _mockKnxService.Setup(s => s.RequestGroupValue<bool>(address))
                           .ReturnsAsync(value); // Simulate lock feedback
             var result = await _lightDevice.ReadLockStateAsync();
@@ -335,7 +335,7 @@ namespace KnxTest.Unit.Models
                         _mockKnxService.Raise(
                             s => s.GroupMessageReceived += null,
                             _mockKnxService.Object,
-                            new KnxGroupEventArgs(_lightDevice.LightAddresses.Feedback, new KnxValue(switchState == Switch.On)));
+                            new KnxGroupEventArgs(_lightDevice.Addresses.Feedback, new KnxValue(switchState == Switch.On)));
                     });
 
             // Act
@@ -395,7 +395,7 @@ namespace KnxTest.Unit.Models
                         _mockKnxService.Raise(
                             s => s.GroupMessageReceived += null,
                             _mockKnxService.Object,
-                            new KnxGroupEventArgs(_lightDevice.LightAddresses.LockFeedback, new KnxValue(lockState == Lock.On)));
+                            new KnxGroupEventArgs(_lightDevice.Addresses.LockFeedback, new KnxValue(lockState == Lock.On)));
                     });
 
             // Act
@@ -431,7 +431,7 @@ namespace KnxTest.Unit.Models
                         _mockKnxService.Raise(
                             s => s.GroupMessageReceived += null,
                             _mockKnxService.Object,
-                            new KnxGroupEventArgs(_lightDevice.LightAddresses.Feedback, new KnxValue(switchState == Switch.On)));
+                            new KnxGroupEventArgs(_lightDevice.Addresses.Feedback, new KnxValue(switchState == Switch.On)));
                     });
 
             // Act
@@ -468,7 +468,7 @@ namespace KnxTest.Unit.Models
                         _mockKnxService.Raise(
                             s => s.GroupMessageReceived += null,
                             _mockKnxService.Object,
-                            new KnxGroupEventArgs(_lightDevice.LightAddresses.LockFeedback, new KnxValue(lockState == Lock.On)));
+                            new KnxGroupEventArgs(_lightDevice.Addresses.LockFeedback, new KnxValue(lockState == Lock.On)));
                     });
 
             // Act
@@ -529,13 +529,13 @@ namespace KnxTest.Unit.Models
                 //unlock to allow switch change
                 if (lockState == Lock.On)
                 {
-                    _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.LightAddresses.LockControl, false)).Returns(Task.CompletedTask);
+                    _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.Addresses.LockControl, false)).Returns(Task.CompletedTask);
                 }
-                _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.LightAddresses.Control, initialSwitchState == Switch.On)).Returns(Task.CompletedTask);
+                _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.Addresses.Control, initialSwitchState == Switch.On)).Returns(Task.CompletedTask);
             }
             if (initialLockState != lockState && initialLockState != Lock.Unknown)
             {
-                _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.LightAddresses.LockControl, initialLockState == Lock.On)).Returns(Task.CompletedTask);
+                _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.Addresses.LockControl, initialLockState == Lock.On)).Returns(Task.CompletedTask);
             }
             
             // Act
@@ -562,21 +562,21 @@ namespace KnxTest.Unit.Models
                 //unlock to allow switch change
                 if (lockState == Lock.On)
                 {
-                    _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.LightAddresses.LockControl, false)).Returns(Task.CompletedTask).Callback(() =>
+                    _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.Addresses.LockControl, false)).Returns(Task.CompletedTask).Callback(() =>
                     {
-                        _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, new KnxGroupEventArgs(_lightDevice.LightAddresses.LockFeedback, new KnxValue(false)));
+                        _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, new KnxGroupEventArgs(_lightDevice.Addresses.LockFeedback, new KnxValue(false)));
                     });
                 }
-                _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.LightAddresses.Control, initialSwitchState == Switch.On)).Returns(Task.CompletedTask).Callback(() =>
+                _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.Addresses.Control, initialSwitchState == Switch.On)).Returns(Task.CompletedTask).Callback(() =>
                 {
-                    _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, new KnxGroupEventArgs(_lightDevice.LightAddresses.Feedback, new KnxValue(initialSwitchState == Switch.On)));
+                    _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, new KnxGroupEventArgs(_lightDevice.Addresses.Feedback, new KnxValue(initialSwitchState == Switch.On)));
                 });
             }
             if (initialLockState != lockState && initialLockState != Lock.Unknown)
             {
-                _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.LightAddresses.LockControl, initialLockState == Lock.On)).Returns(Task.CompletedTask).Callback(() =>
+                _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.Addresses.LockControl, initialLockState == Lock.On)).Returns(Task.CompletedTask).Callback(() =>
                 {
-                    _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, new KnxGroupEventArgs(_lightDevice.LightAddresses.LockFeedback, new KnxValue(initialLockState == Lock.On)));
+                    _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, new KnxGroupEventArgs(_lightDevice.Addresses.LockFeedback, new KnxValue(initialLockState == Lock.On)));
                 });
             }
 
@@ -607,13 +607,13 @@ namespace KnxTest.Unit.Models
             // TODO: Test that multiple commands are all sent correctly
             // Arrange
             _lightDevice.SetStateForTest(Switch.Off, Lock.Off);
-            _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.LightAddresses.Control, true))
+            _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.Addresses.Control, true))
                           .Returns(Task.CompletedTask);
-            _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.LightAddresses.LockControl, true))
+            _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.Addresses.LockControl, true))
                             .Returns(Task.CompletedTask);
-            _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.LightAddresses.Control, false))
+            _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.Addresses.Control, false))
                             .Returns(Task.CompletedTask);
-            _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.LightAddresses.LockControl, false))
+            _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.Addresses.LockControl, false))
                             .Returns(Task.CompletedTask);
             // Act
             _ = _lightDevice.TurnOnAsync(TimeSpan.Zero);
@@ -631,8 +631,8 @@ namespace KnxTest.Unit.Models
         {
             // TODO: Test processing multiple feedbacks in quick succession
             // Arrange
-            var switchFeedbackArgs = new KnxGroupEventArgs(_lightDevice.LightAddresses.Feedback, new KnxValue(switchState == Switch.On)); // Simulate switch
-            var lockFeedbackArgs = new KnxGroupEventArgs(_lightDevice.LightAddresses.LockFeedback, new KnxValue(lockState == Lock.On)); // Simulate lock
+            var switchFeedbackArgs = new KnxGroupEventArgs(_lightDevice.Addresses.Feedback, new KnxValue(switchState == Switch.On)); // Simulate switch
+            var lockFeedbackArgs = new KnxGroupEventArgs(_lightDevice.Addresses.LockFeedback, new KnxValue(lockState == Lock.On)); // Simulate lock
             // Act
             _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, switchFeedbackArgs);
             _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, lockFeedbackArgs);

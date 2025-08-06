@@ -4,11 +4,149 @@ using System.Threading.Tasks;
 
 namespace KnxModel
 {
-    /// <summary>
-    /// Implementation of a simple Light device using new interface architecture
-    /// Combines basic device functionality with switching and locking capabilities
+
+
+
+
+
+    public class DimmerDevice : LightDeviceBase<DimmerAddresses>, IDimmerDevice
+    {
+
+        private float _currentPercentage = 0.0f; // 0% brightness
+        private float? _savedPercentage;
+
+        public DimmerDevice(string id, string name, string subGroup, IKnxService knxService)
+            : base(id, name, subGroup, KnxAddressConfiguration.CreateDimmerAddresses(subGroup), knxService)
+        {
+        }
+
+        public override async Task InitializeAsync()
+        {
+            // Read initial states from KNX bus
+            _currentSwitchState = await ReadSwitchStateAsync();
+            _currentLockState = await ReadLockStateAsync();
+            _currentPercentage = await ReadPercentageAsync();
+            _lastUpdated = DateTime.Now;
+
+            Console.WriteLine($"DimmerDevice {Id} initialized - Switch: {_currentSwitchState}, Lock: {_currentLockState}, Brightness: {_currentPercentage}%");
+        }
+
+        public override void SaveCurrentState()
+        {
+            base.SaveCurrentState();
+            _savedPercentage = _currentPercentage; // Save current brightness percentage
+            Console.WriteLine($"DimmerDevice {Id} state saved - Switch: {_currentSwitchState}, Lock: {_currentLockState}, Brightness: {_savedPercentage}%");
+        }
+
+        public override async Task RestoreSavedStateAsync(TimeSpan? timeout = null)
+        {
+            if (_savedPercentage.HasValue && _savedPercentage.Value != _currentPercentage)
+            {
+                // Unlock before changing switch state if necessary
+                if (_currentLockState == Lock.On)
+                {
+                    await UnlockAsync(timeout);
+                }
+
+                await SetPercentageAsync(_savedPercentage.Value, timeout);
+            }
+
+            await base.RestoreSavedStateAsync(timeout);
+           Console.WriteLine($"DimmerDevice {Id} state restored - Brightness: {_currentPercentage}%");
+        }
+
+
+
+        #region IPercentageControllable Implementation
+
+        public float CurrentPercentage => _currentPercentage;
+
+        public async Task SetPercentageAsync(float percentage, TimeSpan? timeout = null)
+        {
+            if (percentage < 0.0f || percentage > 100.0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(percentage), "Percentage must be between 0 and 100");
+            }
+
+            // TODO: Send KNX command to set brightness
+            await Task.Delay(75); // Simulate KNX communication (dimmers may be slower than switches)
+
+            _currentPercentage = percentage;
+            _lastUpdated = DateTime.Now;
+
+            Console.WriteLine($"DimmerDevice {Id} brightness set to {percentage}%");
+        }
+
+        public async Task<float> ReadPercentageAsync()
+        {
+            // TODO: Read from KNX bus
+            await Task.Delay(30); // Simulate KNX communication
+
+            // For now, return current state (in real implementation, read from bus)
+            _lastUpdated = DateTime.Now;
+            return _currentPercentage;
+        }
+
+        public async Task<bool> WaitForPercentageAsync(float targetPercentage, double tolerance = 2.0, TimeSpan? timeout = null)
+        {
+            if (targetPercentage < 0.0f || targetPercentage > 100.0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(targetPercentage), "Target percentage must be between 0 and 100");
+            }
+
+            var actualTimeout = timeout ?? TimeSpan.FromSeconds(10); // Default 10 seconds
+            var endTime = DateTime.Now + actualTimeout;
+
+            while (DateTime.Now < endTime)
+            {
+                var currentPercentage = await ReadPercentageAsync();
+                if (Math.Abs(currentPercentage - targetPercentage) <= tolerance)
+                {
+                    return true;
+                }
+
+                await Task.Delay(100); // Check every 100ms
+            }
+
+            return false;
+        }
+
+        public async Task AdjustPercentageAsync(float increment, TimeSpan? timeout = null)
+        {
+            var newPercentage = _currentPercentage + increment;
+            newPercentage = Math.Max(0.0f, Math.Min(100.0f, newPercentage)); // Clamp to 0-100
+
+            await SetPercentageAsync(newPercentage, timeout);
+        }
+
+        #endregion
+
+
+    }
+
+
+    public class LightDevice : LightDeviceBase<LightAddresses>
+    {
+        public LightDevice(string id, string name, string subGroup, IKnxService knxService)
+            : base(id, name, subGroup, KnxAddressConfiguration.CreateLightAddresses(subGroup), knxService)
+        {
+        }
+
+        public override async Task InitializeAsync()
+        {
+            // Read initial states from KNX bus
+            _currentSwitchState = await ReadSwitchStateAsync();
+            _currentLockState = await ReadLockStateAsync();
+            _lastUpdated = DateTime.Now;
+
+            Console.WriteLine($"LightDevice {Id} initialized - Switch: {_currentSwitchState}, Lock: {_currentLockState}");
+        }
+
+    }
+    // Combines basic device functionality with switching and locking capabilities
     /// </summary>
-    public class LightDevice : ILightDevice, IDisposable
+    public abstract class LightDeviceBase<TAddressess> : ILightDevice, IDisposable
+        where TAddressess : ISwitchableAddress, ILockableAddress
     {
         
 
@@ -18,20 +156,20 @@ namespace KnxModel
         private readonly SwitchableDeviceHelper _switchableHelper;
         private readonly LockableDeviceHelper _lockableHelper;
         
-        private Switch _currentSwitchState = Switch.Unknown;
-        private Lock _currentLockState = Lock.Unknown;
-        private DateTime _lastUpdated = DateTime.MinValue;
+        internal Switch _currentSwitchState = Switch.Unknown;
+        internal Lock _currentLockState = Lock.Unknown;
+        internal DateTime _lastUpdated = DateTime.MinValue;
         
         // Saved state for testing
         private Switch? _savedSwitchState;
         private Lock? _savedLockState;
 
-        public LightDevice(string id, string name, string subGroup, LightAddresses addresses, IKnxService knxService)
+        public LightDeviceBase(string id, string name, string subGroup, TAddressess addresses, IKnxService knxService)
         {
             Id = id ?? throw new ArgumentNullException(nameof(id));
             Name = name ?? throw new ArgumentNullException(nameof(name));
             SubGroup = subGroup ?? throw new ArgumentNullException(nameof(subGroup));
-            LightAddresses = addresses ?? throw new ArgumentNullException(nameof(addresses));
+            Addresses = addresses ?? throw new ArgumentNullException(nameof(addresses));
             _knxService = knxService ?? throw new ArgumentNullException(nameof(knxService));
 
             // Initialize event manager
@@ -41,26 +179,18 @@ namespace KnxModel
             // Initialize helpers
             _switchableHelper = new SwitchableDeviceHelper(
                 _knxService, Id, "LightDevice",
-                () => LightAddresses,
+                () => Addresses,
                 state => { _currentSwitchState = state; _lastUpdated = DateTime.Now; },
                 () => _currentSwitchState);
 
             _lockableHelper = new LockableDeviceHelper(
                 _knxService, Id, "LightDevice", 
-                () => LightAddresses,
+                () => Addresses,
                 state => { _currentLockState = state; _lastUpdated = DateTime.Now; },
                 () => _currentLockState);
 
             // Start listening to KNX events
             _eventManager.StartListening();
-        }
-
-        /// <summary>
-        /// Convenience constructor that automatically creates addresses based on subGroup
-        /// </summary>
-        public LightDevice(string id, string name, string subGroup, IKnxService knxService)
-            : this(id, name, subGroup, KnxAddressConfiguration.CreateLightAddresses(subGroup), knxService)
-        {
         }
 
         #region IKnxDeviceBase Implementation
@@ -87,31 +217,24 @@ namespace KnxModel
 
         #region LightDevice Addresses
 
-        public LightAddresses LightAddresses { get; }
-        public LightAddresses Addresses => LightAddresses; // Dla kompatybilności
+        public TAddressess Addresses { get; }
+        //public TAddressess Addresses => LightAddresses; // Dla kompatybilności
 
         #endregion
 
         #region IKnxDeviceBase Implementation
 
-        public async Task InitializeAsync()
-        {
-            // Read initial states from KNX bus
-            _currentSwitchState = await ReadSwitchStateAsync();
-            _currentLockState = await ReadLockStateAsync();
-            _lastUpdated = DateTime.Now;
-            
-            Console.WriteLine($"LightDevice {Id} initialized - Switch: {_currentSwitchState}, Lock: {_currentLockState}");
-        }
+        public abstract Task InitializeAsync();
+        
 
-        public void SaveCurrentState()
+        public virtual void SaveCurrentState()
         {
             _savedSwitchState = _currentSwitchState;
             _savedLockState = _currentLockState;
             Console.WriteLine($"LightDevice {Id} state saved - Switch: {_savedSwitchState}, Lock: {_savedLockState}");
         }
 
-        public async Task RestoreSavedStateAsync(TimeSpan? timeout = null)
+        public virtual async Task RestoreSavedStateAsync(TimeSpan? timeout = null)
         {
             if (_savedSwitchState.HasValue && _savedSwitchState.Value != CurrentSwitchState && _savedLockState != Lock.Unknown)
             {

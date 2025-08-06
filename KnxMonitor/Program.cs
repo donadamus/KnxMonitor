@@ -12,6 +12,11 @@ service.GroupMessageReceived += (sender, args) =>
 
 var light = LightFactory.CreateLight("L05.1", service);
 light.TurnOffAsync();
+light.TurnOnAsync();
+
+var dimmer = DimmerFactory.CreateDimmer("D02.2", service);
+dimmer.TurnOnAsync();
+
 
 // Create test dimmers
 var dimmer1 = new DimmerOld("DIM1", "Test Dimmer 1", "1", service);

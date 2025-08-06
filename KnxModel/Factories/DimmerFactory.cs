@@ -8,6 +8,22 @@ namespace KnxModel
     /// </summary>
     public static class DimmerFactory
     {
+
+
+        public static DimmerDevice CreateDimmer(string dimmerId, IKnxService knxService)
+        {
+            if (DimmerConfigurations.TryGetValue(dimmerId, out var config))
+            {
+                return new DimmerDevice(dimmerId, config.Name, config.SubGroup, knxService);
+            }
+            //else if (DimmerFactory.DimmerConfigurations.TryGetValue(lightId, out var dimmerConfig))
+            //{
+            //    return new DimmerOld(lightId, dimmerConfig.Name, dimmerConfig.SubGroup, knxService);
+            //}
+
+            throw new ArgumentException($"Unknown light ID: {dimmerId}");
+        }
+
         /// <summary>
         /// Creates a light instance by ID
         /// </summary>

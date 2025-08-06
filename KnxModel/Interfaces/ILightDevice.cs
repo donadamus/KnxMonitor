@@ -14,7 +14,7 @@ namespace KnxModel
         /// <summary>
         /// KNX addresses for this light device
         /// </summary>
-        LightAddresses LightAddresses { get; }
+       // LightAddresses LightAddresses { get; }
         
         // No additional methods needed - everything comes from composed interfaces
     }
