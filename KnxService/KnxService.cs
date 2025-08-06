@@ -149,14 +149,14 @@ namespace KnxService
         {
             _knxBus.Dispose();
         }
-               
+
         public async Task<T> RequestGroupValue<T>(string address)
         {
             var groupAddress = new GroupAddress(address);
             try
             {
                 _knxRateLimiter.WaitAsync(KnxOperationType.ReadGroupValueAsync).GetAwaiter().GetResult();
-                var result = await _knxBus.ReadGroupValueAsync(groupAddress, TimeSpan.FromSeconds(2), MessagePriority.Low);
+                var result = await _knxBus.ReadGroupValueAsync(groupAddress, TimeSpan.FromSeconds(2) , MessagePriority.Low);
 
                 Console.WriteLine($"RequestGroupValue<{typeof(T).Name}>({address}): {result?.TypedValue?.GetType().Name} = {result?.TypedValue}");
 

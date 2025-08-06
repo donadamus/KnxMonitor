@@ -1,3 +1,4 @@
+using KnxModel.Models.Helpers;
 using System;
 using System.Threading.Tasks;
 
@@ -149,17 +150,17 @@ namespace KnxModel
 
         public async Task TurnOnAsync(TimeSpan? timeout = null)
         {
-            await _switchableHelper.TurnOnAsync();
+            await _switchableHelper.TurnOnAsync(timeout);
         }
 
         public async Task TurnOffAsync(TimeSpan? timeout = null)
         {
-            await _switchableHelper.TurnOffAsync();
+            await _switchableHelper.TurnOffAsync(timeout);
         }
 
         public async Task ToggleAsync(TimeSpan? timeout = null)
         {
-            await _switchableHelper.ToggleAsync();
+            await _switchableHelper.ToggleAsync(timeout);
         }
 
         public async Task<Switch> ReadSwitchStateAsync()
@@ -167,7 +168,7 @@ namespace KnxModel
             return await _switchableHelper.ReadSwitchStateAsync();
         }
 
-        public async Task<bool> WaitForSwitchStateAsync(Switch targetState, TimeSpan timeout)
+        public async Task<bool> WaitForSwitchStateAsync(Switch targetState, TimeSpan? timeout = null)
         {
             return await _switchableHelper.WaitForSwitchStateAsync(targetState, timeout);
         }
@@ -180,15 +181,15 @@ namespace KnxModel
 
         public async Task LockAsync(TimeSpan? timeout = null)
         {
-            await _lockableHelper.LockAsync();
+            await _lockableHelper.LockAsync(timeout);
         }
         public async Task SetLockAsync(Lock lockState, TimeSpan? timeout = null)
         {
-            await _lockableHelper.SetLockAsync(lockState);
+            await _lockableHelper.SetLockAsync(lockState, timeout);
         }
         public async Task UnlockAsync(TimeSpan? timeout = null)
         {
-            await _lockableHelper.UnlockAsync();
+            await _lockableHelper.UnlockAsync(timeout);
         }
 
         public async Task<Lock> ReadLockStateAsync()
@@ -199,6 +200,39 @@ namespace KnxModel
         public async Task<bool> WaitForLockStateAsync(Lock targetState, TimeSpan timeout)
         {
             return await _lockableHelper.WaitForLockStateAsync(targetState, timeout);
+        }
+
+        #endregion
+
+        #region Internal Test Helpers
+
+        /// <summary>
+        /// Internal method for setting device state in unit tests
+        /// Bypasses KNX communication for testing scenarios
+        /// </summary>
+        internal void SetStateForTest(Switch switchState, Lock lockState)
+        {
+            _currentSwitchState = switchState;
+            _currentLockState = lockState;
+            _lastUpdated = DateTime.Now;
+        }
+
+        /// <summary>
+        /// Internal method for setting only switch state in unit tests
+        /// </summary>
+        internal void SetSwitchStateForTest(Switch switchState)
+        {
+            _currentSwitchState = switchState;
+            _lastUpdated = DateTime.Now;
+        }
+
+        /// <summary>
+        /// Internal method for setting only lock state in unit tests
+        /// </summary>
+        internal void SetLockStateForTest(Lock lockState)
+        {
+            _currentLockState = lockState;
+            _lastUpdated = DateTime.Now;
         }
 
         #endregion

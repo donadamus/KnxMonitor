@@ -1,3 +1,4 @@
+using KnxModel.Models.Helpers;
 using System;
 using System.Threading.Tasks;
 
@@ -181,7 +182,7 @@ namespace KnxModel
             return _currentSwitchState;
         }
 
-        public async Task<bool> WaitForSwitchStateAsync(Switch targetState, TimeSpan timeout)
+        public async Task<bool> WaitForSwitchStateAsync(Switch targetState, TimeSpan? timeout = null)
         {
             var endTime = DateTime.Now + timeout;
             

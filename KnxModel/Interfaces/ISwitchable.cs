@@ -45,6 +45,6 @@ namespace KnxModel
         /// <summary>
         /// Wait for specific switch state
         /// </summary>
-        Task<bool> WaitForSwitchStateAsync(Switch targetState, TimeSpan timeout);
+        Task<bool> WaitForSwitchStateAsync(Switch targetState, TimeSpan? timeout = null);
     }
 }
