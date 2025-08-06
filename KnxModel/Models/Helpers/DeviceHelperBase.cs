@@ -19,6 +19,11 @@ namespace KnxModel.Models.Helpers
         {
             var effectiveTimeout = timeout ?? _defaultTimeout;
             Console.WriteLine($"Waiting for {_deviceType} {_deviceId} {description}");
+            if (condition())
+                {
+                Console.WriteLine($"✅ {_deviceType} {_deviceId} {description} already met");
+                return true; // Condition already met
+            }
 
             // Create a task that completes when condition is met
             var waitTask = Task.Run(async () =>

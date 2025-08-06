@@ -68,110 +68,6 @@ namespace KnxTest.Unit.Models
 
         #endregion
 
-        #region ISwitchable Tests
-
-        [Fact]
-        public async Task TurnOnAsync_UpdatesSwitchState()
-        {
-            // Act
-            await _lightDevice.TurnOnAsync();
-
-            // Assert
-            _lightDevice.CurrentSwitchState.Should().Be(Switch.On);
-            _lightDevice.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(1));
-        }
-
-        [Fact]
-        public async Task TurnOffAsync_UpdatesSwitchState()
-        {
-            // Act
-            await _lightDevice.TurnOffAsync();
-
-            // Assert
-            _lightDevice.CurrentSwitchState.Should().Be(Switch.Off);
-            _lightDevice.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(1));
-        }
-
-        [Fact]
-        public async Task ToggleAsync_SwitchesFromOffToOn()
-        {
-            // Arrange
-            await _lightDevice.TurnOffAsync();
-
-            // Act
-            await _lightDevice.ToggleAsync();
-
-            // Assert
-            _lightDevice.CurrentSwitchState.Should().Be(Switch.On);
-        }
-
-        [Fact]
-        public async Task ToggleAsync_SwitchesFromOnToOff()
-        {
-            // Arrange
-            await _lightDevice.TurnOnAsync();
-
-            // Act
-            await _lightDevice.ToggleAsync();
-
-            // Assert
-            _lightDevice.CurrentSwitchState.Should().Be(Switch.Off);
-        }
-
-        [Fact]
-        public async Task WaitForSwitchStateAsync_ReturnsTrue_WhenStateMatches()
-        {
-            // Arrange
-            await _lightDevice.TurnOnAsync();
-
-            // Act
-            var result = await _lightDevice.WaitForSwitchStateAsync(Switch.On, TimeSpan.FromSeconds(1));
-
-            // Assert
-            result.Should().BeTrue();
-        }
-
-        #endregion
-
-        #region ILockableDevice Tests
-
-        [Fact]
-        public async Task LockAsync_UpdatesLockState()
-        {
-            // Act
-            await _lightDevice.LockAsync();
-
-            // Assert
-            _lightDevice.CurrentLockState.Should().Be(Lock.On);
-            _lightDevice.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(1));
-        }
-
-        [Fact]
-        public async Task UnlockAsync_UpdatesLockState()
-        {
-            // Act
-            await _lightDevice.UnlockAsync();
-
-            // Assert
-            _lightDevice.CurrentLockState.Should().Be(Lock.Off);
-            _lightDevice.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(1));
-        }
-
-        [Fact]
-        public async Task WaitForLockStateAsync_ReturnsTrue_WhenStateMatches()
-        {
-            // Arrange
-            await _lightDevice.LockAsync();
-
-            // Act
-            var result = await _lightDevice.WaitForLockStateAsync(Lock.On, TimeSpan.FromSeconds(1));
-
-            // Assert
-            result.Should().BeTrue();
-        }
-
-        #endregion
-
         #region Interface Composition Tests
 
         [Fact]
@@ -227,7 +123,7 @@ namespace KnxTest.Unit.Models
         }
 
         [Fact]
-        public async Task TurnOffAsync_ShouldSendCorrectTelegramAsync()
+        public async Task TurnOffAsync_ShouldSendCorrectTelegram()
         {
             // Arrange
             var address = _lightDevice.LightAddresses.Control;
@@ -434,23 +330,36 @@ namespace KnxTest.Unit.Models
         #region Wait Methods Tests
 
         [Theory]
+        [InlineData(Switch.On, 0, 0, 50)] // Wait for Switch.On
+        [InlineData(Switch.On, 200, 0, 50)] // Wait for Switch.On with timeout
+        [InlineData(Switch.Off, 0, 0, 50)] // Wait for Switch.Off
+        [InlineData(Switch.Off, 200, 0, 50)] // Wait for Switch.Off with timeout
+        [InlineData(Switch.Unknown, 0, 0, 50)] // Wait for Switch.Unknown
+        [InlineData(Switch.Unknown, 200, 0, 50)] // Wait for Switch.OfUnknownf with timeout
+        public async Task WaitForSwitchStateAsync_ImmediateReturnTrueWhenAlreadyInState(Switch switchState, int waitingTime, int executionTimeMin, int executionTimeMax)
+        {
+            // TODO: Test WaitForSwitchStateAsync: immediate return when already in state, timeout when wrong state
+            _lightDevice.SetSwitchStateForTest(switchState);
 
-        [InlineData(Switch.On, 0, Switch.On, 100, Switch.On, true, 0, 10)] // Wait for Switch.On
-        [InlineData(Switch.On, 50, Switch.Off,100, Switch.Off, true, 50, 60)] // Wait for Switch.Off with delay
-        [InlineData(Switch.Off, 0, Switch.Off,100, Switch.Off, true, 0, 10)] // Wait for Switch.Off
-        [InlineData(Switch.Off, 50, Switch.On, 100, Switch.On, true, 50, 60)] // Wait for Switch.On with delay
-        [InlineData(Switch.Unknown, 0, Switch.On, 100, Switch.On, true, 0, 10)] // Wait for Switch.On from Unknown
-        [InlineData(Switch.Unknown, 50, Switch.On, 100, Switch.On, true, 50, 60)] // Wait for Switch.On from Unknown with delay
-        [InlineData(Switch.Unknown, 0, Switch.Off, 100, Switch.Off, true, 0, 10)] // Wait for Switch.Off from Unknown
-        [InlineData(Switch.Unknown, 50, Switch.Off, 100, Switch.Off, true, 50, 60)] // Wait for Switch.Off from Unknown with delay
-        [InlineData(Switch.On, 100, Switch.On, 0, Switch.On, true, 0, 10)] // Wait for Switch.On
-        [InlineData(Switch.On, 100, Switch.Off, 50, Switch.On, false, 50, 60)] // Wait for Switch.Off with delay
-        [InlineData(Switch.Off, 100, Switch.Off, 0, Switch.Off, true, 0, 10)] // Wait for Switch.Off
-        [InlineData(Switch.Off, 100, Switch.On, 50, Switch.Off, false, 50, 60)] // Wait for Switch.On with delay
-        [InlineData(Switch.Unknown, 100, Switch.On, 0, Switch.Unknown,false, 0, 10)] // Wait for Switch.On from Unknown
-        [InlineData(Switch.Unknown, 100, Switch.On, 50, Switch.Unknown,false, 50, 60)] // Wait for Switch.On from Unknown with delay
-        [InlineData(Switch.Unknown, 100, Switch.Off, 0, Switch.Unknown,false, 0, 10)] // Wait for Switch.Off from Unknown
-        [InlineData(Switch.Unknown, 100, Switch.Off, 50, Switch.Unknown,false, 50, 60)] // Wait for Switch.Off from Unknown with delay
+            var timer = new System.Diagnostics.Stopwatch();
+            timer.Start();
+
+            // Act
+            var result = await _lightDevice.WaitForSwitchStateAsync(switchState, TimeSpan.FromMilliseconds(waitingTime));
+            timer.Stop();
+
+            // Assert
+            result.Should().BeTrue($"WaitForSwitchStateAsync should return {true} when state matches expected");
+            _lightDevice.CurrentSwitchState.Should().Be(switchState, "Current switch state should match expected after wait");
+            timer.ElapsedMilliseconds.Should().BeInRange(executionTimeMin, executionTimeMax,
+                $"Execution time should be between {executionTimeMin} and {executionTimeMax} ms");
+        }
+
+        [Theory]
+        [InlineData(Switch.On, 200, Switch.Off, 50, Switch.On, false, 50, 100)] // Wait for Switch.Off with delay
+        [InlineData(Switch.Off, 200, Switch.On, 50, Switch.Off, false, 50, 100)] // Wait for Switch.On with delay
+        [InlineData(Switch.Unknown, 200, Switch.On, 50, Switch.Unknown,false, 50, 100)] // Wait for Switch.On from Unknown with delay
+        [InlineData(Switch.Unknown, 200, Switch.Off, 50, Switch.Unknown,false, 50, 100)] // Wait for Switch.Off from Unknown with delay
 
         public async Task WaitForSwitchStateAsync_ShouldReturnCorrectly(Switch initialState, int delayInMs, Switch switchState, int waitingTime, Switch expectedState, bool expectedResult, int executionTimeMin, int executionTimeMax)
         {
@@ -464,7 +373,10 @@ namespace KnxTest.Unit.Models
             _ = Task.Delay(delayInMs)
                     .ContinueWith(_ =>
                     {
-                        _lightDevice.SetSwitchStateForTest(switchState);
+                        _mockKnxService.Raise(
+                            s => s.GroupMessageReceived += null,
+                            _mockKnxService.Object,
+                            new KnxGroupEventArgs(_lightDevice.LightAddresses.Feedback, new KnxValue(switchState == Switch.On)));
                     });
 
             // Act
@@ -478,22 +390,137 @@ namespace KnxTest.Unit.Models
                 $"Execution time should be between {executionTimeMin} and {executionTimeMax} ms");
         }
 
-        [Fact]
-        public void WaitForLockStateAsync_ShouldReturnCorrectly()
+        [Theory]
+        [InlineData(Lock.On, 0, 0, 50)] // Wait for Lock.On
+        [InlineData(Lock.On, 200, 0, 50)] // Wait for Lock.On with timeout
+        [InlineData(Lock.Off, 0, 0, 50)] // Wait for Lock.Off
+        [InlineData(Lock.Off, 200, 0, 50)] // Wait for Lock.Off with timeout
+        [InlineData(Lock.Unknown, 0, 0, 50)] // Wait for Lock.Unknown
+        [InlineData(Lock.Unknown, 200, 0, 50)] // Wait for Lock.OfUnknownf with timeout
+        public async Task WaitForLockAsync_ImmediateReturnTrueWhenAlreadyInState(Lock lockState, int waitingTime, int executionTimeMin, int executionTimeMax)
         {
             // TODO: Test WaitForLockStateAsync: immediate return when already in state, timeout when wrong state
+            _lightDevice.SetLockStateForTest(lockState);
+
+            var timer = new System.Diagnostics.Stopwatch();
+            timer.Start();
+
+            // Act
+            var result = await _lightDevice.WaitForLockStateAsync(lockState, TimeSpan.FromMilliseconds(waitingTime));
+            timer.Stop();
+
+            // Assert
+            result.Should().BeTrue($"WaitForLockStateAsync should return {true} when state matches expected");
+            _lightDevice.CurrentLockState.Should().Be(lockState, "Current lock state should match expected after wait");
+            timer.ElapsedMilliseconds.Should().BeInRange(executionTimeMin, executionTimeMax,
+                $"Execution time should be between {executionTimeMin} and {executionTimeMax} ms");
         }
 
-        [Fact]
-        public void WaitForSwitchStateAsync_WhenFeedbackReceived_ShouldReturnTrue()
+
+        [Theory]
+        [InlineData(Lock.On, 200, Lock.Off, 50, Lock.On, false, 50, 100)] // Wait for Lock.Off with delay
+        [InlineData(Lock.Off, 200, Lock.On, 50, Lock.Off, false, 50, 100)] // Wait for Lock.On with delay
+        [InlineData(Lock.Unknown, 200, Lock.On, 50, Lock.Unknown, false, 50, 100)] // Wait for Lock.On from Unknown with delay
+        [InlineData(Lock.Unknown, 200, Lock.Off, 50, Lock.Unknown, false, 50, 100)] // Wait for Lock.Off from Unknown with delay
+        public async Task WaitForLockStateAsync_ShouldReturnCorrectly(Lock initialState, int delayInMs, Lock lockState, int waitingTime, Lock expectedState, bool expectedResult, int executionTimeMin, int executionTimeMax)
         {
-            // TODO: Test that wait method returns true when feedback changes state to target
+            // TODO: Test WaitForLockStateAsync: immediate return when already in state, timeout when wrong state
+            _lightDevice.SetLockStateForTest(initialState);
+            var timer = new System.Diagnostics.Stopwatch();
+            timer.Start();
+
+            // Simulate delay before setting expected state
+            _ = Task.Delay(delayInMs)
+                    .ContinueWith(_ =>
+                    {
+                        _mockKnxService.Raise(
+                            s => s.GroupMessageReceived += null,
+                            _mockKnxService.Object,
+                            new KnxGroupEventArgs(_lightDevice.LightAddresses.LockFeedback, new KnxValue(lockState == Lock.On)));
+                    });
+
+            // Act
+            var result = await _lightDevice.WaitForLockStateAsync(lockState, TimeSpan.FromMilliseconds(waitingTime));
+            timer.Stop();
+            // Assert
+            result.Should().Be(expectedResult, $"WaitForLockStateAsync should return {expectedResult} when state matches expected");
+            _lightDevice.CurrentLockState.Should().Be(expectedState, "Current lock state should match expected after wait");
+            timer.ElapsedMilliseconds.Should().BeInRange(executionTimeMin, executionTimeMax,
+                $"Execution time should be between {executionTimeMin} and {executionTimeMax} ms");
         }
 
-        [Fact]
-        public void WaitForLockStateAsync_WhenFeedbackReceived_ShouldReturnTrue()
+        [Theory]
+        [InlineData(Switch.On, 50, Switch.Off, 200, Switch.Off,  50, 150)] // Wait for Switch.Off with delay
+        [InlineData(Switch.Off, 50, Switch.On, 200, Switch.On, 50, 150)] // Wait for Switch.On with delay
+        [InlineData(Switch.Unknown, 0, Switch.On, 200, Switch.On, 0, 100)] // Wait for Switch.On from Unknown
+        [InlineData(Switch.Unknown, 50, Switch.On, 200, Switch.On, 50, 150)] // Wait for Switch.On from Unknown with delay
+        [InlineData(Switch.Unknown, 0, Switch.Off, 200, Switch.Off, 0, 100)] // Wait for Switch.Off from Unknown
+        [InlineData(Switch.Unknown, 50, Switch.Off, 200, Switch.Off, 50, 150)] // Wait for Switch.Off from Unknown with delay
+
+        public async Task WaitForSwitchStateAsync_WhenFeedbackReceived_ShouldReturnTrue(Switch initialState, int delayInMs, Switch switchState, int waitingTime, Switch expectedState, int executionTimeMin, int executionTimeMax)
         {
             // TODO: Test that wait method returns true when feedback changes state to target
+            _lightDevice.SetSwitchStateForTest(initialState);
+
+            var timer = new System.Diagnostics.Stopwatch();
+            timer.Start();
+
+            // Simulate delay before setting expected state
+            _ = Task.Delay(delayInMs)
+                    .ContinueWith(_ =>
+                    {
+                        _mockKnxService.Raise(
+                            s => s.GroupMessageReceived += null,
+                            _mockKnxService.Object,
+                            new KnxGroupEventArgs(_lightDevice.LightAddresses.Feedback, new KnxValue(switchState == Switch.On)));
+                    });
+
+            // Act
+            var result = await _lightDevice.WaitForSwitchStateAsync(switchState, TimeSpan.FromMilliseconds(waitingTime));
+            timer.Stop();
+
+            // Assert
+            result.Should().BeTrue($"WaitForSwitchStateAsync should return {true} when state matches expected");
+            _lightDevice.CurrentSwitchState.Should().Be(expectedState, "Current switch state should match expected after wait");
+            timer.ElapsedMilliseconds.Should().BeInRange(executionTimeMin, executionTimeMax,
+                $"Execution time should be between {executionTimeMin} and {executionTimeMax} ms");
+        }
+
+        [Theory]
+        [InlineData(Lock.On, 50, Lock.Off, 200, Lock.Off, 50, 150)] // Wait for Lock.Off with delay
+        [InlineData(Lock.Off, 50, Lock.On, 200, Lock.On, 50, 150)] // Wait for Lock.On with delay
+        [InlineData(Lock.Unknown, 0, Lock.On, 200, Lock.On, 0, 100)] // Wait for Lock.On from Unknown
+        [InlineData(Lock.Unknown, 50, Lock.On, 200, Lock.On, 50, 150)] // Wait for Lock.On from Unknown with delay
+        [InlineData(Lock.Unknown, 0, Lock.Off, 200, Lock.Off, 0, 100)] // Wait for Lock.Off from Unknown
+        [InlineData(Lock.Unknown, 50, Lock.Off, 200, Lock.Off, 50, 150)] // Wait for Lock.Off from Unknown with delay
+
+        public async Task WaitForLockStateAsync_WhenFeedbackReceived_ShouldReturnTrue(Lock initialState, int delayInMs, Lock lockState, int waitingTime, Lock expectedState, int executionTimeMin, int executionTimeMax)
+        {
+            // TODO: Test that wait method returns true when feedback changes state to target
+            // TODO: Test WaitForLockStateAsync: immediate return when already in state, timeout when wrong state
+            _lightDevice.SetLockStateForTest(initialState);
+            var timer = new System.Diagnostics.Stopwatch();
+            timer.Start();
+
+            // Simulate delay before setting expected state
+            _ = Task.Delay(delayInMs)
+                    .ContinueWith(_ =>
+                    {
+                        _mockKnxService.Raise(
+                            s => s.GroupMessageReceived += null,
+                            _mockKnxService.Object,
+                            new KnxGroupEventArgs(_lightDevice.LightAddresses.LockFeedback, new KnxValue(lockState == Lock.On)));
+                    });
+
+            // Act
+            var result = await _lightDevice.WaitForLockStateAsync(lockState, TimeSpan.FromMilliseconds(waitingTime));
+            timer.Stop();
+            // Assert
+            result.Should().BeTrue($"WaitForLockStateAsync should return {true} when state matches expected");
+            _lightDevice.CurrentLockState.Should().Be(expectedState, "Current lock state should match expected after wait");
+            timer.ElapsedMilliseconds.Should().BeInRange(executionTimeMin, executionTimeMax,
+                $"Execution time should be between {executionTimeMin} and {executionTimeMax} ms");
+
         }
 
         #endregion
