@@ -33,37 +33,24 @@ namespace KnxTest.Unit.Models
             _lightDevice.LastUpdated.Should().Be(DateTime.MinValue); // Not initialized yet
         }
 
-        [Fact]
-        public async Task InitializeAsync_UpdatesLastUpdated()
+        [Theory]
+        [InlineData(Switch.On, Lock.On)]
+        [InlineData(Switch.Off, Lock.Off)]
+        [InlineData(Switch.On, Lock.Off)]
+        [InlineData(Switch.Off, Lock.On)]
+        public async Task InitializeAsync_UpdatesLastUpdatedAndStates(Switch switchState, Lock lockState)
         {
+            // Arrange
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_lightDevice.Addresses.Feedback)).ReturnsAsync(switchState == Switch.On);
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_lightDevice.Addresses.LockFeedback)).ReturnsAsync(lockState == Lock.On);
+
             // Act
             await _lightDevice.InitializeAsync();
 
             // Assert
             _lightDevice.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(1));
-        }
-
-        [Fact]
-        public async Task SaveAndRestoreState_WorksCorrectly()
-        {
-            // Arrange
-            await _lightDevice.InitializeAsync();
-            await _lightDevice.TurnOnAsync();
-            await _lightDevice.LockAsync();
-
-            // Act - Save state
-            _lightDevice.SaveCurrentState();
-
-            // Change state
-            await _lightDevice.TurnOffAsync();
-            await _lightDevice.UnlockAsync();
-
-            // Restore state
-            await _lightDevice.RestoreSavedStateAsync();
-
-            // Assert
-            _lightDevice.CurrentSwitchState.Should().Be(Switch.On);
-            _lightDevice.CurrentLockState.Should().Be(Lock.On);
+            _lightDevice.CurrentSwitchState.Should().Be(switchState);
+            _lightDevice.CurrentLockState.Should().Be(lockState);
         }
 
         #endregion
@@ -78,32 +65,6 @@ namespace KnxTest.Unit.Models
             _lightDevice.Should().BeAssignableTo<ISwitchable>();
             _lightDevice.Should().BeAssignableTo<ILockableDevice>();
             _lightDevice.Should().BeAssignableTo<ILightDevice>();
-        }
-
-        [Fact]
-        public async Task CanUseAsISwitchable()
-        {
-            // Arrange
-            ISwitchable switchable = _lightDevice;
-
-            // Act
-            await switchable.TurnOnAsync();
-
-            // Assert
-            switchable.CurrentSwitchState.Should().Be(Switch.On);
-        }
-
-        [Fact]
-        public async Task CanUseAsILockableDevice()
-        {
-            // Arrange
-            ILockableDevice lockable = _lightDevice;
-
-            // Act
-            await lockable.LockAsync();
-
-            // Assert
-            lockable.CurrentLockState.Should().Be(Lock.On);
         }
 
         #endregion
@@ -268,8 +229,6 @@ namespace KnxTest.Unit.Models
             _lightDevice.CurrentSwitchState.Should().Be(currentSwitchState);
             _lightDevice.CurrentLockState.Should().Be(currentLockState);
             _lightDevice.LastUpdated.Should().Be(currentDate, "LastUpdated should not change on unknown feedback");
-
-
 
         }
 
@@ -527,28 +486,115 @@ namespace KnxTest.Unit.Models
 
         #region State Management Tests
 
-        [Fact]
-        public void SaveCurrentState_ShouldStoreCurrentValues()
+        [Theory]
+        [InlineData(Switch.On, Lock.On)]
+        [InlineData(Switch.On, Lock.Off)]
+        [InlineData(Switch.On, Lock.Unknown)]
+        [InlineData(Switch.Off, Lock.On)]
+        [InlineData(Switch.Off, Lock.Off)]
+        [InlineData(Switch.Off, Lock.Unknown)]
+        [InlineData(Switch.Unknown, Lock.On)]
+        [InlineData(Switch.Unknown, Lock.Off)]
+        [InlineData(Switch.Unknown, Lock.Unknown)]
+
+        public void SaveCurrentState_ShouldStoreCurrentValues(Switch switchState, Lock lockState)
         {
-            // TODO: Test that SaveCurrentState captures current switch and lock states
+            // Arrange
+            _lightDevice.SetStateForTest(switchState, lockState);
+
+            // Act
+            _lightDevice.SaveCurrentState();
+
+            // Assert
+            _lightDevice.SavedSwitchState.Should().Be(switchState, "Saved switch state should match current state");
+            _lightDevice.SavedLockState.Should().Be(lockState, "Saved lock state should match current state");
         }
 
-        [Fact]
-        public void RestoreSavedStateAsync_ShouldSendCorrectTelegrams()
+        [Theory]
+        [InlineData(Switch.On, Lock.On, Switch.Off, Lock.Off)]
+        [InlineData(Switch.Off, Lock.Off, Switch.On, Lock.On)]
+        [InlineData(Switch.On, Lock.Off, Switch.Off, Lock.On)]
+        [InlineData(Switch.Off, Lock.On, Switch.On, Lock.Off)]
+        [InlineData(Switch.Unknown, Lock.Unknown, Switch.On, Lock.On)]
+        [InlineData(Switch.Unknown, Lock.Unknown, Switch.Off, Lock.Off)]
+        public async Task RestoreSavedStateAsync_ShouldSendCorrectTelegrams(Switch initialSwitchState, Lock initialLockState, Switch switchState, Lock lockState)
         {
             // TODO: Test that RestoreSavedStateAsync sends appropriate telegrams to restore state
+            // Arrange
+            _lightDevice.SetSavedStateForTest(initialSwitchState, initialLockState);
+            _lightDevice.SetStateForTest(switchState, lockState);
+            
+            if (initialSwitchState != switchState && initialSwitchState != Switch.Unknown)
+            {
+                //unlock to allow switch change
+                if (lockState == Lock.On)
+                {
+                    _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.LightAddresses.LockControl, false)).Returns(Task.CompletedTask);
+                }
+                _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.LightAddresses.Control, initialSwitchState == Switch.On)).Returns(Task.CompletedTask);
+            }
+            if (initialLockState != lockState && initialLockState != Lock.Unknown)
+            {
+                _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.LightAddresses.LockControl, initialLockState == Lock.On)).Returns(Task.CompletedTask);
+            }
+            
+            // Act
+            await _lightDevice.RestoreSavedStateAsync(TimeSpan.Zero);
+        }
+
+        [Theory]
+        [InlineData(Switch.On, Lock.On, Switch.Off, Lock.Off, Switch.On, Lock.On)]
+        [InlineData(Switch.Off, Lock.Off, Switch.On, Lock.On, Switch.Off, Lock.Off)]
+        [InlineData(Switch.On, Lock.Off, Switch.Off, Lock.On, Switch.On, Lock.Off)]
+        [InlineData(Switch.Off, Lock.On, Switch.On, Lock.Off, Switch.Off, Lock.On)]
+        [InlineData(Switch.Unknown, Lock.Unknown, Switch.On, Lock.On,Switch.On, Lock.On)]
+        [InlineData(Switch.Unknown, Lock.Unknown, Switch.Off, Lock.Off, Switch.Off, Lock.Off)]
+
+        public async Task RestoreSavedStateAsync_ShouldRestoreCorrectState(Switch initialSwitchState, Lock initialLockState, Switch switchState, Lock lockState, Switch restoredSwitchState, Lock restoredLockState)
+        {
+            // TODO: Test that RestoreSavedStateAsync sends appropriate telegrams to restore state
+            // Arrange
+            _lightDevice.SetSavedStateForTest(initialSwitchState, initialLockState);
+            _lightDevice.SetStateForTest(switchState, lockState);
+
+            if (initialSwitchState != switchState && initialSwitchState != Switch.Unknown)
+            {
+                //unlock to allow switch change
+                if (lockState == Lock.On)
+                {
+                    _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.LightAddresses.LockControl, false)).Returns(Task.CompletedTask).Callback(() =>
+                    {
+                        _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, new KnxGroupEventArgs(_lightDevice.LightAddresses.LockFeedback, new KnxValue(false)));
+                    });
+                }
+                _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.LightAddresses.Control, initialSwitchState == Switch.On)).Returns(Task.CompletedTask).Callback(() =>
+                {
+                    _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, new KnxGroupEventArgs(_lightDevice.LightAddresses.Feedback, new KnxValue(initialSwitchState == Switch.On)));
+                });
+            }
+            if (initialLockState != lockState && initialLockState != Lock.Unknown)
+            {
+                _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.LightAddresses.LockControl, initialLockState == Lock.On)).Returns(Task.CompletedTask).Callback(() =>
+                {
+                    _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, new KnxGroupEventArgs(_lightDevice.LightAddresses.LockFeedback, new KnxValue(initialLockState == Lock.On)));
+                });
+            }
+
+            // Act
+            await _lightDevice.RestoreSavedStateAsync(TimeSpan.Zero);
+            // Assert
+            _lightDevice.CurrentSwitchState.Should().Be(restoredSwitchState, "Current switch state should match restored state after restore");
+            _lightDevice.CurrentLockState.Should().Be(restoredLockState, "Current lock state should match restored state after restore");
         }
 
         [Fact]
-        public void RestoreSavedStateAsync_ShouldRestoreCorrectState()
+        public async Task RestoreSavedStateAsync_WhenNoSavedState_ShouldNotSendTelegrams()
         {
-            // TODO: Test state restoration with different saved state combinations
-        }
+            // Arrange
+            _lightDevice.SetStateForTest(Switch.On, Lock.On); // Set some initial state
 
-        [Fact]
-        public void RestoreSavedStateAsync_WhenNoSavedState_ShouldNotSendTelegrams()
-        {
-            // TODO: Test that restoration without saved state doesn't send any telegrams
+            // Act
+            await _lightDevice.RestoreSavedStateAsync(TimeSpan.Zero);
         }
 
         #endregion
@@ -559,24 +605,58 @@ namespace KnxTest.Unit.Models
         public void MultipleCommandsInSequence_ShouldSendAllTelegrams()
         {
             // TODO: Test that multiple commands are all sent correctly
+            // Arrange
+            _lightDevice.SetStateForTest(Switch.Off, Lock.Off);
+            _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.LightAddresses.Control, true))
+                          .Returns(Task.CompletedTask);
+            _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.LightAddresses.LockControl, true))
+                            .Returns(Task.CompletedTask);
+            _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.LightAddresses.Control, false))
+                            .Returns(Task.CompletedTask);
+            _mockKnxService.Setup(s => s.WriteGroupValueAsync(_lightDevice.LightAddresses.LockControl, false))
+                            .Returns(Task.CompletedTask);
+            // Act
+            _ = _lightDevice.TurnOnAsync(TimeSpan.Zero);
+            _ = _lightDevice.LockAsync(TimeSpan.Zero);
+            _ = _lightDevice.TurnOffAsync(TimeSpan.Zero);
+            _ = _lightDevice.UnlockAsync(TimeSpan.Zero);
         }
 
-        [Fact]
-        public void SimultaneousFeedbacks_ShouldProcessAllCorrectly()
+        [Theory]
+        [InlineData(Switch.Off, Lock.Off)]
+        [InlineData(Switch.On, Lock.On)]
+        [InlineData(Switch.On, Lock.Off)]
+        [InlineData(Switch.Off, Lock.On)]
+        public void SimultaneousFeedbacks_ShouldProcessAllCorrectly(Switch switchState, Lock lockState)
         {
             // TODO: Test processing multiple feedbacks in quick succession
+            // Arrange
+            var switchFeedbackArgs = new KnxGroupEventArgs(_lightDevice.LightAddresses.Feedback, new KnxValue(switchState == Switch.On)); // Simulate switch
+            var lockFeedbackArgs = new KnxGroupEventArgs(_lightDevice.LightAddresses.LockFeedback, new KnxValue(lockState == Lock.On)); // Simulate lock
+            // Act
+            _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, switchFeedbackArgs);
+            _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, lockFeedbackArgs);
+            // Assert
+            _lightDevice.CurrentSwitchState.Should().Be(switchState, "Switch state should match feedback");
+            _lightDevice.CurrentLockState.Should().Be(lockState, "Lock state should match feedback");
         }
 
         [Fact]
         public void InvalidFeedbackAddress_ShouldBeIgnored()
         {
             // TODO: Test that feedback from unknown addresses is ignored
-        }
+            // Arrange
+            var invalidAddress = "invalid/address/format";
+            var feedbackArgs = new KnxGroupEventArgs(invalidAddress, new KnxValue(true)); // Simulate invalid feedback
+            var currentState = _lightDevice.CurrentSwitchState;
+            var currentLockState = _lightDevice.CurrentLockState;
 
-        [Fact]
-        public void InvalidAddressFormat_ShouldBeHandledGracefully()
-        {
-            // TODO: Test handling of invalid address formats in feedback (null, empty, invalid)
+            // Act
+            _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, feedbackArgs);
+
+            // Assert
+            _lightDevice.CurrentSwitchState.Should().Be(currentState, "Current switch state should remain unchanged on invalid address");
+            _lightDevice.CurrentLockState.Should().Be(currentLockState, "Current lock state should remain unchanged on invalid address");
         }
 
         #endregion

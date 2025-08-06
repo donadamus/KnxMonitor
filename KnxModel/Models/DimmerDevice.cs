@@ -85,7 +85,7 @@ namespace KnxModel
             Console.WriteLine($"DimmerDevice {Id} state saved - Switch: {_savedSwitchState}, Lock: {_savedLockState}, Brightness: {_savedPercentage}%");
         }
 
-        public async Task RestoreSavedStateAsync()
+        public async Task RestoreSavedStateAsync(TimeSpan? timeout = null)
         {
             if (_savedSwitchState.HasValue)
             {

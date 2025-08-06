@@ -38,6 +38,6 @@ namespace KnxModel
         /// <summary>
         /// Restores the device to previously saved state
         /// </summary>
-        Task RestoreSavedStateAsync();
+        Task RestoreSavedStateAsync(TimeSpan? timeout = null);
     }
 }

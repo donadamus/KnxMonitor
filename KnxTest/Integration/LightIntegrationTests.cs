@@ -15,7 +15,7 @@ namespace KnxTest.Integration
     /// Inherits from DeviceTestBase and implements ILockableDeviceTests interface
     /// </summary>
     [Collection("KnxService collection")]
-    public class LightIntegrationTests : DeviceTestBaseNew, ILockableDeviceTests, ISwitchableDeviceTests, IDisposable
+    public class LightIntegrationTests : IntegrationTestBaseNew, ILockableDeviceTests, ISwitchableDeviceTests
     {
         private readonly LockTestHelper _lockTestHelper;
         private readonly SwitchTestHelper _switchTestHelper;
@@ -33,34 +33,23 @@ namespace KnxTest.Integration
             get
             {
                 var config = LightFactory.LightConfigurations;
-                return config.Where(x => x.Value.Name.ToLower().Contains("of"))
+                return config.Where(x => x.Value.Name.ToLower().Contains("off"))
                             .Select(k => new object[] { k.Key });
             }
         }
 
         // ===== DEVICE INITIALIZATION =====
 
-        private async Task InitializeDevice(string deviceId)
+        private async Task InitializeDevice(string deviceId, bool saveCurrentState = true)
         {
-            // Dispose previous device if exists to prevent event subscription accumulation
-            if (_device != null)
-            {
-                Console.WriteLine($"🗑️ Disposing previous device {_device.Id}");
-                _device.Dispose();
-                _device = null;
-                
-                // Give a small delay to ensure disposal completes
-                await Task.Delay(100);
-            }
-            else
-            {
-                Console.WriteLine($"🆕 No previous device to dispose");
-            }
-            
             Console.WriteLine($"🆕 Creating new LightDevice {deviceId}");
             _device = LightFactory.CreateLight(deviceId, _knxService);
             await _device.InitializeAsync();
-            
+            if (saveCurrentState)
+            {
+                _device.SaveCurrentState();
+            }
+
             Console.WriteLine($"Light {deviceId} initialized - Switch: {_device.CurrentSwitchState}, Lock: {_device.CurrentLockState}");
         }
 
@@ -178,12 +167,12 @@ namespace KnxTest.Integration
 
         #region Cleanup
 
-        public override async ValueTask DisposeAsync()
+        public override void Dispose()
         {
             try
             {
                 if (_device != null)
-                    await _device.RestoreSavedStateAsync();
+                    _device.RestoreSavedStateAsync().GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {
@@ -192,22 +181,9 @@ namespace KnxTest.Integration
             finally
             {
                 _device?.Dispose();
+                base.Dispose();
             }
         }
-
-
-        // ===== DEVICE CLEANUP =====
-
-        public void Dispose()
-        {
-            if (_device != null)
-            {
-                Console.WriteLine($"🧹 Disposing test class - cleaning up device {_device.Id}");
-                _device.Dispose();
-                _device = null;
-            }
-        }
-
         #endregion
     }
 }

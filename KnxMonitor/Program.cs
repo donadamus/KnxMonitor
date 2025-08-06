@@ -10,6 +10,9 @@ service.GroupMessageReceived += (sender, args) =>
     Console.WriteLine($"Received Group Address: {args.Destination}, Value: {args.Value}");
 };
 
+var light = LightFactory.CreateLight("L05.1", service);
+light.TurnOffAsync();
+
 // Create test dimmers
 var dimmer1 = new DimmerOld("DIM1", "Test Dimmer 1", "1", service);
 var dimmer2 = new DimmerOld("DIM2", "Test Dimmer 2", "2", service);

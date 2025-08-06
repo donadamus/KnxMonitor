@@ -83,7 +83,7 @@ namespace KnxModel
             Console.WriteLine($"ShutterDevice {Id} state saved - Position: {_savedPercentage}%, Lock: {_savedLockState}");
         }
 
-        public async Task RestoreSavedStateAsync()
+        public async Task RestoreSavedStateAsync(TimeSpan? timeout = null)
         {
             if (_savedPercentage.HasValue)
             {
