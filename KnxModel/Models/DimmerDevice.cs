@@ -111,6 +111,35 @@ namespace KnxModel
             return false;
         }
 
+        public async Task FadeToAsync(float targetBrightness, TimeSpan duration)
+        {
+            if (targetBrightness < 0 || targetBrightness > 100)
+            {
+                throw new ArgumentOutOfRangeException(nameof(targetBrightness), "Target brightness must be between 0 and 100");
+            }
+
+            Console.WriteLine($"Fading dimmer {Id} to {targetBrightness}% over {duration.TotalSeconds:F1} seconds");
+
+            var startBrightness = _currentPercentage;
+            var stepCount = Math.Max(1, (int)(duration.TotalMilliseconds / 100)); // Step every 100ms
+            var stepSize = (targetBrightness - startBrightness) / (float)stepCount;
+            var stepDelay = duration.TotalMilliseconds / stepCount;
+
+            for (int i = 1; i <= stepCount; i++)
+            {
+                var currentTarget = startBrightness + (int)(stepSize * i);
+                await SetPercentageAsync(currentTarget, TimeSpan.FromMilliseconds(stepDelay));
+
+                if (i < stepCount) // Don't delay after the last step
+                {
+                    await Task.Delay((int)stepDelay);
+                }
+            }
+
+            Console.WriteLine($"Fade completed for dimmer {Id}");
+        }
+
+
         public async Task AdjustPercentageAsync(float increment, TimeSpan? timeout = null)
         {
             var newPercentage = _currentPercentage + increment;

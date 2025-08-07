@@ -8,22 +8,6 @@ namespace KnxModel
     /// </summary>
     public static class LightFactory
     {
-        /// <summary>
-        /// Creates a light instance by ID
-        /// </summary>
-        public static ILightOld CreateLightOld(string lightId, IKnxService knxService)
-        {
-            if (LightConfigurations.TryGetValue(lightId, out var config))
-            {
-                return new LightOld(lightId, config.Name, config.SubGroup, knxService);
-            }
-            else if (DimmerFactory.DimmerConfigurations.TryGetValue(lightId, out var dimmerConfig))
-            {
-                return new DimmerOld(lightId, dimmerConfig.Name, dimmerConfig.SubGroup, knxService);
-            }
-
-            throw new ArgumentException($"Unknown light ID: {lightId}");
-        }
         public static LightDevice CreateLight(string lightId, IKnxService knxService)
         {
             if (LightConfigurations.TryGetValue(lightId, out var config))
@@ -38,16 +22,6 @@ namespace KnxModel
             throw new ArgumentException($"Unknown light ID: {lightId}");
         }
 
-        /// <summary>
-        /// Creates all lights defined in the configuration
-        /// </summary>
-        public static IEnumerable<ILightOld> CreateAllLights(IKnxService knxService)
-        {
-            foreach (var (id, config) in LightConfigurations)
-            {
-                yield return new LightOld(id, config.Name, config.SubGroup, knxService);
-            }
-        }
 
         /// <summary>
         /// Gets all available light IDs

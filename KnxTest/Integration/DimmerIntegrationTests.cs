@@ -105,7 +105,7 @@ namespace KnxTest.Integration
             await _lockTestHelper.EnsureDeviceIsUnlockedBeforeTest(Device!);
 
             // Act
-            await _percentageTestHelper.TestCanSetPercentage(Device!);
+            await _percentageTestHelper.CanSetPercentage(Device!);
 
             await Task.CompletedTask;
         }
@@ -122,7 +122,7 @@ namespace KnxTest.Integration
             await InitializeDevice(deviceId);
 
             //Act $ Assert
-            await _percentageTestHelper.TestCanReadPercentage(Device!);
+            await _percentageTestHelper.CanReadPercentage(Device!);
 
             await Task.CompletedTask;
 
@@ -137,7 +137,13 @@ namespace KnxTest.Integration
 
         public async Task TestPercentageRangeValidation(string deviceId)
         {
-            throw new NotImplementedException();
+            // Arrange
+            await InitializeDevice(deviceId);
+
+            // Ensure device is unlocked before testing switch functionality
+            await _lockTestHelper.EnsureDeviceIsUnlockedBeforeTest(Device!);
+
+            await _percentageTestHelper.PercentageRangeValidation(Device!);
         }
 
         [Theory]
@@ -149,7 +155,13 @@ namespace KnxTest.Integration
 
         public async Task TestCanAdjustPercentage(string deviceId)
         {
-            throw new NotImplementedException();
+            // Arrange
+            await InitializeDevice(deviceId);
+
+            // Ensure device is unlocked before testing switch functionality
+            await _lockTestHelper.EnsureDeviceIsUnlockedBeforeTest(Device!);
+
+            await _percentageTestHelper.CanAdjustPercentage(Device!);
         }
 
         [Theory]
@@ -161,7 +173,13 @@ namespace KnxTest.Integration
 
         public async Task TestCanSetToMinimum(string deviceId)
         {
-            throw new NotImplementedException();
+            // Arrange
+            await InitializeDevice(deviceId);
+
+            // Ensure device is unlocked before testing switch functionality
+            await _lockTestHelper.EnsureDeviceIsUnlockedBeforeTest(Device!);
+
+            await _percentageTestHelper.CanSetToMinimum(Device!);
         }
 
         [Theory]
@@ -173,7 +191,13 @@ namespace KnxTest.Integration
 
         public async Task TestCanSetToMaximum(string deviceId)
         {
-            throw new NotImplementedException();
+            // Arrange
+            await InitializeDevice(deviceId);
+
+            // Ensure device is unlocked before testing switch functionality
+            await _lockTestHelper.EnsureDeviceIsUnlockedBeforeTest(Device!);
+
+            await _percentageTestHelper.CanSetToMaximum(Device!);
         }
 
         [Theory]
@@ -185,7 +209,13 @@ namespace KnxTest.Integration
 
         public async Task TestCanWaitForPercentageState(string deviceId)
         {
-            throw new NotImplementedException();
+            // Arrange
+            await InitializeDevice(deviceId);
+
+            // Ensure device is unlocked before testing switch functionality
+            await _lockTestHelper.EnsureDeviceIsUnlockedBeforeTest(Device!);
+
+            await _percentageTestHelper.CanWaitForPercentageState(Device!);
         }
 
         [Theory]
@@ -197,7 +227,15 @@ namespace KnxTest.Integration
 
         public async Task TestCanSetSpecificPercentages(string deviceId)
         {
-            throw new NotImplementedException();
+            // Arrange
+            await InitializeDevice(deviceId);
+
+            // Ensure device is unlocked before testing switch functionality
+            await _lockTestHelper.EnsureDeviceIsUnlockedBeforeTest(Device!);
+
+            await _percentageTestHelper.CanSetSpecificPercentages(Device!);
+
+            await Task.CompletedTask;
         }
     }
 }

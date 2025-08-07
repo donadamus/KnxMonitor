@@ -25,30 +25,6 @@ namespace KnxModel
         }
 
         /// <summary>
-        /// Creates a light instance by ID
-        /// </summary>
-        public static IDimmerOld CreateDimmerOld(string dimmerId, IKnxService knxService)
-        {
-            if (!DimmerConfigurations.TryGetValue(dimmerId, out var config))
-            {
-                throw new ArgumentException($"Unknown Dimmer ID: {dimmerId}");
-            }
-
-            return new DimmerOld(dimmerId, config.Name, config.SubGroup, knxService);
-        }
-
-        /// <summary>
-        /// Creates all lights defined in the configuration
-        /// </summary>
-        public static IEnumerable<IDimmerOld> CreateAllDimmers(IKnxService knxService)
-        {
-            foreach (var (id, config) in DimmerConfigurations)
-            {
-                yield return new DimmerOld(id, config.Name, config.SubGroup, knxService);
-            }
-        }
-
-        /// <summary>
         /// Gets all available light IDs
         /// </summary>
         public static IEnumerable<string> GetAvailableDimmerIds()
