@@ -3,6 +3,7 @@ using KnxModel;
 
 namespace KnxTest.Integration.Base
 {
+
     public class SwitchTestHelper
     {
         public SwitchTestHelper()

@@ -32,7 +32,7 @@ namespace KnxModel
         /// <param name="targetPercentage">Target percentage to wait for</param>
         /// <param name="tolerance">Allowed deviation in percentage points</param>
         /// <param name="timeout">Maximum time to wait</param>
-        Task<bool> WaitForPercentageAsync(float targetPercentage, double tolerance = 2.0, TimeSpan? timeout = null);
+        Task<bool> WaitForPercentageAsync(float targetPercentage, double tolerance = 1.0, TimeSpan? timeout = null);
 
         /// <summary>
         /// Increase percentage by specified amount

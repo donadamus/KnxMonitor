@@ -19,7 +19,7 @@ namespace KnxModel
         string BrightnessFeedback,
         string LockControl,
         string LockFeedback
-    ) : LightAddresses(SwitchControl, SwitchFeedback, LockControl, LockFeedback);
+    ) : LightAddresses(SwitchControl, SwitchFeedback, LockControl, LockFeedback), IBrightnessControllableAddress;
 
     /// <summary>
     /// Current state of a KNX dimmer

@@ -32,6 +32,7 @@ namespace KnxModel
             _ => false
         };
    }
+
     /// <summary>
     /// KNX addresses for light control and feedback
     /// </summary>
@@ -62,6 +63,17 @@ public record LockableAddresses(
         string LockControl { get; }
         string LockFeedback { get; }
     }
+    public interface IPercentageControllableAddress
+    {
+        string PercantageControl { get; }
+        string PercantageFeedback { get; }
+    }
+    public interface IBrightnessControllableAddress
+    {
+        string BrightnessControl { get; }
+        string BrightnessFeedback { get; }
+    }
+
 
     /// <summary>
     /// Current state of a KNX light

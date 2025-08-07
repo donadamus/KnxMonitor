@@ -1,13 +1,16 @@
 using KnxModel;
 using KnxTest.Integration.Base;
+using KnxTest.Integration.Interfaces;
 
 namespace KnxTest.Integration
 {
     [Collection("KnxService collection")]
-    public class DimmerIntegrationTests : LightIntegrationTestsBase<DimmerDevice>
+    public class DimmerIntegrationTests : LightIntegrationTestsBase<DimmerDevice>, IPercentageControllableDeviceTests
     {
+        internal readonly PercentageControllTestHelper _percentageTestHelper;
         public DimmerIntegrationTests(KnxServiceFixture fixture) : base(fixture)
         {
+            _percentageTestHelper = new PercentageControllTestHelper();
         }
 
         // Data source for tests - only pure lights (not dimmers)
@@ -86,5 +89,115 @@ namespace KnxTest.Integration
             await TestSwitchableDeviceTurnOffWhenLocked(deviceId);
         }
 
+        [Theory]
+        [MemberData(nameof(DimmerIdsFromConfig))]
+        public async Task CanSetPercentage(string deviceId)
+        {
+            await TestCanSetPercentage(deviceId);
+        }
+
+        public async Task TestCanSetPercentage(string deviceId)
+        {
+            // Arrange
+            await InitializeDevice(deviceId);
+
+            // Ensure device is unlocked before testing switch functionality
+            await _lockTestHelper.EnsureDeviceIsUnlockedBeforeTest(Device!);
+
+            // Act
+            await _percentageTestHelper.TestCanSetPercentage(Device!);
+
+            await Task.CompletedTask;
+        }
+
+        [Theory]
+        [MemberData(nameof(DimmerIdsFromConfig))]
+        public async Task CanReadPercentage(string deviceId)
+        {
+            await TestCanReadPercentage(deviceId);
+        }
+
+        public async Task TestCanReadPercentage(string deviceId)
+        {
+            await InitializeDevice(deviceId);
+
+            //Act $ Assert
+            await _percentageTestHelper.TestCanReadPercentage(Device!);
+
+            await Task.CompletedTask;
+
+        }
+
+        [Theory]
+        [MemberData(nameof(DimmerIdsFromConfig))]
+        public async Task PercentageRangeValidation(string deviceId)
+        {
+            await TestPercentageRangeValidation(deviceId);
+        }
+
+        public async Task TestPercentageRangeValidation(string deviceId)
+        {
+            throw new NotImplementedException();
+        }
+
+        [Theory]
+        [MemberData(nameof(DimmerIdsFromConfig))]
+        public async Task CanAdjustPercentage(string deviceId)
+        {
+            await TestCanAdjustPercentage(deviceId);
+        }
+
+        public async Task TestCanAdjustPercentage(string deviceId)
+        {
+            throw new NotImplementedException();
+        }
+
+        [Theory]
+        [MemberData(nameof(DimmerIdsFromConfig))]
+        public async Task CanSetToMinimum(string deviceId)
+        {
+            await TestCanSetToMinimum(deviceId);
+        }
+
+        public async Task TestCanSetToMinimum(string deviceId)
+        {
+            throw new NotImplementedException();
+        }
+
+        [Theory]
+        [MemberData(nameof(DimmerIdsFromConfig))]
+        public async Task CanSetToMaximum(string deviceId)
+        {
+            await TestCanSetToMaximum(deviceId);
+        }
+
+        public async Task TestCanSetToMaximum(string deviceId)
+        {
+            throw new NotImplementedException();
+        }
+
+        [Theory]
+        [MemberData(nameof(DimmerIdsFromConfig))]
+        public async Task CanWaitForPercentageState(string deviceId)
+        {
+           await TestCanWaitForPercentageState(deviceId);
+        }
+
+        public async Task TestCanWaitForPercentageState(string deviceId)
+        {
+            throw new NotImplementedException();
+        }
+
+        [Theory]
+        [MemberData(nameof(DimmerIdsFromConfig))]
+        public async Task CanSetSpecificPercentages(string deviceId)
+        {
+            await TestCanSetSpecificPercentages(deviceId);
+        }
+
+        public async Task TestCanSetSpecificPercentages(string deviceId)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

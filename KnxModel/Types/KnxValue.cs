@@ -59,7 +59,7 @@ namespace KnxModel
             return RawValue switch
             {
                 Percent p => (int)p.Value,
-                byte b => (int)(b / 2.55), // Convert KNX byte (0-255) to percentage (0-100)
+                byte b => (float)(b / 2.55), // Convert KNX byte (0-255) to percentage (0-100)
                 int i when i >= 0 && i <= 100 => (float)i, // Already percentage
                 float f when f >= 0 && f <= 100 => f,
                 double d when d >= 0 && d <= 100 => (float)d,

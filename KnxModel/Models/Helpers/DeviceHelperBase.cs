@@ -68,5 +68,20 @@ namespace KnxModel.Models.Helpers
                 description: $"set {address} to {value}"
             );
         }
+
+        protected async Task SetFloatFunctionAsync(string address, float value, Func<bool> condition, TimeSpan? timeout = null)
+        {
+            var effectiveTimeout = timeout ?? _defaultTimeout;
+            // Write the value to the KNX bus
+            _knxService.WriteGroupValue(address, value);
+            // Wait for the state to be updated
+
+            await WaitForConditionAsync(
+                condition: condition,
+                timeout: effectiveTimeout,
+                description: $"set {address} to {value}"
+            );
+        }
+
     }
 }
