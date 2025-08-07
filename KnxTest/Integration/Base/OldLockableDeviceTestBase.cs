@@ -3,7 +3,7 @@ using KnxTest.Integration.Interfaces;
 
 namespace KnxTest.Integration.Base
 {
-    public abstract class OldLockableDeviceTestBase<T> : DeviceTestBase, ILockableDeviceTests
+    public abstract class OldLockableDeviceTestBase<T> : DeviceTestBase, ILockableDeviceTests<T>
         where T : ILockableOld
     {
         protected T _device; // Will be initialized in each test method
@@ -75,5 +75,64 @@ namespace KnxTest.Integration.Base
             _device.Dispose();
         }
 
+        public Task CanLockAndUnlock(T device)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task LockPreventsStateChanges(T device)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task CanReadLockState(T device)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SwitchableDeviceTurnOffWhenLocked(T device)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task TestCanLockAndUnlock(T device)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task TestLockPreventsStateChanges(T device)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task TestCanReadLockState(T device)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task TestSwitchableDeviceTurnOffWhenLocked(T device)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task TestCanLockAndUnlock(string deviceId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task TestLockPreventsStateChanges(string deviceId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task TestCanReadLockState(string deviceId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task TestSwitchableDeviceTurnOffWhenLocked(string deviceId)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

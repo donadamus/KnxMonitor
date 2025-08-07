@@ -29,31 +29,51 @@ namespace KnxTest.Integration
         #region ILockableDeviceTests Implementation
         [Theory]
         [MemberData(nameof(DimmerIdsFromConfig))]
-        public override async Task CanLockAndUnlock(string deviceId)
+        public async Task CanLockAndUnlockTest(string deviceId)
         {
             await AssertCanLockAndUnlock(deviceId);
         }
 
         [Theory]
         [MemberData(nameof(DimmerIdsFromConfig))]
-        public override async Task LockPreventsStateChanges(string deviceId)
+        public async Task LockPreventsStateChangesTest(string deviceId)
         {
             await AssertLockPreventsStateChanges(deviceId);
         }
 
         [Theory]
         [MemberData(nameof(DimmerIdsFromConfig))]
-        public override async Task CanReadLockState(string deviceId)
+        public async Task CanReadLockStateTest(string deviceId)
         {
             await AssertCanReadLockState(deviceId);
         }
 
         [Theory]
         [MemberData(nameof(DimmerIdsFromConfig))]
-        public override async Task SwitchableDeviceTurnOffWhenLocked(string deviceId)
+        public  async Task SwitchableDeviceTurnOffWhenLockedTest(string deviceId)
         {
             // Dimmer specific test for auto-off when locked
             await AssertSwitchableDeviceTurnOffWhenLocked(deviceId);
+        }
+
+        public override Task CanLockAndUnlock(string deviceId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Task LockPreventsStateChanges(string deviceId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Task CanReadLockState(string deviceId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Task SwitchableDeviceTurnOffWhenLocked(string deviceId)
+        {
+            throw new NotImplementedException();
         }
         #endregion
 
