@@ -5,7 +5,7 @@ namespace KnxTest.Integration.Interfaces
     /// <summary>
     /// Tests for devices that support lock functionality
     /// </summary>
-    public interface ILockableDeviceTests<TDevice>
+    public interface ILockableDeviceTests
     {
         /// <summary>
         /// Tests basic lock and unlock functionality

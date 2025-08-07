@@ -1,6 +1,6 @@
 namespace KnxTest.Integration.Interfaces
 {
-    public interface ISwitchableDeviceTests<TDevice>
+    public interface ISwitchableDeviceTests
     {
         Task CanTurnOnAndTurnOff(string deviceId);
         Task TestCanTurnOnAndTurnOff(string deviceId);
