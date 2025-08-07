@@ -94,21 +94,7 @@ namespace KnxModel
                 throw new ArgumentOutOfRangeException(nameof(targetPercentage), "Target percentage must be between 0 and 100");
             }
 
-            var actualTimeout = timeout ?? TimeSpan.FromSeconds(10); // Default 10 seconds
-            var endTime = DateTime.Now + actualTimeout;
-
-            while (DateTime.Now < endTime)
-            {
-                var currentPercentage = await ReadPercentageAsync();
-                if (Math.Abs(currentPercentage - targetPercentage) <= tolerance)
-                {
-                    return true;
-                }
-
-                await Task.Delay(100); // Check every 100ms
-            }
-
-            return false;
+            return await _percentageControllableHelper.WaitForPercentageAsync(targetPercentage, tolerance, timeout);
         }
 
         public async Task FadeToAsync(float targetBrightness, TimeSpan duration)

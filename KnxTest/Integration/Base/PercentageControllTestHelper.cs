@@ -119,6 +119,7 @@ namespace KnxTest.Integration.Base
             //await EnsureDeviceIsAtZeroPercentBeforeTest(dimmerDevice);
 
             await SetDevicePercentageAndAssert(dimmerDevice, 50, TimeSpan.FromSeconds(20));
+            await Task.CompletedTask;
         }
 
         internal async Task CanSetSpecificPercentages(IPercentageControllable device)
@@ -128,31 +129,38 @@ namespace KnxTest.Integration.Base
             await SetDevicePercentageAndAssert(device, 33, TimeSpan.FromSeconds(20));
             await SetDevicePercentageAndAssert(device, 49, TimeSpan.FromSeconds(20));
             await SetDevicePercentageAndAssert(device, 78, TimeSpan.FromSeconds(20));
+            await Task.CompletedTask;
         }
 
         internal async Task CanWaitForPercentageState(DimmerDevice dimmerDevice)
         {
+            // Ensure device is at 0% before starting percentage tests
+            await EnsureDeviceIsAtZeroPercentBeforeTest(dimmerDevice);
             // Set device to a known percentage first
-            await SetDevicePercentageAndAssert(dimmerDevice, 25, TimeSpan.FromSeconds(20));
+            await SetDevicePercentageAndAssert(dimmerDevice, 25, TimeSpan.FromSeconds(10));
             
             // Test waiting for current state (should return immediately)
-            var waitResult = await dimmerDevice.WaitForPercentageAsync(25, 1, TimeSpan.FromSeconds(1));
+            var waitResult = await dimmerDevice.WaitForPercentageAsync(25, 1, TimeSpan.Zero);
             waitResult.Should().BeTrue($"Device {dimmerDevice.Id} should immediately return true when waiting for current state");
-            
+            dimmerDevice.CurrentPercentage.Should().BeApproximately(25, 1,
+                $"Device {dimmerDevice.Id} should be at 25% after waiting for current state");
+
             // Test waiting for a different state with tolerance
-            await dimmerDevice.SetPercentageAsync(75, TimeSpan.FromSeconds(20));
-            waitResult = await dimmerDevice.WaitForPercentageAsync(75, 2, TimeSpan.FromSeconds(5));
+            await dimmerDevice.SetPercentageAsync(75, TimeSpan.Zero);
+            waitResult = await dimmerDevice.WaitForPercentageAsync(75, 1, TimeSpan.FromSeconds(10));
             waitResult.Should().BeTrue($"Device {dimmerDevice.Id} should reach 75% within tolerance");
-            
-            // Test waiting with very tight tolerance - should still work for exact match
-            waitResult = await dimmerDevice.WaitForPercentageAsync(dimmerDevice.CurrentPercentage, 0.1f, TimeSpan.FromSeconds(1));
-            waitResult.Should().BeTrue($"Device {dimmerDevice.Id} should match current percentage with tight tolerance");
-            
-            // Test timeout scenario - wait for state that won't occur
-            waitResult = await dimmerDevice.WaitForPercentageAsync(dimmerDevice.CurrentPercentage + 50, 1, TimeSpan.FromMilliseconds(500));
-            waitResult.Should().BeFalse($"Device {dimmerDevice.Id} should timeout when waiting for unreachable state");
-            
+            dimmerDevice.CurrentPercentage.Should().BeApproximately(75, 1,
+                $"Device {dimmerDevice.Id} should be at 75% after waiting for that state");
+
+            waitResult = await dimmerDevice.WaitForPercentageAsync(40, 1, TimeSpan.FromMilliseconds(100));
+            // This should return false since we are waiting for 40% but the device is at 75% no
+            waitResult.Should().BeFalse($"Device {dimmerDevice.Id} should not reach 40% when it is at 75%");
+            dimmerDevice.CurrentPercentage.Should().BeApproximately(75, 1,
+                $"Device {dimmerDevice.Id} should still be at 75% after waiting for unreachable state");
+
             Console.WriteLine($"✅ Device {dimmerDevice.Id} wait for percentage state functionality works correctly");
+
+            await Task.CompletedTask;
         }
 
         private async Task SetDevicePercentageAndAssert(IPercentageControllable device, float targetPercentage, TimeSpan? timeout = null)

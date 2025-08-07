@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace KnxModel.Models.Helpers
@@ -56,11 +57,16 @@ namespace KnxModel.Models.Helpers
                 timeout
             );
         }
+
+        internal async Task<bool> WaitForPercentageAsync(float targetPercentage, double tolerance, TimeSpan? timeout)
+        {
+            return await WaitForConditionAsync(
+                () => Math.Abs(_getCurrentPercentage() - targetPercentage) <= tolerance,
+                timeout ?? _defaultTimeout,
+                $"percentage {targetPercentage} ± {tolerance}"
+            );
+        }
     }
-
-
-
-
 
     /// <summary>
     /// Helper class for implementing lockable device functionality
