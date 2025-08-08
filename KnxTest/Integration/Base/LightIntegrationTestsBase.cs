@@ -27,50 +27,9 @@ namespace KnxTest.Integration.Base
         #region ILockableDeviceTests Implementation
 
         public abstract Task CanLockAndUnlock(string deviceId);
-        public async Task TestCanLockAndUnlock(string deviceId)
-        {
-            // Arrange
-            await InitializeDevice(deviceId);
-
-            // Act & Assert
-            await _lockTestHelper.CanLockAndUnlock(Device!);
-
-            await Task.CompletedTask;
-        }
         public abstract Task LockPreventsStateChanges(string deviceId);
-        public async Task TestLockPreventsStateChanges(string deviceId)
-        {
-            // Arrange
-            await InitializeDevice(deviceId);
-
-            // Act & Assert
-            await _lockTestHelper.LockPreventsStateChange(Device!);
-
-            await Task.CompletedTask;
-
-        }
         public abstract Task CanReadLockState(string deviceId);
-        public async Task TestCanReadLockState(string deviceId)
-        {
-            // Arrange
-            await InitializeDevice(deviceId);
-
-            // Act & Assert
-            await _lockTestHelper.CanReadLockState(Device!);
-
-            await Task.CompletedTask;
-        }
         public abstract Task SwitchableDeviceTurnOffWhenLocked(string deviceId);
-        public async Task TestSwitchableDeviceTurnOffWhenLocked(string deviceId)
-        {
-            // Arrange
-            await InitializeDevice(deviceId);
-
-            // Act & Assert
-            await _lockTestHelper.SwitchableDeviceTurnOffWhenLocked(Device!);
-
-            await Task.CompletedTask;
-        }
 
         #endregion
 

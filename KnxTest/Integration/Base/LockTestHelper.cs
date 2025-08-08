@@ -45,6 +45,8 @@ namespace KnxTest.Integration.Base
             
             // Test Unlock
             await ChangeLockStateAndForceUpdateIfNeeded(device, Lock.Off);
+
+            await Task.CompletedTask;
         }
 
 
@@ -109,6 +111,7 @@ namespace KnxTest.Integration.Base
                 "Device should remain OFF after attempting to turn ON while locked");
 
             Console.WriteLine($"✅ Device {device.Id} lock properly prevents state changes");
+            await Task.CompletedTask;
         }
 
         public async Task CanReadLockState(ILockableDevice device)
@@ -122,6 +125,8 @@ namespace KnxTest.Integration.Base
             device.CurrentLockState.Should().Be(lockState, "Current state should match read lock state");
 
             Console.WriteLine($"✅ Device {device.Id} lock state read successfully: {lockState}");
+
+            await Task.CompletedTask;
         }
 
         public async Task SwitchableDeviceTurnOffWhenLocked(ILockableDevice device)
@@ -145,6 +150,7 @@ namespace KnxTest.Integration.Base
             await CheckIfTheDeviceHasSwitchedOffWhenLocked(device, switchableDevice);
 
             Console.WriteLine($"✅ Device {device.Id} automatically turned OFF when locked");
+            await Task.CompletedTask;
         }
 
         private static async Task CheckIfTheDeviceHasSwitchedOffWhenLocked(ILockableDevice device, ISwitchable switchableDevice)

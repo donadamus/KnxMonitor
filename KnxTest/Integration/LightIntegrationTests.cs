@@ -51,28 +51,46 @@ namespace KnxTest.Integration
        // [MemberData(nameof(LightIdsFromConfig))]
         public override async Task CanLockAndUnlock(string deviceId)
         {
-            await TestCanLockAndUnlock(deviceId);
+            // Arrange
+            await InitializeDevice(deviceId);
+
+            // Act & Assert
+            await _lockTestHelper.CanLockAndUnlock(Device!);
+
+
         }
 
         [Theory]
         [MemberData(nameof(LightIdsFromConfig))]
         public override async Task LockPreventsStateChanges(string deviceId)
         {
-            await TestLockPreventsStateChanges(deviceId);
+            // Arrange
+            await InitializeDevice(deviceId);
+
+            // Act & Assert
+            await _lockTestHelper.LockPreventsStateChange(Device!);
         }
 
         [Theory]
         [MemberData(nameof(LightIdsFromConfig))]
         public override async Task CanReadLockState(string deviceId)
         {
-            await TestCanReadLockState(deviceId);
+            // Arrange
+            await InitializeDevice(deviceId);
+
+            // Act & Assert
+            await _lockTestHelper.CanReadLockState(Device!);
         }
 
         [Theory]
         [MemberData(nameof(LightIdsFromConfig))]
         public override async Task SwitchableDeviceTurnOffWhenLocked(string deviceId)
         {
-            await TestSwitchableDeviceTurnOffWhenLocked(deviceId);
+            // Arrange
+            await InitializeDevice(deviceId);
+
+            // Act & Assert
+            await _lockTestHelper.SwitchableDeviceTurnOffWhenLocked(Device!);
         }
 
         #endregion
