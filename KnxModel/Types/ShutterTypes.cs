@@ -8,13 +8,13 @@ namespace KnxModel
     public record ShutterAddresses(
         string MovementControl,      // 4/0/X - UP/DOWN control
         string MovementFeedback,     // 4/0/{X+100} - UP/DOWN feedback
-        string PositionControl,      // 4/2/X - absolute position control
-        string PositionFeedback,     // 4/2/{X+100} - position feedback
+        string PercentageControl,      // 4/2/X - absolute position control
+        string PercentageFeedback,     // 4/2/{X+100} - position feedback
         string LockControl,          // 4/3/X - lock control
         string LockFeedback,         // 4/3/{X+100} - lock feedback
         string StopControl,          // 4/1/X - stop/step control
         string MovementStatusFeedback // 4/1/{X+100} - movement status feedback
-    ) : LockableAddresses(LockControl, LockFeedback), ILockableAddress;
+    ) : LockableAddresses(LockControl, LockFeedback), ILockableAddress, IPercentageControllableAddress;
 
     /// <summary>
     /// Current state of a shutter

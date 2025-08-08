@@ -3,6 +3,10 @@ using System;
 
 namespace KnxModel
 {
+
+    
+
+
     public class DimmerDevice : LightDeviceBase<DimmerAddresses>, IDimmerDevice
     {
 

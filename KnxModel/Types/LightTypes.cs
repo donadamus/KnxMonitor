@@ -65,8 +65,8 @@ public record LockableAddresses(
     }
     public interface IPercentageControllableAddress
     {
-        string PercantageControl { get; }
-        string PercantageFeedback { get; }
+        string PercentageControl { get; }
+        string PercentageFeedback { get; }
     }
     public interface IBrightnessControllableAddress
     {

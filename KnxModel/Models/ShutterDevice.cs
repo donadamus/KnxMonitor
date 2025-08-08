@@ -10,63 +10,42 @@ namespace KnxModel
     /// Position: 0% = fully open, 100% = fully closed
     /// IsActive: true = moving, false = stopped
     /// </summary>
-    public class ShutterDevice : IShutterDevice
+    public class ShutterDevice : LockableDeviceBase<ShutterAddresses>, IShutterDevice
     {
-        private readonly IKnxService _knxService;
-        private readonly LockableDeviceHelper _lockableHelper;
+        private readonly PercentageControllableDeviceHelper _shutterHelper;
 
         private float _currentPercentage = 0.0f; // Start fully open
-        private Lock _currentLockState = Lock.Unknown;
         private bool _isActive = false; // Movement status: true = moving, false = stopped
-        private DateTime _lastUpdated = DateTime.MinValue;
         
         // Saved state for testing
         private float? _savedPercentage;
-        private Lock? _savedLockState;
-
-        public ShutterDevice(string id, string name, string subGroup, ShutterAddresses addresses, IKnxService knxService)
-        {
-            Id = id ?? throw new ArgumentNullException(nameof(id));
-            Name = name ?? throw new ArgumentNullException(nameof(name));
-            SubGroup = subGroup ?? throw new ArgumentNullException(nameof(subGroup));
-            ShutterAddresses = addresses ?? throw new ArgumentNullException(nameof(addresses));
-            _knxService = knxService ?? throw new ArgumentNullException(nameof(knxService));
-
-
-            _lockableHelper = new LockableDeviceHelper(
-                _knxService, Id, "LightDevice",
-                () => ShutterAddresses,
-                state => { _currentLockState = state; _lastUpdated = DateTime.Now; },
-                () => _currentLockState);
-        }
 
         /// <summary>
         /// Convenience constructor that automatically creates addresses based on subGroup
         /// </summary>
         public ShutterDevice(string id, string name, string subGroup, IKnxService knxService)
-            : this(id, name, subGroup, KnxAddressConfiguration.CreateShutterAddresses(subGroup), knxService)
+            : base(id, name, subGroup, KnxAddressConfiguration.CreateShutterAddresses(subGroup), knxService)
         {
+            _shutterHelper = new PercentageControllableDeviceHelper(
+                            _knxService, Id, "ShutterDevice",
+                            () => Addresses,
+                            state => { _currentPercentage = state; _lastUpdated = DateTime.Now; },
+                            () => _currentPercentage);
+            _eventManager.MessageReceived += OnKnxMessageReceived;
+
         }
 
-        #region IKnxDeviceBase Implementation
+        private void OnKnxMessageReceived(object? sender, KnxGroupEventArgs e)
+        {
+            // Process percentage control messages
+            _shutterHelper.ProcessSwitchMessage(e);
 
-        public string Id { get; }
-        public string Name { get; }
-        public string SubGroup { get; }
-        public DateTime LastUpdated => _lastUpdated;
+        }
 
-        #endregion
-
-        #region ShutterDevice Addresses
-
-        public ShutterAddresses ShutterAddresses { get; }
-        public ShutterAddresses Addresses => ShutterAddresses; // Dla kompatybilności
-
-        #endregion
 
         #region IKnxDeviceBase Methods
 
-        public async Task InitializeAsync()
+        public override async Task InitializeAsync()
         {
             // Read initial states from KNX bus
             _currentPercentage = await ReadPercentageAsync();
@@ -76,40 +55,29 @@ namespace KnxModel
             Console.WriteLine($"ShutterDevice {Id} initialized - Position: {_currentPercentage}%, Lock: {_currentLockState}");
         }
 
-        public void SaveCurrentState()
+        public override void SaveCurrentState()
         {
+            base.SaveCurrentState();
             _savedPercentage = _currentPercentage;
-            _savedLockState = _currentLockState;
             Console.WriteLine($"ShutterDevice {Id} state saved - Position: {_savedPercentage}%, Lock: {_savedLockState}");
         }
 
-        public async Task RestoreSavedStateAsync(TimeSpan? timeout = null)
+        public override async Task RestoreSavedStateAsync(TimeSpan? timeout = null)
         {
-            if (_savedPercentage.HasValue)
+            if (_savedPercentage.HasValue && _savedPercentage.Value != _currentPercentage)
             {
-                await SetPercentageAsync(_savedPercentage.Value);
+                // Unlock before changing switch state if necessary
+                if (_currentLockState == Lock.On)
+                {
+                    await UnlockAsync(timeout);
+                }
+
+                await SetPercentageAsync(_savedPercentage.Value, timeout);
             }
 
-            if (_savedLockState.HasValue)
-            {
-                switch (_savedLockState.Value)
-                {
-                    case Lock.On:
-                        await LockAsync();
-                        break;
-                    case Lock.Off:
-                        await UnlockAsync();
-                        break;
-                }
-            }
+            await base.RestoreSavedStateAsync(timeout);
 
             Console.WriteLine($"ShutterDevice {Id} state restored");
-        }
-
-        public void Dispose()
-        {
-            // Cleanup resources if needed
-            Console.WriteLine($"ShutterDevice {Id} disposed");
         }
 
         #endregion
@@ -183,67 +151,6 @@ namespace KnxModel
             newPercentage = Math.Max(0.0f, Math.Min(100.0f, newPercentage)); // Clamp to 0-100
             
             await SetPercentageAsync(newPercentage, timeout);
-        }
-
-        #endregion
-
-        #region ILockableDevice Implementation
-
-        public Lock CurrentLockState => _currentLockState;
-
-        public async Task SetLockAsync(Lock lockState, TimeSpan? timeout = null)
-        {
-            await _lockableHelper.SetLockAsync(lockState);
-        }
-
-        public async Task LockAsync(TimeSpan? timeout = null)
-        {
-            // TODO: Send KNX command to lock
-            await Task.Delay(50); // Simulate KNX communication
-            
-            _currentLockState = Lock.On;
-            _lastUpdated = DateTime.Now;
-            
-            Console.WriteLine($"ShutterDevice {Id} locked");
-        }
-
-        public async Task UnlockAsync(TimeSpan? timeout = null)
-        {
-            // TODO: Send KNX command to unlock
-            await Task.Delay(50); // Simulate KNX communication
-            
-            _currentLockState = Lock.Off;
-            _lastUpdated = DateTime.Now;
-            
-            Console.WriteLine($"ShutterDevice {Id} unlocked");
-        }
-
-        public async Task<Lock> ReadLockStateAsync()
-        {
-            // TODO: Read from KNX bus
-            await Task.Delay(30); // Simulate KNX communication
-            
-            // For now, return current state (in real implementation, read from bus)
-            _lastUpdated = DateTime.Now;
-            return _currentLockState;
-        }
-
-        public async Task<bool> WaitForLockStateAsync(Lock targetState, TimeSpan timeout)
-        {
-            var endTime = DateTime.Now + timeout;
-            
-            while (DateTime.Now < endTime)
-            {
-                var currentState = await ReadLockStateAsync();
-                if (currentState == targetState)
-                {
-                    return true;
-                }
-                
-                await Task.Delay(100); // Check every 100ms
-            }
-            
-            return false;
         }
 
         #endregion

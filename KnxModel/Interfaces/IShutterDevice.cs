@@ -12,11 +12,6 @@ namespace KnxModel
         // - Locking capability (ILockableDevice)
         // - Activity status monitoring (IActivityStatusReadable - is moving?)
         
-        /// <summary>
-        /// KNX addresses for this shutter device
-        /// </summary>
-        ShutterAddresses ShutterAddresses { get; }
-        
         // Note: Shutters don't need ISwitchable - they use percentage for open/close
         // 0% = fully open, 100% = fully closed
         // IsActive = true when shutter is moving, false when stopped

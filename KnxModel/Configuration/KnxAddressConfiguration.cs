@@ -338,8 +338,8 @@ namespace KnxModel
             return new ShutterAddresses(
                 MovementControl: CreateShutterMovementAddress(subGroup),
                 MovementFeedback: CreateShutterMovementFeedbackAddress(subGroup),
-                PositionControl: CreateShutterPositionAddress(subGroup),
-                PositionFeedback: CreateShutterPositionFeedbackAddress(subGroup),
+                PercentageControl: CreateShutterPositionAddress(subGroup),
+                PercentageFeedback: CreateShutterPositionFeedbackAddress(subGroup),
                 LockControl: CreateShutterLockAddress(subGroup),
                 LockFeedback: CreateShutterLockFeedbackAddress(subGroup),
                 StopControl: CreateShutterStopAddress(subGroup),

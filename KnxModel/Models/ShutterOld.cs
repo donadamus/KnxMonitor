@@ -57,8 +57,8 @@ namespace KnxModel
             return new ShutterAddresses(
                 MovementControl: KnxAddressConfiguration.CreateShutterMovementAddress(SubGroup),
                 MovementFeedback: KnxAddressConfiguration.CreateShutterMovementFeedbackAddress(SubGroup),
-                PositionControl: KnxAddressConfiguration.CreateShutterPositionAddress(SubGroup),
-                PositionFeedback: KnxAddressConfiguration.CreateShutterPositionFeedbackAddress(SubGroup),
+                PercentageControl: KnxAddressConfiguration.CreateShutterPositionAddress(SubGroup),
+                PercentageFeedback: KnxAddressConfiguration.CreateShutterPositionFeedbackAddress(SubGroup),
                 LockControl: KnxAddressConfiguration.CreateShutterLockAddress(SubGroup),
                 LockFeedback: KnxAddressConfiguration.CreateShutterLockFeedbackAddress(SubGroup),
                 StopControl: KnxAddressConfiguration.CreateShutterStopAddress(SubGroup),
@@ -167,7 +167,7 @@ namespace KnxModel
         protected override void ProcessDeviceSpecificMessage(KnxGroupEventArgs e)
         {
             // Handle shutter-specific (non-lock) messages
-            if (e.Destination == Addresses.PositionFeedback)
+            if (e.Destination == Addresses.PercentageFeedback)
             {
                 var positionPercent = e.Value.AsPercentageValue();
                 CurrentState = CurrentState with { Position = positionPercent, LastUpdated = DateTime.Now };
@@ -217,7 +217,7 @@ namespace KnxModel
             // Wait for position to be reached (considering relay delay and mechanical precision)
             // One byte step = 100/255 ≈ 0.39%, but mechanical systems may have 1-2 steps tolerance
             const float byteTolerancePercent = 1.0f; // Allow for relay delay and mechanical precision
-            await SetFloatFunctionAsync(Addresses.PositionControl, position, () => Math.Abs(CurrentState.Position - position) <= byteTolerancePercent, timeout);
+            await SetFloatFunctionAsync(Addresses.PercentageControl, position, () => Math.Abs(CurrentState.Position - position) <= byteTolerancePercent, timeout);
         }
 
         public async Task MoveAsync(ShutterDirection direction, TimeSpan? duration = null)
@@ -257,7 +257,7 @@ namespace KnxModel
         {
             try
             {
-                return await _knxService.RequestGroupValue<float>(Addresses.PositionFeedback);
+                return await _knxService.RequestGroupValue<float>(Addresses.PercentageFeedback);
             }
             catch (Exception ex)
             {
