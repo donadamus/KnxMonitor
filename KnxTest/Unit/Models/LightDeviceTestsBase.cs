@@ -8,17 +8,12 @@ namespace KnxTest.Unit.Models
     /// Unit tests for new LightDevice implementation
     /// Tests each interface functionality separately
     /// </summary>
-    public abstract class LightDeviceTestsBase<T, TAddressess> : BaseKnxDeviceUnitTests
+    public abstract class LightDeviceTestsBase<T, TAddressess> : LockDeviceTestsBase<T, TAddressess>
         where T : LightDeviceBase<TAddressess>, ISwitchable, ILockableDevice, IKnxDeviceBase
         where TAddressess : ISwitchableAddress, ILockableAddress
 
     {
 
-        // Replace this line:
-        // private abstract readonly LightDevice _lightDevice;
-
-        // With this property:
-        protected abstract T _device { get; }
         public LightDeviceTestsBase() : base()
         {
             
