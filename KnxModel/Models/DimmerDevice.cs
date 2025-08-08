@@ -78,11 +78,6 @@ namespace KnxModel
 
         public async Task SetPercentageAsync(float percentage, TimeSpan? timeout = null)
         {
-            if (percentage < 0.0f || percentage > 100.0f)
-            {
-                throw new ArgumentOutOfRangeException(nameof(percentage), "Percentage must be between 0 and 100");
-            }
-
             await _percentageControllableHelper.SetPercentageAsync(percentage, timeout);
         }
 
@@ -93,11 +88,6 @@ namespace KnxModel
 
         public async Task<bool> WaitForPercentageAsync(float targetPercentage, double tolerance = 1.0, TimeSpan? timeout = null)
         {
-            if (targetPercentage < 0.0f || targetPercentage > 100.0f)
-            {
-                throw new ArgumentOutOfRangeException(nameof(targetPercentage), "Target percentage must be between 0 and 100");
-            }
-
             return await _percentageControllableHelper.WaitForPercentageAsync(targetPercentage, tolerance, timeout);
         }
 
@@ -132,10 +122,9 @@ namespace KnxModel
 
         public async Task AdjustPercentageAsync(float increment, TimeSpan? timeout = null)
         {
-            var newPercentage = _currentPercentage + increment;
-            newPercentage = Math.Max(0.0f, Math.Min(100.0f, newPercentage)); // Clamp to 0-100
 
-            await SetPercentageAsync(newPercentage, timeout);
+
+            await _percentageControllableHelper.AdjustPercentageAsync(increment, timeout);
         }
 
         #endregion

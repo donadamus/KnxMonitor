@@ -18,6 +18,14 @@ namespace KnxModel.Models.Helpers
             _getCurrentPercentage = getCurrentPercentage ?? throw new ArgumentNullException(nameof(getCurrentPercentage));
         }
 
+        internal async Task AdjustPercentageAsync(float increment, TimeSpan? timeout)
+        {
+            var newPercentage = _getCurrentPercentage() + increment;
+            newPercentage = Math.Max(0.0f, Math.Min(100.0f, newPercentage)); // Clamp to 0-100
+
+            await SetPercentageAsync(newPercentage, timeout);
+        }
+
         internal void ProcessSwitchMessage(KnxGroupEventArgs e)
         {
             var addresses = _getAddresses();
@@ -45,6 +53,11 @@ namespace KnxModel.Models.Helpers
 
         internal async Task SetPercentageAsync(float percentage, TimeSpan? timeout)
         {
+            if (percentage < 0.0f || percentage > 100.0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(percentage), "Percentage must be between 0 and 100");
+            }
+
             // Use brightness as float directly (0-100) - KnxService converts to KNX byte range
             await SetFloatFunctionAsync(
                 _getAddresses().PercentageControl,
@@ -56,6 +69,11 @@ namespace KnxModel.Models.Helpers
 
         internal async Task<bool> WaitForPercentageAsync(float targetPercentage, double tolerance, TimeSpan? timeout)
         {
+            if (targetPercentage < 0.0f || targetPercentage > 100.0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(targetPercentage), "Target percentage must be between 0 and 100");
+            }
+
             return await WaitForConditionAsync(
                 () => Math.Abs(_getCurrentPercentage() - targetPercentage) <= tolerance,
                 timeout ?? _defaultTimeout,
