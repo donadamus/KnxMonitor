@@ -32,7 +32,6 @@ namespace KnxModel
                             state => { _currentPercentage = state; _lastUpdated = DateTime.Now; },
                             () => _currentPercentage);
             _eventManager.MessageReceived += OnKnxMessageReceived;
-
         }
 
         private void OnKnxMessageReceived(object? sender, KnxGroupEventArgs e)

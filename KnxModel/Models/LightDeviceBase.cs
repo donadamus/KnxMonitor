@@ -169,15 +169,6 @@ namespace KnxModel
         }
 
         /// <summary>
-        /// Internal method for setting only lock state in unit tests
-        /// </summary>
-        internal void SetLockStateForTest(Lock lockState)
-        {
-            _currentLockState = lockState;
-            _lastUpdated = DateTime.Now;
-        }
-
-        /// <summary>
         /// Internal property for accessing saved switch state in unit tests
         /// </summary>
         internal Switch? SavedSwitchState => _savedSwitchState;

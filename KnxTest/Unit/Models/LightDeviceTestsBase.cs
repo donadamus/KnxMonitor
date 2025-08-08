@@ -123,39 +123,6 @@ namespace KnxTest.Unit.Models
             await _device.ToggleAsync(TimeSpan.Zero);
         }
 
-        [Fact]
-        public async Task LockAsync_ShouldSendCorrectTelegram()
-        {
-            var address = _device.Addresses.LockControl;
-            _mockKnxService.Setup(s => s.WriteGroupValueAsync(address, true))
-                          .Returns(Task.CompletedTask)
-                          .Verifiable();
-            await _device.LockAsync(TimeSpan.Zero);
-        }
-
-        [Fact]
-        public async Task UnlockAsync_ShouldSendCorrectTelegram()
-        {
-            var address = _device.Addresses.LockControl;
-            _mockKnxService.Setup(s => s.WriteGroupValueAsync(address, false))
-                          .Returns(Task.CompletedTask)
-                          .Verifiable();
-            await _device.UnlockAsync(TimeSpan.Zero);
-        }
-
-        [Theory]
-        [InlineData(Lock.On, true)]  // Lock.On -> true
-        [InlineData(Lock.Off, false)] // Lock.Off -> false
-        public async Task SetLockAsync_ShouldSendCorrectTelegram(Lock lockState, bool expectedValue)
-        {
-            var address = _device.Addresses.LockControl;
-            _mockKnxService.Setup(s => s.WriteGroupValueAsync(address, expectedValue))
-                          .Returns(Task.CompletedTask)
-                          .Verifiable();
-            await _device.SetLockAsync(lockState, TimeSpan.Zero);
-        }
-
-        
 
         #endregion
 
@@ -173,20 +140,6 @@ namespace KnxTest.Unit.Models
 
             // Assert
             _device.CurrentSwitchState.Should().Be(expectedSwitchState);
-        }
-
-        [Theory]
-        [InlineData(Lock.On, true)]  // Lock.On -> true
-        [InlineData(Lock.Off, false)] // Lock.Off -> false
-        public void OnLockFeedback_ShouldUpdateState(Lock expectedLock, bool feedback)
-        {
-            // TODO: Test lock feedback: true->Lock.On, false->Lock.Off
-            var feedbackAddress = _device.Addresses.LockFeedback;
-            var feedbackArgs = new KnxGroupEventArgs(feedbackAddress, new KnxValue(feedback));
-            // Act
-            _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, feedbackArgs);
-            // Assert
-            _device.CurrentLockState.Should().Be(expectedLock);
         }
 
         [Fact]
@@ -262,18 +215,6 @@ namespace KnxTest.Unit.Models
             result.Should().Be(Switch.On, "ReadSwitchStateAsync should return Switch.On for true feedback");
         }
 
-        [Fact]
-        public async Task ReadLockStateAsync_ShouldRequestCorrectAddress()
-        {
-            // TODO: Test that ReadLockStateAsync calls RequestGroupValue with lock feedback address
-            var address = _device.Addresses.LockFeedback;
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(address))
-                          .ReturnsAsync(true)
-                          .Verifiable(); // Simulate lock on feedback
-            var result = await _device.ReadLockStateAsync();
-            result.Should().Be(Lock.On, "ReadLockStateAsync should return Lock.On for true feedback");
-        }
-
         [Theory]
         [InlineData(true, Switch.On)]
         [InlineData(false, Switch.Off)]
@@ -288,19 +229,6 @@ namespace KnxTest.Unit.Models
             result.Should().Be(switchState, $"ReadSwitchStateAsync should return {switchState} for {value} feedback");
         }
 
-        [Theory]
-        [InlineData(true, Lock.On)]
-        [InlineData(false, Lock.Off)]
-        public async Task ReadLockStateAsync_ShouldReturnCorrectValue(bool value, Lock lockState)
-        {
-            // TODO: Test ReadLockStateAsync returns correct enum: true->Lock.On, false->Lock.Off
-            var address = _device.Addresses.LockFeedback;
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(address))
-                          .ReturnsAsync(value)
-                          .Verifiable(); // Simulate lock feedback
-            var result = await _device.ReadLockStateAsync();
-            result.Should().Be(lockState, $"ReadLockStateAsync should return {lockState} for {value} feedback");
-        }
 
         #endregion
 
@@ -367,64 +295,6 @@ namespace KnxTest.Unit.Models
                 $"Execution time should be between {executionTimeMin} and {executionTimeMax} ms");
         }
 
-        [Theory]
-        [InlineData(Lock.On, 0, 0, 50)] // Wait for Lock.On
-        [InlineData(Lock.On, 200, 0, 50)] // Wait for Lock.On with timeout
-        [InlineData(Lock.Off, 0, 0, 50)] // Wait for Lock.Off
-        [InlineData(Lock.Off, 200, 0, 50)] // Wait for Lock.Off with timeout
-        [InlineData(Lock.Unknown, 0, 0, 50)] // Wait for Lock.Unknown
-        [InlineData(Lock.Unknown, 200, 0, 50)] // Wait for Lock.OfUnknownf with timeout
-        public async Task WaitForLockAsync_ImmediateReturnTrueWhenAlreadyInState(Lock lockState, int waitingTime, int executionTimeMin, int executionTimeMax)
-        {
-            // TODO: Test WaitForLockStateAsync: immediate return when already in state, timeout when wrong state
-            _device.SetLockStateForTest(lockState);
-
-            var timer = new System.Diagnostics.Stopwatch();
-            timer.Start();
-
-            // Act
-            var result = await _device.WaitForLockStateAsync(lockState, TimeSpan.FromMilliseconds(waitingTime));
-            timer.Stop();
-
-            // Assert
-            result.Should().BeTrue($"WaitForLockStateAsync should return {true} when state matches expected");
-            _device.CurrentLockState.Should().Be(lockState, "Current lock state should match expected after wait");
-            timer.ElapsedMilliseconds.Should().BeInRange(executionTimeMin, executionTimeMax,
-                $"Execution time should be between {executionTimeMin} and {executionTimeMax} ms");
-        }
-
-
-        [Theory]
-        [InlineData(Lock.On, 200, Lock.Off, 50, Lock.On, false, 40, 100)] // Wait for Lock.Off with delay
-        [InlineData(Lock.Off, 200, Lock.On, 50, Lock.Off, false, 40, 100)] // Wait for Lock.On with delay
-        [InlineData(Lock.Unknown, 200, Lock.On, 50, Lock.Unknown, false, 40, 100)] // Wait for Lock.On from Unknown with delay
-        [InlineData(Lock.Unknown, 200, Lock.Off, 50, Lock.Unknown, false, 40, 100)] // Wait for Lock.Off from Unknown with delay
-        public async Task WaitForLockStateAsync_ShouldReturnCorrectly(Lock initialState, int delayInMs, Lock lockState, int waitingTime, Lock expectedState, bool expectedResult, int executionTimeMin, int executionTimeMax)
-        {
-            // TODO: Test WaitForLockStateAsync: immediate return when already in state, timeout when wrong state
-            _device.SetLockStateForTest(initialState);
-            var timer = new System.Diagnostics.Stopwatch();
-            timer.Start();
-
-            // Simulate delay before setting expected state
-            _ = Task.Delay(delayInMs)
-                    .ContinueWith(_ =>
-                    {
-                        _mockKnxService.Raise(
-                            s => s.GroupMessageReceived += null,
-                            _mockKnxService.Object,
-                            new KnxGroupEventArgs(_device.Addresses.LockFeedback, new KnxValue(lockState == Lock.On)));
-                    });
-
-            // Act
-            var result = await _device.WaitForLockStateAsync(lockState, TimeSpan.FromMilliseconds(waitingTime));
-            timer.Stop();
-            // Assert
-            result.Should().Be(expectedResult, $"WaitForLockStateAsync should return {expectedResult} when state matches expected");
-            _device.CurrentLockState.Should().Be(expectedState, "Current lock state should match expected after wait");
-            timer.ElapsedMilliseconds.Should().BeInRange(executionTimeMin, executionTimeMax,
-                $"Execution time should be between {executionTimeMin} and {executionTimeMax} ms");
-        }
 
         [Theory]
         [InlineData(Switch.On, 50, Switch.Off, 200, Switch.Off,  50, 150)] // Wait for Switch.Off with delay
@@ -461,43 +331,6 @@ namespace KnxTest.Unit.Models
             _device.CurrentSwitchState.Should().Be(expectedState, "Current switch state should match expected after wait");
             timer.ElapsedMilliseconds.Should().BeInRange(executionTimeMin, executionTimeMax,
                 $"Execution time should be between {executionTimeMin} and {executionTimeMax} ms");
-        }
-
-        [Theory]
-        [InlineData(Lock.On, 50, Lock.Off, 200, Lock.Off, 50, 150)] // Wait for Lock.Off with delay
-        [InlineData(Lock.Off, 50, Lock.On, 200, Lock.On, 50, 150)] // Wait for Lock.On with delay
-        [InlineData(Lock.Unknown, 0, Lock.On, 200, Lock.On, 0, 100)] // Wait for Lock.On from Unknown
-        [InlineData(Lock.Unknown, 50, Lock.On, 200, Lock.On, 50, 150)] // Wait for Lock.On from Unknown with delay
-        [InlineData(Lock.Unknown, 0, Lock.Off, 200, Lock.Off, 0, 100)] // Wait for Lock.Off from Unknown
-        [InlineData(Lock.Unknown, 50, Lock.Off, 200, Lock.Off, 50, 150)] // Wait for Lock.Off from Unknown with delay
-
-        public async Task WaitForLockStateAsync_WhenFeedbackReceived_ShouldReturnTrue(Lock initialState, int delayInMs, Lock lockState, int waitingTime, Lock expectedState, int executionTimeMin, int executionTimeMax)
-        {
-            // TODO: Test that wait method returns true when feedback changes state to target
-            // TODO: Test WaitForLockStateAsync: immediate return when already in state, timeout when wrong state
-            _device.SetLockStateForTest(initialState);
-            var timer = new System.Diagnostics.Stopwatch();
-            timer.Start();
-
-            // Simulate delay before setting expected state
-            _ = Task.Delay(delayInMs)
-                    .ContinueWith(_ =>
-                    {
-                        _mockKnxService.Raise(
-                            s => s.GroupMessageReceived += null,
-                            _mockKnxService.Object,
-                            new KnxGroupEventArgs(_device.Addresses.LockFeedback, new KnxValue(lockState == Lock.On)));
-                    });
-
-            // Act
-            var result = await _device.WaitForLockStateAsync(lockState, TimeSpan.FromMilliseconds(waitingTime));
-            timer.Stop();
-            // Assert
-            result.Should().BeTrue($"WaitForLockStateAsync should return {true} when state matches expected");
-            _device.CurrentLockState.Should().Be(expectedState, "Current lock state should match expected after wait");
-            timer.ElapsedMilliseconds.Should().BeInRange(executionTimeMin, executionTimeMax,
-                $"Execution time should be between {executionTimeMin} and {executionTimeMax} ms");
-
         }
 
         #endregion

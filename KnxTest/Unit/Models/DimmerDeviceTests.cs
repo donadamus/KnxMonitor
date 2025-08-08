@@ -14,6 +14,7 @@ namespace KnxTest.Unit.Models
             _device = new DimmerDevice("D_TEST", "Test Dimmer", "1", _mockKnxService.Object);
         }
 
+        [Fact]
         public override void Constructor_SetsBasicProperties()
         {
             // Assert

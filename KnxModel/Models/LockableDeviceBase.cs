@@ -120,6 +120,15 @@ namespace KnxModel
             Console.WriteLine($"LightDevice {Id} disposed");
         }
 
+        /// <summary>
+        /// Internal method for setting only lock state in unit tests
+        /// </summary>
+        internal void SetLockStateForTest(Lock lockState)
+        {
+            _currentLockState = lockState;
+            _lastUpdated = DateTime.Now;
+        }
+
         #endregion
     }
 }
