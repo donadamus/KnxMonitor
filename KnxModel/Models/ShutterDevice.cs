@@ -87,69 +87,22 @@ namespace KnxModel
 
         public async Task SetPercentageAsync(float percentage, TimeSpan? timeout = null)
         {
-            if (percentage < 0.0f || percentage > 100.0f)
-            {
-                throw new ArgumentOutOfRangeException(nameof(percentage), "Percentage must be between 0 and 100");
-            }
-
-            // TODO: Send KNX command to set position
-            Console.WriteLine($"ShutterDevice {Id} starting movement to {percentage}%");
-            
-            // Simulate movement - in real implementation this would trigger actual motor movement
-            _isActive = true; // Movement started
-            await Task.Delay(50); // Simulate KNX command send time
-            
-            // Simulate movement duration (longer movements take more time)
-            var movementDuration = Math.Abs(_currentPercentage - percentage) * 10; // 10ms per 1% change
-            await Task.Delay((int)movementDuration);
-            
-            _currentPercentage = percentage;
-            _isActive = false; // Movement completed
-            _lastUpdated = DateTime.Now;
-            
-            Console.WriteLine($"ShutterDevice {Id} position set to {percentage}% (movement completed)");
+            await _shutterHelper.SetPercentageAsync(percentage, timeout);
         }
 
         public async Task<float> ReadPercentageAsync()
         {
-            // TODO: Read from KNX bus
-            await Task.Delay(30); // Simulate KNX communication
-            
-            // For now, return current state (in real implementation, read from bus)
-            _lastUpdated = DateTime.Now;
-            return _currentPercentage;
+            return await _shutterHelper.ReadPercentageAsync();
         }
 
         public async Task<bool> WaitForPercentageAsync(float targetPercentage, double tolerance = 2.0, TimeSpan? timeout = null)
         {
-            if (targetPercentage < 0.0f || targetPercentage > 100.0f)
-            {
-                throw new ArgumentOutOfRangeException(nameof(targetPercentage), "Target percentage must be between 0 and 100");
-            }
-
-            var actualTimeout = timeout ?? TimeSpan.FromSeconds(10); // Default 10 seconds
-            var endTime = DateTime.Now + actualTimeout;
-            
-            while (DateTime.Now < endTime)
-            {
-                var currentPercentage = await ReadPercentageAsync();
-                if (Math.Abs(currentPercentage - targetPercentage) <= tolerance)
-                {
-                    return true;
-                }
-                
-                await Task.Delay(100); // Check every 100ms
-            }
-            
-            return false;
+            return await _shutterHelper.WaitForPercentageAsync(targetPercentage, tolerance, timeout);
         }
 
         public async Task AdjustPercentageAsync(float delta, TimeSpan? timeout = null)
         {
-            var newPercentage = _currentPercentage + delta;
-            newPercentage = Math.Max(0.0f, Math.Min(100.0f, newPercentage)); // Clamp to 0-100
-            
-            await SetPercentageAsync(newPercentage, timeout);
+            await _shutterHelper.AdjustPercentageAsync(delta, timeout);
         }
 
         #endregion
