@@ -9,30 +9,6 @@ namespace KnxModel
     public static class ShutterFactory
     {
         /// <summary>
-        /// Creates a shutter instance by ID
-        /// </summary>
-        public static IShutterOld CreateShutterOld(string shutterId, IKnxService knxService)
-        {
-            if (!ShutterConfigurations.TryGetValue(shutterId, out var config))
-            {
-                throw new ArgumentException($"Unknown shutter ID: {shutterId}");
-            }
-
-            return new ShutterOld(shutterId, config.Name, config.SubGroup, knxService);
-        }
-
-        /// <summary>
-        /// Creates all shutters defined in the configuration
-        /// </summary>
-        public static IEnumerable<IShutterOld> CreateAllShutters(IKnxService knxService)
-        {
-            foreach (var (id, config) in ShutterConfigurations)
-            {
-                yield return new ShutterOld(id, config.Name, config.SubGroup, knxService);
-            }
-        }
-
-        /// <summary>
         /// Gets all available shutter IDs
         /// </summary>
         public static IEnumerable<string> GetAvailableShutterIds()
