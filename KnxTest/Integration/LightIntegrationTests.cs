@@ -13,8 +13,6 @@ namespace KnxTest.Integration
     [Collection("KnxService collection")]
     public class LightIntegrationTests : LightIntegrationTestsBase<LightDevice>
     {
-        internal override LightDevice? Device { get; set; }
-
         public LightIntegrationTests(KnxServiceFixture fixture) : base(fixture)
         {
             

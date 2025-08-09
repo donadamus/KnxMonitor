@@ -8,6 +8,18 @@ namespace KnxModel
     /// </summary>
     public static class ShutterFactory
     {
+
+        public static ShutterDevice CreateShutter(string shutterId, IKnxService knxService)
+        {
+            if (ShutterConfigurations.TryGetValue(shutterId, out var config))
+            {
+                return new ShutterDevice(shutterId, config.Name, config.SubGroup, knxService);
+            }
+            
+            throw new ArgumentException($"Unknown light ID: {shutterId}");
+        }
+
+
         /// <summary>
         /// Gets all available shutter IDs
         /// </summary>

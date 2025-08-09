@@ -4,6 +4,88 @@ using KnxTest.Integration.Interfaces;
 
 namespace KnxTest.Integration
 {
+    public class ShutterIntegrationTests :LockableIntegrationTestBase<ShutterDevice>, IPercentageControllableDeviceTests
+    {
+        internal readonly PercentageControllTestHelper _percentageTestHelper;
+        public ShutterIntegrationTests(KnxServiceFixture fixture) : base(fixture)
+        {
+            _percentageTestHelper = new PercentageControllTestHelper();
+        }
+
+        public Task CanAdjustPercentage(string deviceId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Task CanLockAndUnlock(string deviceId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Task CanReadLockState(string deviceId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task CanReadPercentage(string deviceId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task CanSetPercentage(string deviceId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task CanSetSpecificPercentages(string deviceId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task CanSetToMaximum(string deviceId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task CanSetToMinimum(string deviceId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task CanWaitForPercentageState(string deviceId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Task LockPreventsStateChanges(string deviceId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task PercentageRangeValidation(string deviceId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Task SwitchableDeviceTurnOffWhenLocked(string deviceId)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal override async Task InitializeDevice(string deviceId, bool saveCurrentState = true)
+        {
+            Console.WriteLine($"🆕 Creating new DimmerDevice {deviceId}");
+            Device = ShutterFactory.CreateShutter(deviceId, _knxService);
+            await Device.InitializeAsync();
+            if (saveCurrentState)
+            {
+                Device.SaveCurrentState();
+            }
+            Console.WriteLine($"Shutter {deviceId} initialized - Percentage: {Device.CurrentPercentage}, Lock: {Device.CurrentLockState}");
+        }
+    }
+
+
     [Collection("KnxService collection")]
     public class DimmerIntegrationTests : LightIntegrationTestsBase<DimmerDevice>, IPercentageControllableDeviceTests
     {
@@ -36,9 +118,6 @@ namespace KnxTest.Integration
 
             Console.WriteLine($"Light {deviceId} initialized - Switch: {Device.CurrentSwitchState}, Lock: {Device.CurrentLockState}");
         }
-
-
-        internal override DimmerDevice? Device { get; set; }
 
         [Theory]
         [MemberData(nameof(DimmerIdsFromConfig))]
