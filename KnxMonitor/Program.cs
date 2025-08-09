@@ -14,7 +14,7 @@ var light = LightFactory.CreateLight("L05.1", service);
 light.TurnOffAsync();
 light.TurnOnAsync();
 
-var dimmer = DimmerFactory.CreateDimmer("D02.2", service);
+var dimmer = DimmerFactory.CreateDimmer("D02.2", service, null);
 dimmer.TurnOnAsync();
 
 

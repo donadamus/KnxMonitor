@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 
@@ -9,11 +10,11 @@ namespace KnxModel
     public static class ShutterFactory
     {
 
-        public static ShutterDevice CreateShutter(string shutterId, IKnxService knxService)
+        public static ShutterDevice CreateShutter(string shutterId, IKnxService knxService, ILogger<ShutterDevice> logger)
         {
             if (ShutterConfigurations.TryGetValue(shutterId, out var config))
             {
-                return new ShutterDevice(shutterId, config.Name, config.SubGroup, knxService);
+                return new ShutterDevice(shutterId, config.Name, config.SubGroup, knxService, logger);
             }
             
             throw new ArgumentException($"Unknown light ID: {shutterId}");

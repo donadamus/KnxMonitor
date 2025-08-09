@@ -1,21 +1,28 @@
+using Microsoft.Extensions.Logging;
+
 namespace KnxModel.Models.Helpers
 {
-    public class PercentageControllableDeviceHelper : DeviceHelperBase
+    public class PercentageControllableDeviceHelper<T> : DeviceHelperBase
+        where T : class
     {
         private readonly Func<IPercentageControllableAddress> _getAddresses;
         private readonly Action<float> _updatePercentage;
         private readonly Func<float> _getCurrentPercentage;
+        private readonly ILogger<T> logger;
+
         public PercentageControllableDeviceHelper(
             IKnxService knxService,
             string deviceId,
             string deviceType,
             Func<IPercentageControllableAddress> getAddresses,
             Action<float> updatePercentage,
-            Func<float> getCurrentPercentage) : base(knxService, deviceId, deviceType)
+            Func<float> getCurrentPercentage,
+            ILogger<T> logger) : base(knxService, deviceId, deviceType)
         {
             _getAddresses = getAddresses ?? throw new ArgumentNullException(nameof(getAddresses));
             _updatePercentage = updatePercentage ?? throw new ArgumentNullException(nameof(updatePercentage));
             _getCurrentPercentage = getCurrentPercentage ?? throw new ArgumentNullException(nameof(getCurrentPercentage));
+            this.logger = logger;
         }
 
         internal async Task AdjustPercentageAsync(float increment, TimeSpan? timeout)

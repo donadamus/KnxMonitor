@@ -1,5 +1,6 @@
 using FluentAssertions;
 using KnxModel;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace KnxTest.Unit.Models
@@ -13,6 +14,8 @@ namespace KnxTest.Unit.Models
         where TAddressess : ILockableAddress
     {
         protected abstract T _device { get; }
+
+        protected abstract ILogger<T> _logger { get; }
 
         public LockDeviceTestsBase() : base()
         {

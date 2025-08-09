@@ -1,5 +1,6 @@
 using FluentAssertions;
 using KnxModel;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Xunit;
@@ -10,6 +11,9 @@ namespace KnxTest.Unit.Models
     public class LightDeviceTests : LightDeviceTestsBase<LightDevice, LightAddresses>
     {
         protected override LightDevice _device { get; }
+
+        protected override ILogger<LightDevice> _logger => throw new NotImplementedException();
+
         // This class is just a placeholder to allow the test class to compile
         // Actual tests are defined in LightDeviceTests
         public LightDeviceTests()

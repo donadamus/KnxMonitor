@@ -1,5 +1,7 @@
 using FluentAssertions;
 using KnxModel;
+using Microsoft.Extensions.Logging;
+using Moq;
 using System;
 using System.Threading.Tasks;
 using Xunit;
@@ -10,10 +12,13 @@ namespace KnxTest.Unit.Models
     {
         protected override DimmerDevice _device { get; }
 
+        protected override ILogger<DimmerDevice> _logger { get; }
+
         public DimmerDeviceTests()
         {
             // Initialize DimmerDevice with mock KNX service
-            _device = new DimmerDevice("D_TEST", "Test Dimmer", "1", _mockKnxService.Object);
+            _logger = new Mock<ILogger<DimmerDevice>>().Object;
+            _device = new DimmerDevice("D_TEST", "Test Dimmer", "1", _mockKnxService.Object, _logger);
         }
 
         #region IKnxDeviceBase Tests

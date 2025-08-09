@@ -1,18 +1,70 @@
 using KnxModel;
 using KnxTest.Integration.Base;
 using KnxTest.Integration.Interfaces;
+using Microsoft.Extensions.Logging;
+using Xunit.Abstractions;
 
 namespace KnxTest.Integration
 {
 
+    public class XUnitLogger<T> : ILogger<T>
+    {
+        private readonly ITestOutputHelper _output;
+
+        public XUnitLogger(ITestOutputHelper output)
+        {
+            _output = output;
+        }
+
+        public IDisposable BeginScope<TState>(TState state) => default!;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            if (formatter == null) throw new ArgumentNullException(nameof(formatter));
+
+            _output.WriteLine($"[{logLevel}] {formatter(state, exception)}");
+
+            if (exception != null)
+            {
+                _output.WriteLine(exception.ToString());
+            }
+        }
+    }
+    public class XUnitLoggerFactory<T> //: ILoggerFactory
+    {
+        private readonly ITestOutputHelper _output;
+
+        public XUnitLoggerFactory(ITestOutputHelper output)
+        {
+            _output = output;
+        }
+
+        public ILogger CreateLogger()
+        {
+            return new XUnitLogger<T>(_output);
+        }
+
+        public void AddProvider(ILoggerProvider provider) { }
+
+        public void Dispose() { }
+    }
 
     [Collection("KnxService collection")]
     public class DimmerIntegrationTests : LightIntegrationTestsBase<DimmerDevice>, IPercentageControllableDeviceTests
     {
         internal readonly PercentageControllTestHelper _percentageTestHelper;
-        public DimmerIntegrationTests(KnxServiceFixture fixture) : base(fixture)
+        internal readonly XUnitLogger<DimmerDevice> _logger;
+        public DimmerIntegrationTests(KnxServiceFixture fixture, ITestOutputHelper output) : base(fixture)
         {
-            _percentageTestHelper = new PercentageControllTestHelper();
+            _percentageTestHelper = new PercentageControllTestHelper(output);
+            _logger = new XUnitLogger<DimmerDevice>(output);
         }
 
         // Data source for tests - only pure lights (not dimmers)
@@ -28,8 +80,10 @@ namespace KnxTest.Integration
 
         internal override async Task InitializeDevice(string deviceId, bool saveCurrentState = true)
         {
+            
+
             Console.WriteLine($"🆕 Creating new DimmerDevice {deviceId}");
-            Device = DimmerFactory.CreateDimmer(deviceId, _knxService);
+            Device = DimmerFactory.CreateDimmer(deviceId, _knxService, _logger);
             await Device.InitializeAsync();
             if (saveCurrentState)
             {

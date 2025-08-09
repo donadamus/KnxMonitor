@@ -1,6 +1,7 @@
 using KnxModel;
 using KnxTest.Integration.Base;
 using KnxTest.Integration.Interfaces;
+using Xunit.Abstractions;
 
 namespace KnxTest.Integration
 {
@@ -8,9 +9,11 @@ namespace KnxTest.Integration
     public class ShutterIntegrationTests :LockableIntegrationTestBase<ShutterDevice>, IPercentageControllableDeviceTests
     {
         internal readonly PercentageControllTestHelper _percentageTestHelper;
-        public ShutterIntegrationTests(KnxServiceFixture fixture) : base(fixture)
+        internal readonly XUnitLogger<ShutterDevice> _logger;
+        public ShutterIntegrationTests(KnxServiceFixture fixture, ITestOutputHelper output) : base(fixture)
         {
-            _percentageTestHelper = new PercentageControllTestHelper();
+            _percentageTestHelper = new PercentageControllTestHelper(output);
+            _logger = new XUnitLogger<ShutterDevice>(output);
         }
 
         // Data source for tests - only pure lights (not dimmers)
@@ -26,10 +29,12 @@ namespace KnxTest.Integration
 
         [Theory]
         [MemberData(nameof(ShutterIdsFromConfig))]
-        public Task CanAdjustPercentage(string deviceId)
+        public async Task CanAdjustPercentage(string deviceId)
         {
-            throw new NotImplementedException();
+            await InitializeDeviceAndEnsureUnlocked(deviceId);
+            await _percentageTestHelper.CanAdjustPercentage(Device!);
         }
+
         [Theory]
         [MemberData(nameof(ShutterIdsFromConfig))]
         public override async Task CanLockAndUnlock(string deviceId)
@@ -37,71 +42,91 @@ namespace KnxTest.Integration
             await InitializeDevice(deviceId);
             await _lockTestHelper.CanLockAndUnlock(Device!);
         }
+
         [Theory]
         [MemberData(nameof(ShutterIdsFromConfig))]
-        public override Task CanReadLockState(string deviceId)
+        public override async Task CanReadLockState(string deviceId)
         {
-            throw new NotImplementedException();
+            await InitializeDevice(deviceId);
+            await _lockTestHelper.CanReadLockState(Device!);
         }
+
         [Theory]
         [MemberData(nameof(ShutterIdsFromConfig))]
-        public Task CanReadPercentage(string deviceId)
+        public async Task CanReadPercentage(string deviceId)
         {
-            throw new NotImplementedException();
+            await InitializeDevice(deviceId);
+            await _percentageTestHelper.CanReadPercentage(Device!);
         }
+
         [Theory]
         [MemberData(nameof(ShutterIdsFromConfig))]
-        public Task CanSetPercentage(string deviceId)
+        public async Task CanSetPercentage(string deviceId)
         {
-            throw new NotImplementedException();
+            await InitializeDeviceAndEnsureUnlocked(deviceId);
+            await _percentageTestHelper.CanSetPercentage(Device!);
         }
+
         [Theory]
         [MemberData(nameof(ShutterIdsFromConfig))]
-        public Task CanSetSpecificPercentages(string deviceId)
+        public async Task CanSetSpecificPercentages(string deviceId)
         {
-            throw new NotImplementedException();
+            await InitializeDeviceAndEnsureUnlocked(deviceId);
+            await _percentageTestHelper.CanSetSpecificPercentages(Device!);
         }
+
         [Theory]
         [MemberData(nameof(ShutterIdsFromConfig))]
-        public Task CanSetToMaximum(string deviceId)
+        public async Task CanSetToMaximum(string deviceId)
         {
-            throw new NotImplementedException();
+            await InitializeDeviceAndEnsureUnlocked(deviceId);
+            await _percentageTestHelper.CanSetToMaximum(Device!);
         }
+
         [Theory]
         [MemberData(nameof(ShutterIdsFromConfig))]
-        public Task CanSetToMinimum(string deviceId)
+        public async Task CanSetToMinimum(string deviceId)
         {
-            throw new NotImplementedException();
+            await InitializeDeviceAndEnsureUnlocked(deviceId);
+            await _percentageTestHelper.CanSetToMinimum(Device!);
         }
+
         [Theory]
         [MemberData(nameof(ShutterIdsFromConfig))]
-        public Task CanWaitForPercentageState(string deviceId)
+        public async Task CanWaitForPercentageState(string deviceId)
         {
-            throw new NotImplementedException();
+            await InitializeDeviceAndEnsureUnlocked(deviceId);
+            await _percentageTestHelper.CanWaitForPercentageState(Device!);
         }
+
         [Theory]
         [MemberData(nameof(ShutterIdsFromConfig))]
-        public override Task LockPreventsStateChanges(string deviceId)
+        public override async Task LockPreventsStateChanges(string deviceId)
         {
-            throw new NotImplementedException();
+            await InitializeDevice(deviceId);
+            await _lockTestHelper.LockPreventsStateChange(Device!);
         }
+
         [Theory]
         [MemberData(nameof(ShutterIdsFromConfig))]
-        public Task PercentageRangeValidation(string deviceId)
+        public async Task PercentageRangeValidation(string deviceId)
         {
-            throw new NotImplementedException();
+            await InitializeDeviceAndEnsureUnlocked(deviceId);
+            await _percentageTestHelper.PercentageRangeValidation(Device!);
         }
+
         [Theory]
         [MemberData(nameof(ShutterIdsFromConfig))]
-        public override Task SwitchableDeviceTurnOffWhenLocked(string deviceId)
+        public override async Task SwitchableDeviceTurnOffWhenLocked(string deviceId)
         {
-            throw new NotImplementedException();
+            await InitializeDevice(deviceId);
+            await _lockTestHelper.SwitchableDeviceTurnOffWhenLocked(Device!);
         }
 
         internal override async Task InitializeDevice(string deviceId, bool saveCurrentState = true)
         {
-            Console.WriteLine($"🆕 Creating new DimmerDevice {deviceId}");
-            Device = ShutterFactory.CreateShutter(deviceId, _knxService);
+            Console.WriteLine($"🆕 Creating new ShutterDevice {deviceId}");
+            Device = ShutterFactory.CreateShutter(deviceId, _knxService, _logger);
             await Device.InitializeAsync();
             if (saveCurrentState)
             {

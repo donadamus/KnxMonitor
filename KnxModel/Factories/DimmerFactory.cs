@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 
 namespace KnxModel
@@ -10,11 +11,11 @@ namespace KnxModel
     {
 
 
-        public static DimmerDevice CreateDimmer(string dimmerId, IKnxService knxService)
+        public static DimmerDevice CreateDimmer(string dimmerId, IKnxService knxService, ILogger<DimmerDevice> logger)
         {
             if (DimmerConfigurations.TryGetValue(dimmerId, out var config))
             {
-                return new DimmerDevice(dimmerId, config.Name, config.SubGroup, knxService);
+                return new DimmerDevice(dimmerId, config.Name, config.SubGroup, knxService, logger);
             }
             //else if (DimmerFactory.DimmerConfigurations.TryGetValue(lightId, out var dimmerConfig))
             //{

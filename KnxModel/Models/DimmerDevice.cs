@@ -1,4 +1,5 @@
 using KnxModel.Models.Helpers;
+using Microsoft.Extensions.Logging;
 using System;
 
 namespace KnxModel
@@ -12,17 +13,18 @@ namespace KnxModel
 
         private float _currentPercentage = -1.0f; // 0% brightness
         private float? _savedPercentage;
-        private readonly PercentageControllableDeviceHelper _percentageControllableHelper;
+        private readonly PercentageControllableDeviceHelper<DimmerDevice> _percentageControllableHelper;
 
-        public DimmerDevice(string id, string name, string subGroup, IKnxService knxService)
+        public DimmerDevice(string id, string name, string subGroup, IKnxService knxService, ILogger<DimmerDevice> logger)
             : base(id, name, subGroup, KnxAddressConfiguration.CreateDimmerAddresses(subGroup), knxService)
         {
 
-            _percentageControllableHelper = new PercentageControllableDeviceHelper(
+            _percentageControllableHelper = new PercentageControllableDeviceHelper<DimmerDevice>(
                 _knxService, Id, "DimmerDevice",
                 () => Addresses,
                 percentage => { _currentPercentage = percentage; _lastUpdated = DateTime.Now; },
-                () => _currentPercentage);
+                () => _currentPercentage,
+                logger);
 
             _eventManager.MessageReceived += OnKnxMessageReceived;
         }

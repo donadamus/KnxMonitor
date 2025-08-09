@@ -1,5 +1,7 @@
 using FluentAssertions;
 using KnxModel;
+using Microsoft.Extensions.Logging;
+using Moq;
 using System;
 using System.Threading.Tasks;
 using Xunit;
@@ -10,10 +12,13 @@ namespace KnxTest.Unit.Models
     {
         protected override ShutterDevice _device { get; }
 
+        protected override ILogger<ShutterDevice> _logger { get; }
+
         public ShutterDeviceTests()
         {
             // Initialize ShutterDevice with mock KNX service
-            _device = new ShutterDevice("S_TEST", "Test Shutter", "1", _mockKnxService.Object);
+            _logger = new Mock<ILogger<ShutterDevice>>().Object;
+            _device = new ShutterDevice("S_TEST", "Test Shutter", "1", _mockKnxService.Object, _logger);
         }
 
         #region IKnxDeviceBase Tests
