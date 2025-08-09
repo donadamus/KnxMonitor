@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 
@@ -7,7 +8,7 @@ namespace KnxModel.Models.Helpers
     /// Helper class for implementing switchable device functionality
     /// Handles switch state management and KNX communication for ISwitchable implementations
     /// </summary>
-    public class SwitchableDeviceHelper : DeviceHelperBase
+    public class SwitchableDeviceHelper<TDevice> : DeviceHelperBase<TDevice>
     {
         private readonly Func<ISwitchableAddress> _getAddresses;
         private readonly Action<Switch> _updateSwitchState;
@@ -19,7 +20,8 @@ namespace KnxModel.Models.Helpers
             string deviceType,
             Func<ISwitchableAddress> getAddresses,
             Action<Switch> updateSwitchState,
-            Func<Switch> getCurrentSwitchState) : base(knxService, deviceId, deviceType)
+            Func<Switch> getCurrentSwitchState,
+            ILogger<TDevice> logger) : base(knxService, deviceId, deviceType, logger)
         {
             _getAddresses = getAddresses ?? throw new ArgumentNullException(nameof(getAddresses));
             _updateSwitchState = updateSwitchState ?? throw new ArgumentNullException(nameof(updateSwitchState));

@@ -18,14 +18,20 @@ service.GroupMessageReceived += (sender, args) =>
     Console.WriteLine($"Received Group Address: {args.Destination}, Value: {args.Value}");
 };
 
-var light = LightFactory.CreateLight("L05.1", service, lightLogger);
-await light.TurnOffAsync();
-await light.TurnOnAsync();
+//var light = LightFactory.CreateLight("L05.1", service, lightLogger);
+//await light.TurnOffAsync();
+//await light.TurnOnAsync();
 
-var dimmer = DimmerFactory.CreateDimmer("D02.2", service, dimmerLogger);
-await dimmer.TurnOnAsync();
+//var dimmer = DimmerFactory.CreateDimmer("D02.2", service, dimmerLogger);
+//await dimmer.TurnOnAsync();
 
-
+var shutter = ShutterFactory.CreateShutter("R05.1", service, loggerFactory.CreateLogger<ShutterDevice>());
+await shutter.SetPercentageAsync(10, TimeSpan.FromSeconds(20));
+await shutter.SetPercentageAsync(100, TimeSpan.FromSeconds(20));
+await shutter.SetPercentageAsync(10, TimeSpan.FromSeconds(20));
+await shutter.SetPercentageAsync(50, TimeSpan.FromSeconds(20));
+await shutter.SetPercentageAsync(100, TimeSpan.FromSeconds(20));
+await shutter.SetPercentageAsync(0, TimeSpan.FromSeconds(20));
 
 Console.ReadKey();
 

@@ -1,6 +1,8 @@
+using Microsoft.Extensions.Logging;
+
 namespace KnxModel.Models.Helpers
 {
-    public class DeviceHelperBase
+    public class DeviceHelperBase<TDevice>
     {
         protected readonly TimeSpan _defaultTimeout = TimeSpan.FromSeconds(5);
         protected const int _pollingIntervalMs = 50; // Polling interval for wait operations
@@ -8,11 +10,14 @@ namespace KnxModel.Models.Helpers
         protected readonly IKnxService _knxService;
         protected readonly string _deviceId;
         protected readonly string _deviceType;
-        public DeviceHelperBase(IKnxService knxService, string deviceId, string deviceType)
+        protected readonly ILogger<TDevice> _logger;
+
+        public DeviceHelperBase(IKnxService knxService, string deviceId, string deviceType, ILogger<TDevice> logger)
         {
             _knxService = knxService ?? throw new ArgumentNullException(nameof(knxService));
             _deviceId = deviceId ?? throw new ArgumentNullException(nameof(deviceId));
             _deviceType = deviceType ?? throw new ArgumentNullException(nameof(deviceType));
+            _logger = logger;
         }
 
         protected async Task<bool> WaitForConditionAsync(Func<bool> condition, TimeSpan? timeout = null, string description = "condition")
@@ -34,6 +39,16 @@ namespace KnxModel.Models.Helpers
                 }
                 return true;
             });
+            //// Create a task that completes when condition is met
+            //var logTask = Task.Run(async () =>
+            //{
+            //    while (!condition())
+            //    {
+            //        await Task.Delay(1000);
+            //        _logger.LogInformation($"Device {_deviceType} {_deviceId} still waiting for {description}");
+            //    }
+            //    return true;
+            //});
 
             // Create timeout task
             var timeoutTask = Task.Delay(effectiveTimeout);

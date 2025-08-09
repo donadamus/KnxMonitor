@@ -22,7 +22,7 @@ namespace KnxTest.Integration
             get
             {
                 var config = ShutterFactory.ShutterConfigurations;
-                return config.Where(x => x.Value.Name.ToLower().Contains("off"))
+                return config//.Where(x => x.Value.Name.ToLower().Contains("off"))
                             .Select(k => new object[] { k.Key });
             }
         }

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -8,7 +9,7 @@ namespace KnxModel.Models.Helpers
     /// Helper class for implementing lockable device functionality
     /// Handles lock state management and KNX communication for ILockableDevice implementations
     /// </summary>
-    public class LockableDeviceHelper : DeviceHelperBase
+    public class LockableDeviceHelper<TDevice> : DeviceHelperBase<TDevice>
     {
         private readonly Func<ILockableAddress> _getAddresses;
         private readonly Action<Lock> _updateLockState;
@@ -20,7 +21,8 @@ namespace KnxModel.Models.Helpers
             string deviceType,
             Func<ILockableAddress> getAddresses,
             Action<Lock> updateLockState,
-            Func<Lock> getCurrentLockState) : base(knxService, deviceId, deviceType)
+            Func<Lock> getCurrentLockState,
+            ILogger<TDevice> logger) : base(knxService, deviceId, deviceType, logger)
         {
             _getAddresses = getAddresses ?? throw new ArgumentNullException(nameof(getAddresses));
             _updateLockState = updateLockState ?? throw new ArgumentNullException(nameof(updateLockState));

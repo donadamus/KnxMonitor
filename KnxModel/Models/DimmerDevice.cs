@@ -8,7 +8,7 @@ namespace KnxModel
     
 
 
-    public class DimmerDevice : LightDeviceBase<DimmerAddresses>, IDimmerDevice
+    public class DimmerDevice : LightDeviceBase<DimmerDevice, DimmerAddresses>, IDimmerDevice
     {
         private readonly ILogger<DimmerDevice> _logger;
         private float _currentPercentage = -1.0f; // 0% brightness
@@ -16,7 +16,7 @@ namespace KnxModel
         private readonly PercentageControllableDeviceHelper<DimmerDevice> _percentageControllableHelper;
 
         public DimmerDevice(string id, string name, string subGroup, IKnxService knxService, ILogger<DimmerDevice> logger)
-            : base(id, name, subGroup, KnxAddressConfiguration.CreateDimmerAddresses(subGroup), knxService)
+            : base(id, name, subGroup, KnxAddressConfiguration.CreateDimmerAddresses(subGroup), knxService, logger)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 

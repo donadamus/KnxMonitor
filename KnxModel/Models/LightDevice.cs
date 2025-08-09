@@ -4,12 +4,12 @@ using Microsoft.Extensions.Logging;
 
 namespace KnxModel
 {
-    public class LightDevice : LightDeviceBase<LightAddresses>
+    public class LightDevice : LightDeviceBase<LightDevice, LightAddresses>
     {
         private readonly ILogger<LightDevice> _logger;
 
         public LightDevice(string id, string name, string subGroup, IKnxService knxService, ILogger<LightDevice> logger)
-            : base(id, name, subGroup, KnxAddressConfiguration.CreateLightAddresses(subGroup), knxService)
+            : base(id, name, subGroup, KnxAddressConfiguration.CreateLightAddresses(subGroup), knxService, logger)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }

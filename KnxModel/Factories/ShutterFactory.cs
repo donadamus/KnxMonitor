@@ -39,24 +39,24 @@ namespace KnxModel
         /// </summary>
         public static readonly Dictionary<string, ShutterConfig> ShutterConfigurations = new()
         {
-            { "R1.1", new("Bathroom", "1") },
-            { "R2.1", new("Master Bathroom", "2") },
-            { "R3.1", new("Master Bedroom", "3") },
-            { "R3.2", new("Master Bedroom", "4") },
-            { "R5.1", new("Guest Room", "5") },
-            { "R6.1", new("Kinga's Room", "6") },
-            { "R6.2", new("Kinga's Room", "7") },
-            { "R6.3", new("Kinga's Room", "8") },
-            { "R7.1", new("Rafal's Room", "9") },
-            { "R7.2", new("Rafal's Room", "10") },
-            { "R7.3", new("Rafal's Room", "11") },
-            { "R8.1", new("Hall", "12") },
+            //{ "R1.1", new("Bathroom", "1") },
+            //{ "R2.1", new("Master Bathroom", "2") },
+            //{ "R3.1", new("Master Bedroom", "3") },
+            //{ "R3.2", new("Master Bedroom", "4") },
+            //{ "R5.1", new("Guest Room", "5") },
+            //{ "R6.1", new("Kinga's Room", "6") },
+            //{ "R6.2", new("Kinga's Room", "7") },
+            //{ "R6.3", new("Kinga's Room", "8") },
+            //{ "R7.1", new("Rafal's Room", "9") },
+            //{ "R7.2", new("Rafal's Room", "10") },
+            //{ "R7.3", new("Rafal's Room", "11") },
+            //{ "R8.1", new("Hall", "12") },
 
-            { "R02.1", new("Kitchen", "13") },
-            { "R02.2", new("Kitchen", "14") },
-            { "R03.1", new("Dining Room", "15") },
-            { "R04.1", new("Living Room", "16") },
-            { "R04.2", new("Living Room", "17") },
+            //{ "R02.1", new("Kitchen", "13") },
+            //{ "R02.2", new("Kitchen", "14") },
+            //{ "R03.1", new("Dining Room", "15") },
+            //{ "R04.1", new("Living Room", "16") },
+            //{ "R04.2", new("Living Room", "17") },
             { "R05.1", new("Office", "18") }
         };
     }

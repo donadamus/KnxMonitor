@@ -1,8 +1,9 @@
 using KnxModel.Models.Helpers;
+using Microsoft.Extensions.Logging;
 
 namespace KnxModel
 {
-    public abstract class LockableDeviceBase<TAddressess> : ILockableDevice, IDisposable, IIdentifable
+    public abstract class LockableDeviceBase<TDevice, TAddressess> : ILockableDevice, IDisposable, IIdentifable
         where TAddressess : ILockableAddress
     {
         internal readonly KnxEventManager _eventManager;
@@ -19,9 +20,9 @@ namespace KnxModel
         public TAddressess Addresses { get; }
 
 
-        private readonly LockableDeviceHelper _lockableHelper;
+        private readonly LockableDeviceHelper<TDevice> _lockableHelper;
 
-        public LockableDeviceBase(string id, string name, string subGroup, TAddressess addresses, IKnxService knxService)
+        public LockableDeviceBase(string id, string name, string subGroup, TAddressess addresses, IKnxService knxService, ILogger<TDevice> logger)
         {
             Id = id ?? throw new ArgumentNullException(nameof(id));
             Name = name ?? throw new ArgumentNullException(nameof(name));
@@ -32,11 +33,12 @@ namespace KnxModel
             _eventManager = new KnxEventManager(_knxService, Id, "LockableDevice");
             _eventManager.MessageReceived += OnKnxMessageReceived;
 
-            _lockableHelper = new LockableDeviceHelper(
+            _lockableHelper = new LockableDeviceHelper<TDevice>(
             _knxService, Id, "LightDevice",
             () => Addresses,
             state => { _currentLockState = state; _lastUpdated = DateTime.Now; },
-            () => _currentLockState);
+            () => _currentLockState,
+            logger);
 
             // Start listening to KNX events
             _eventManager.StartListening();

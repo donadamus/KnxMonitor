@@ -9,13 +9,13 @@ namespace KnxTest.Unit.Models
     /// Base unit tests for devices that implement ILockableDevice
     /// Tests lock-specific functionality
     /// </summary>
-    public abstract class LockDeviceTestsBase<T, TAddressess> : BaseKnxDeviceUnitTests
-        where T : LockableDeviceBase<TAddressess>, ILockableDevice, IKnxDeviceBase
+    public abstract class LockDeviceTestsBase<TDevice, TAddressess> : BaseKnxDeviceUnitTests
+        where TDevice : LockableDeviceBase<TDevice, TAddressess>, ILockableDevice, IKnxDeviceBase
         where TAddressess : ILockableAddress
     {
-        protected abstract T _device { get; }
+        protected abstract TDevice _device { get; }
 
-        protected abstract ILogger<T> _logger { get; }
+        protected abstract ILogger<TDevice> _logger { get; }
 
         public LockDeviceTestsBase() : base()
         {

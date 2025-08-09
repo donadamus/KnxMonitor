@@ -11,7 +11,7 @@ namespace KnxModel
     /// Position: 0% = fully open, 100% = fully closed
     /// IsActive: true = moving, false = stopped
     /// </summary>
-    public class ShutterDevice : LockableDeviceBase<ShutterAddresses>, IShutterDevice
+    public class ShutterDevice : LockableDeviceBase<ShutterDevice, ShutterAddresses>, IShutterDevice
     {
         private readonly PercentageControllableDeviceHelper<ShutterDevice> _shutterHelper;
         private readonly ILogger<ShutterDevice> logger;
@@ -25,7 +25,7 @@ namespace KnxModel
         /// Convenience constructor that automatically creates addresses based on subGroup
         /// </summary>
         public ShutterDevice(string id, string name, string subGroup, IKnxService knxService, ILogger<ShutterDevice> logger)
-            : base(id, name, subGroup, KnxAddressConfiguration.CreateShutterAddresses(subGroup), knxService)
+            : base(id, name, subGroup, KnxAddressConfiguration.CreateShutterAddresses(subGroup), knxService, logger)
         {
             _shutterHelper = new PercentageControllableDeviceHelper<ShutterDevice>(
                             _knxService, Id, "ShutterDevice",
@@ -36,6 +36,16 @@ namespace KnxModel
                             );
             _eventManager.MessageReceived += OnKnxMessageReceived;
             this.logger = logger;
+        }
+
+        private async Task WaitForCooldownAsync()
+        {
+            var elapsed = DateTime.Now - LastUpdated;
+
+            if (elapsed < TimeSpan.FromSeconds(2) && elapsed > TimeSpan.Zero)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(2) - elapsed);
+            }
         }
 
         private void OnKnxMessageReceived(object? sender, KnxGroupEventArgs e)
@@ -96,6 +106,7 @@ namespace KnxModel
 
         public async Task SetPercentageAsync(float percentage, TimeSpan? timeout = null)
         {
+            await WaitForCooldownAsync();
             logger.LogInformation($"ShutterDevice {Id} set percentage to {percentage}%");
             await _shutterHelper.SetPercentageAsync(percentage, timeout);
             logger.LogInformation($"ShutterDevice {Id} current percentage is now {_currentPercentage}%");
@@ -114,6 +125,7 @@ namespace KnxModel
 
         public async Task AdjustPercentageAsync(float delta, TimeSpan? timeout = null)
         {
+            await WaitForCooldownAsync();
             logger.LogInformation($"ShutterDevice {Id} adjusting percentage by {delta}%, timeout: {timeout?.TotalSeconds ?? 0}s");
             await _shutterHelper.AdjustPercentageAsync(delta, timeout);
             logger.LogInformation($"ShutterDevice {Id} adjusted percentage by {delta}%, new value: {_currentPercentage}%");
@@ -190,12 +202,14 @@ namespace KnxModel
 
         public async Task OpenAsync(TimeSpan? timeout = null)
         {
+            await WaitForCooldownAsync();
             await SetPercentageAsync(0.0f, timeout); // 0% = fully open
             Console.WriteLine($"ShutterDevice {Id} opened");
         }
 
         public async Task CloseAsync(TimeSpan? timeout = null)
         {
+            await WaitForCooldownAsync();
             await SetPercentageAsync(100.0f, timeout); // 100% = fully closed
             Console.WriteLine($"ShutterDevice {Id} closed");
         }

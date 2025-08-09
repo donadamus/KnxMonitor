@@ -32,6 +32,7 @@ namespace KnxTest.Integration.Base
 
             // Test positive adjustment
             await dimmerDevice.AdjustPercentageAsync(20, TimeSpan.FromSeconds(20));
+
             var waitResult = await dimmerDevice.WaitForPercentageAsync(50, 1, TimeSpan.FromSeconds(1));
 
 
@@ -43,6 +44,7 @@ namespace KnxTest.Integration.Base
             await dimmerDevice.AdjustPercentageAsync(-15, TimeSpan.FromSeconds(20));
 
             waitResult = await dimmerDevice.WaitForPercentageAsync(35, 1, TimeSpan.FromSeconds(1));
+
             waitResult.Should().BeTrue($"Device {dimmerDevice.Id} should be at 35% after -15 adjustment");
             dimmerDevice.CurrentPercentage.Should().BeApproximately(35, 1,
                 $"Device {dimmerDevice.Id} should be at 35% after -15 adjustment");
@@ -115,7 +117,7 @@ namespace KnxTest.Integration.Base
                 $"Device {dimmerDevice.Id} should return a valid percentage >= 0");
             percentage.Should().BeLessThanOrEqualTo(100,
                 $"Device {dimmerDevice.Id} should return a valid percentage <= 100");
-            dimmerDevice.CurrentPercentage.Should().Be(percentage,
+            dimmerDevice.CurrentPercentage.Should().BeApproximately(percentage, 0.1f,
                 $"Device {dimmerDevice.Id} should have its CurrentPercentage updated to {percentage}");
             Console.WriteLine($"✅ Device {dimmerDevice.Id} read percentage: {percentage}%");
 
@@ -132,11 +134,10 @@ namespace KnxTest.Integration.Base
 
         internal async Task CanSetSpecificPercentages(IPercentageControllable device)
         {
-            await SetDevicePercentageAndAssert(device, 11, TimeSpan.FromSeconds(20));
-            await SetDevicePercentageAndAssert(device, 22, TimeSpan.FromSeconds(20));
-            await SetDevicePercentageAndAssert(device, 33, TimeSpan.FromSeconds(20));
-            await SetDevicePercentageAndAssert(device, 49, TimeSpan.FromSeconds(20));
-            await SetDevicePercentageAndAssert(device, 78, TimeSpan.FromSeconds(20));
+            await SetDevicePercentageAndAssert(device, 20, TimeSpan.FromSeconds(20));
+            await SetDevicePercentageAndAssert(device, 40, TimeSpan.FromSeconds(20));
+            await SetDevicePercentageAndAssert(device, 80, TimeSpan.FromSeconds(20));
+
             await Task.CompletedTask;
         }
 

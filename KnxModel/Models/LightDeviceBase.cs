@@ -1,15 +1,16 @@
 using KnxModel.Models.Helpers;
+using Microsoft.Extensions.Logging;
 
 namespace KnxModel
 {
     // Combines basic device functionality with switching and locking capabilities
     /// </summary>
-    public abstract class LightDeviceBase<TAddressess> : LockableDeviceBase<TAddressess>, ILightDevice
+    public abstract class LightDeviceBase<TDevice, TAddressess> : LockableDeviceBase<TDevice, TAddressess>, ILightDevice
         where TAddressess : ISwitchableAddress, ILockableAddress
     {
 
         
-        private readonly SwitchableDeviceHelper _switchableHelper;
+        private readonly SwitchableDeviceHelper<TDevice> _switchableHelper;
 
         
         internal Switch _currentSwitchState = Switch.Unknown;
@@ -19,8 +20,8 @@ namespace KnxModel
         private Switch? _savedSwitchState;
 
 
-        public LightDeviceBase(string id, string name, string subGroup, TAddressess addresses, IKnxService knxService)
-            : base(id, name, subGroup, addresses,knxService)
+        public LightDeviceBase(string id, string name, string subGroup, TAddressess addresses, IKnxService knxService, ILogger<TDevice> logger)
+            : base(id, name, subGroup, addresses,knxService, logger)
         {
             
 
@@ -28,11 +29,12 @@ namespace KnxModel
             _eventManager.MessageReceived += OnKnxMessageReceived;
 
             // Initialize helpers
-            _switchableHelper = new SwitchableDeviceHelper(
+            _switchableHelper = new SwitchableDeviceHelper<TDevice>(
                 _knxService, Id, "LightDevice",
                 () => Addresses,
                 state => { _currentSwitchState = state; _lastUpdated = DateTime.Now; },
-                () => _currentSwitchState);
+                () => _currentSwitchState,
+                logger);
 
 
         }
