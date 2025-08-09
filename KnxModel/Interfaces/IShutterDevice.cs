@@ -12,17 +12,24 @@ namespace KnxModel
         // - Locking capability (ILockableDevice)
         // - Activity status monitoring (IActivityStatusReadable - is moving?)
         
-        // Note: Shutters don't need ISwitchable - they use percentage for open/close
+        // Note: Shutters support both percentage control (0-100%) and direct UP/DOWN commands
         // 0% = fully open, 100% = fully closed
         // IsActive = true when shutter is moving, false when stopped
+        // 
+        // IMPORTANT: Physical shutters measure position by timing open/close operations.
+        // This can become desynchronized, so UP/DOWN commands via MovementControl are used
+        // in OpenAsync/CloseAsync methods instead of percentage 0%/100% for better reliability.
+        // A 2-second cooldown is enforced between commands to prevent device synchronization issues.
         
         /// <summary>
-        /// Open shutter completely (0% position)
+        /// Open shutter completely using UP command (MovementControl = 1)
+        /// More reliable than SetPercentageAsync(0) due to timing-based position tracking
         /// </summary>
         Task OpenAsync(TimeSpan? timeout = null);
 
         /// <summary>
-        /// Close shutter completely (100% position)  
+        /// Close shutter completely using DOWN command (MovementControl = 0)
+        /// More reliable than SetPercentageAsync(100) due to timing-based position tracking
         /// </summary>
         Task CloseAsync(TimeSpan? timeout = null);
 

@@ -14,6 +14,7 @@ namespace KnxModel
     public class ShutterDevice : LockableDeviceBase<ShutterDevice, ShutterAddresses>, IShutterDevice
     {
         private readonly PercentageControllableDeviceHelper<ShutterDevice> _shutterHelper;
+        private readonly ShutterDeviceHelper<ShutterDevice> _shutterMovementHelper;
         private readonly ILogger<ShutterDevice> logger;
         private float _currentPercentage = 0.0f; // Start fully open
         private bool _isActive = false; // Movement status: true = moving, false = stopped
@@ -34,25 +35,29 @@ namespace KnxModel
                             () => _currentPercentage,
                             logger: logger
                             );
+
+            _shutterMovementHelper = new ShutterDeviceHelper<ShutterDevice>(
+                            _knxService, Id, "ShutterDevice",
+                            () => Addresses,
+                            active => { _isActive = active; },
+                            () => _lastUpdated,
+                            () => { _lastUpdated = DateTime.Now; },
+                            () => _currentLockState,
+                            () => UnlockAsync(),
+                            logger: logger
+                            );
+
             _eventManager.MessageReceived += OnKnxMessageReceived;
             this.logger = logger;
-        }
-
-        private async Task WaitForCooldownAsync()
-        {
-            var elapsed = DateTime.Now - LastUpdated;
-
-            if (elapsed < TimeSpan.FromSeconds(2) && elapsed > TimeSpan.Zero)
-            {
-                await Task.Delay(TimeSpan.FromSeconds(2) - elapsed);
-            }
         }
 
         private void OnKnxMessageReceived(object? sender, KnxGroupEventArgs e)
         {
             // Process percentage control messages
             _shutterHelper.ProcessSwitchMessage(e);
-
+            
+            // Process movement feedback messages
+            _shutterMovementHelper.ProcessMovementMessage(e);
         }
 
 
@@ -106,7 +111,6 @@ namespace KnxModel
 
         public async Task SetPercentageAsync(float percentage, TimeSpan? timeout = null)
         {
-            await WaitForCooldownAsync();
             logger.LogInformation($"ShutterDevice {Id} set percentage to {percentage}%");
             await _shutterHelper.SetPercentageAsync(percentage, timeout);
             logger.LogInformation($"ShutterDevice {Id} current percentage is now {_currentPercentage}%");
@@ -125,7 +129,6 @@ namespace KnxModel
 
         public async Task AdjustPercentageAsync(float delta, TimeSpan? timeout = null)
         {
-            await WaitForCooldownAsync();
             logger.LogInformation($"ShutterDevice {Id} adjusting percentage by {delta}%, timeout: {timeout?.TotalSeconds ?? 0}s");
             await _shutterHelper.AdjustPercentageAsync(delta, timeout);
             logger.LogInformation($"ShutterDevice {Id} adjusted percentage by {delta}%, new value: {_currentPercentage}%");
@@ -202,29 +205,17 @@ namespace KnxModel
 
         public async Task OpenAsync(TimeSpan? timeout = null)
         {
-            await WaitForCooldownAsync();
-            await SetPercentageAsync(0.0f, timeout); // 0% = fully open
-            Console.WriteLine($"ShutterDevice {Id} opened");
+            await _shutterMovementHelper.OpenAsync(timeout);
         }
 
         public async Task CloseAsync(TimeSpan? timeout = null)
         {
-            await WaitForCooldownAsync();
-            await SetPercentageAsync(100.0f, timeout); // 100% = fully closed
-            Console.WriteLine($"ShutterDevice {Id} closed");
+            await _shutterMovementHelper.CloseAsync(timeout);
         }
 
         public async Task StopAsync(TimeSpan? timeout = null)
         {
-            // TODO: Send KNX stop command
-            await Task.Delay(25); // Simulate KNX communication
-            
-            // In a real implementation, this would stop the motor at current position
-            // and update the activity status
-            _isActive = false; // Movement stopped
-            _lastUpdated = DateTime.Now;
-            
-            Console.WriteLine($"ShutterDevice {Id} stopped at {_currentPercentage}%");
+            await _shutterMovementHelper.StopAsync(timeout);
             
             // Wait for confirmation that movement actually stopped
             if (timeout.HasValue)
