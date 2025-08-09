@@ -1,11 +1,13 @@
 using FluentAssertions;
 using KnxModel;
 using KnxTest.Integration.Base;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
+using Xunit.Abstractions;
 using static KnxTest.Integration.LightIntegrationTests;
 
 namespace KnxTest.Integration
@@ -13,9 +15,11 @@ namespace KnxTest.Integration
     [Collection("KnxService collection")]
     public class LightIntegrationTests : LightIntegrationTestsBase<LightDevice>
     {
-        public LightIntegrationTests(KnxServiceFixture fixture) : base(fixture)
+        internal readonly XUnitLogger<LightDevice> _logger;
+
+        public LightIntegrationTests(KnxServiceFixture fixture, ITestOutputHelper output) : base(fixture)
         {
-            
+            _logger = new XUnitLogger<LightDevice>(output);
         }
 
         // Data source for tests - only pure lights (not dimmers)
@@ -32,7 +36,7 @@ namespace KnxTest.Integration
         internal override async Task InitializeDevice(string deviceId, bool saveCurrentState = true)
         {
             Console.WriteLine($"🆕 Creating new LightDevice {deviceId}");
-            Device = LightFactory.CreateLight(deviceId, _knxService);
+            Device = LightFactory.CreateLight(deviceId, _knxService, _logger);
             await Device.InitializeAsync();
             if (saveCurrentState)
             {

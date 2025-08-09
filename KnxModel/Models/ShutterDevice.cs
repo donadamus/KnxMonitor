@@ -50,10 +50,15 @@ namespace KnxModel
 
         public override async Task InitializeAsync()
         {
+            logger.LogInformation("Initializing ShutterDevice {DeviceId} ({DeviceName})", Id, Name);
+            
             // Read initial states from KNX bus
             _currentPercentage = await ReadPercentageAsync();
             _currentLockState = await ReadLockStateAsync();
             _lastUpdated = DateTime.Now;
+            
+            logger.LogInformation("ShutterDevice {DeviceId} initialized - Position: {Position}%, Lock: {LockState}", 
+                Id, _currentPercentage, _currentLockState);
             
             Console.WriteLine($"ShutterDevice {Id} initialized - Position: {_currentPercentage}%, Lock: {_currentLockState}");
         }
@@ -91,8 +96,8 @@ namespace KnxModel
 
         public async Task SetPercentageAsync(float percentage, TimeSpan? timeout = null)
         {
-            await _shutterHelper.SetPercentageAsync(percentage, timeout);
             logger.LogInformation($"ShutterDevice {Id} set percentage to {percentage}%");
+            await _shutterHelper.SetPercentageAsync(percentage, timeout);
             logger.LogInformation($"ShutterDevice {Id} current percentage is now {_currentPercentage}%");
         }
 
@@ -109,6 +114,7 @@ namespace KnxModel
 
         public async Task AdjustPercentageAsync(float delta, TimeSpan? timeout = null)
         {
+            logger.LogInformation($"ShutterDevice {Id} adjusting percentage by {delta}%, timeout: {timeout?.TotalSeconds ?? 0}s");
             await _shutterHelper.AdjustPercentageAsync(delta, timeout);
             logger.LogInformation($"ShutterDevice {Id} adjusted percentage by {delta}%, new value: {_currentPercentage}%");
         }

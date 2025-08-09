@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
 
 namespace KnxModel
 {
@@ -8,11 +9,11 @@ namespace KnxModel
     /// </summary>
     public static class LightFactory
     {
-        public static LightDevice CreateLight(string lightId, IKnxService knxService)
+        public static LightDevice CreateLight(string lightId, IKnxService knxService, ILogger<LightDevice> logger)
         {
             if (LightConfigurations.TryGetValue(lightId, out var config))
             {
-                return new LightDevice(lightId, config.Name, config.SubGroup, knxService);
+                return new LightDevice(lightId, config.Name, config.SubGroup, knxService, logger);
             }
             //else if (DimmerFactory.DimmerConfigurations.TryGetValue(lightId, out var dimmerConfig))
             //{

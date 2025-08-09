@@ -29,7 +29,7 @@ namespace KnxTest.Integration
         {
             if (formatter == null) throw new ArgumentNullException(nameof(formatter));
 
-            _output.WriteLine($"[{logLevel}] {formatter(state, exception)}");
+            _output.WriteLine($"[{logLevel}]({DateTime.Now.TimeOfDay}) {formatter(state, exception)}");
 
             if (exception != null)
             {

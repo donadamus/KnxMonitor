@@ -10,7 +10,7 @@ namespace KnxModel
 
     public class DimmerDevice : LightDeviceBase<DimmerAddresses>, IDimmerDevice
     {
-
+        private readonly ILogger<DimmerDevice> _logger;
         private float _currentPercentage = -1.0f; // 0% brightness
         private float? _savedPercentage;
         private readonly PercentageControllableDeviceHelper<DimmerDevice> _percentageControllableHelper;
@@ -18,6 +18,7 @@ namespace KnxModel
         public DimmerDevice(string id, string name, string subGroup, IKnxService knxService, ILogger<DimmerDevice> logger)
             : base(id, name, subGroup, KnxAddressConfiguration.CreateDimmerAddresses(subGroup), knxService)
         {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             _percentageControllableHelper = new PercentageControllableDeviceHelper<DimmerDevice>(
                 _knxService, Id, "DimmerDevice",
@@ -39,11 +40,16 @@ namespace KnxModel
 
         public override async Task InitializeAsync()
         {
+            _logger.LogInformation("Initializing DimmerDevice {DeviceId} ({DeviceName})", Id, Name);
+            
             // Read initial states from KNX bus
             _currentSwitchState = await ReadSwitchStateAsync();
             _currentLockState = await ReadLockStateAsync();
             _currentPercentage = await ReadPercentageAsync();
             _lastUpdated = DateTime.Now;
+
+            _logger.LogInformation("DimmerDevice {DeviceId} initialized - Switch: {SwitchState}, Lock: {LockState}, Brightness: {Brightness}%", 
+                Id, _currentSwitchState, _currentLockState, _currentPercentage);
 
             Console.WriteLine($"DimmerDevice {Id} initialized - Switch: {_currentSwitchState}, Lock: {_currentLockState}, Brightness: {_currentPercentage}%");
         }
