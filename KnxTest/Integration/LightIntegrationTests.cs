@@ -101,22 +101,24 @@ namespace KnxTest.Integration
         [MemberData(nameof(LightIdsFromConfig))]
         public override async Task CanTurnOnAndTurnOff(string deviceId)
         {
-            await TestCanTurnOnAndTurnOff(deviceId);
-
+            await InitializeDeviceAndEnsureUnlocked(deviceId);
+            await _switchTestHelper.CanTurnOnAndTurnOff(Device!);
         }
 
         [Theory]
         [MemberData(nameof(LightIdsFromConfig))]
         public override async Task CanToggleSwitch(string deviceId)
         {
-            await TestCanToggleSwitch(deviceId);
+            await InitializeDeviceAndEnsureUnlocked(deviceId);
+            await _switchTestHelper.CanToggleSwitch(Device!);
         }
 
         [Theory]
         [MemberData(nameof(LightIdsFromConfig))]
         public override async Task CanReadSwitchState(string deviceId)
         {
-            await TestCanReadSwitchState(deviceId);
+            await InitializeDevice(deviceId);
+            await _switchTestHelper.CanReadSwitchState(Device!);
         }
 
         #endregion

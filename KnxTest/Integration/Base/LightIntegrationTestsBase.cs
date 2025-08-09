@@ -24,6 +24,15 @@ namespace KnxTest.Integration.Base
 
         internal abstract Task InitializeDevice(string deviceId, bool saveCurrentState = true);
 
+        /// <summary>
+        /// Initialize device and ensure it's unlocked for testing
+        /// </summary>
+        protected async Task InitializeDeviceAndEnsureUnlocked(string deviceId, bool saveCurrentState = true)
+        {
+            await InitializeDevice(deviceId, saveCurrentState);
+            await _lockTestHelper.EnsureDeviceIsUnlockedBeforeTest(Device!);
+        }
+
         #region ILockableDeviceTests Implementation
 
         public abstract Task CanLockAndUnlock(string deviceId);
@@ -36,43 +45,8 @@ namespace KnxTest.Integration.Base
         #region ISwitchableDeviceTests Tests
 
         public abstract Task CanTurnOnAndTurnOff(string deviceId);
-        public async Task TestCanTurnOnAndTurnOff(string deviceId)
-        {
-            // Arrange
-            await InitializeDevice(deviceId);
-
-            // Ensure device is unlocked before testing switch functionality
-            await _lockTestHelper.EnsureDeviceIsUnlockedBeforeTest(Device!);
-
-            // Act & Assert - Test switch functionality
-            await _switchTestHelper.CanTurnOnAndTurnOff(Device!);
-
-            await Task.CompletedTask;
-        }
         public abstract Task CanToggleSwitch(string deviceId);
-        public async Task TestCanToggleSwitch(string deviceId)
-        {
-            // Arrange
-            await InitializeDevice(deviceId);
-            // Ensure device is unlocked before testing toggle functionality
-            await _lockTestHelper.EnsureDeviceIsUnlockedBeforeTest(Device!);
-
-            // Act & Assert - Check toggle functionality
-            await _switchTestHelper.CanToggleSwitch(Device!);
-
-            await Task.CompletedTask;
-
-        }
         public abstract Task CanReadSwitchState(string deviceId);
-        public async Task TestCanReadSwitchState(string deviceId)
-        {
-            await InitializeDevice(deviceId);
-
-            //Act $ Assert
-            await _switchTestHelper.CanReadSwitchState(Device!);
-
-            await Task.CompletedTask;
-        }
 
         #endregion
 

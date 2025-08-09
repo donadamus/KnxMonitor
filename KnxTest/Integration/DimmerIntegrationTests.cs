@@ -44,22 +44,15 @@ namespace KnxTest.Integration
         [MemberData(nameof(DimmerIdsFromConfig))]
         public override async Task CanLockAndUnlock(string deviceId)
         {
-            // Arrange
             await InitializeDevice(deviceId);
-
-            // Act & Assert
             await _lockTestHelper.CanLockAndUnlock(Device!);
-            
         }
 
         [Theory]
         [MemberData(nameof(DimmerIdsFromConfig))]
         public override async Task CanReadLockState(string deviceId)
         {
-            // Arrange
             await InitializeDevice(deviceId);
-
-            // Act & Assert
             await _lockTestHelper.CanReadLockState(Device!);
         }
 
@@ -67,31 +60,31 @@ namespace KnxTest.Integration
         [MemberData(nameof(DimmerIdsFromConfig))]
         public override async Task CanReadSwitchState(string deviceId)
         {
-            await TestCanReadSwitchState(deviceId);
+            await InitializeDevice(deviceId);
+            await _switchTestHelper.CanReadSwitchState(Device!);
         }
 
         [Theory]
         [MemberData(nameof(DimmerIdsFromConfig))]
         public override async Task CanToggleSwitch(string deviceId)
         {
-            await TestCanToggleSwitch(deviceId);
+            await InitializeDeviceAndEnsureUnlocked(deviceId);
+            await _switchTestHelper.CanToggleSwitch(Device!);
         }
 
         [Theory]
         [MemberData(nameof(DimmerIdsFromConfig))]
         public override async Task CanTurnOnAndTurnOff(string deviceId)
         {
-            await TestCanTurnOnAndTurnOff(deviceId);
+            await InitializeDeviceAndEnsureUnlocked(deviceId);
+            await _switchTestHelper.CanTurnOnAndTurnOff(Device!);
         }
 
         [Theory]
         [MemberData(nameof(DimmerIdsFromConfig))]
         public override async Task LockPreventsStateChanges(string deviceId)
         {
-            // Arrange
             await InitializeDevice(deviceId);
-
-            // Act & Assert
             await _lockTestHelper.LockPreventsStateChange(Device!);
         }
 
@@ -99,10 +92,7 @@ namespace KnxTest.Integration
         [MemberData(nameof(DimmerIdsFromConfig))]
         public override async Task SwitchableDeviceTurnOffWhenLocked(string deviceId)
         {
-            // Arrange
             await InitializeDevice(deviceId);
-
-            // Act & Assert
             await _lockTestHelper.SwitchableDeviceTurnOffWhenLocked(Device!);
         }
 
@@ -110,56 +100,23 @@ namespace KnxTest.Integration
         [MemberData(nameof(DimmerIdsFromConfig))]
         public async Task CanSetPercentage(string deviceId)
         {
-            await TestCanSetPercentage(deviceId);
-        }
-
-        public async Task TestCanSetPercentage(string deviceId)
-        {
-            // Arrange
-            await InitializeDevice(deviceId);
-
-            // Ensure device is unlocked before testing switch functionality
-            await _lockTestHelper.EnsureDeviceIsUnlockedBeforeTest(Device!);
-
-            // Act
+            await InitializeDeviceAndEnsureUnlocked(deviceId);
             await _percentageTestHelper.CanSetPercentage(Device!);
-
-            await Task.CompletedTask;
         }
 
         [Theory]
         [MemberData(nameof(DimmerIdsFromConfig))]
         public async Task CanReadPercentage(string deviceId)
         {
-            await TestCanReadPercentage(deviceId);
-        }
-
-        public async Task TestCanReadPercentage(string deviceId)
-        {
             await InitializeDevice(deviceId);
-
-            //Act $ Assert
             await _percentageTestHelper.CanReadPercentage(Device!);
-
-            await Task.CompletedTask;
-
         }
 
         [Theory]
         [MemberData(nameof(DimmerIdsFromConfig))]
         public async Task PercentageRangeValidation(string deviceId)
         {
-            await TestPercentageRangeValidation(deviceId);
-        }
-
-        public async Task TestPercentageRangeValidation(string deviceId)
-        {
-            // Arrange
-            await InitializeDevice(deviceId);
-
-            // Ensure device is unlocked before testing switch functionality
-            await _lockTestHelper.EnsureDeviceIsUnlockedBeforeTest(Device!);
-
+            await InitializeDeviceAndEnsureUnlocked(deviceId);
             await _percentageTestHelper.PercentageRangeValidation(Device!);
         }
 
@@ -167,17 +124,7 @@ namespace KnxTest.Integration
         [MemberData(nameof(DimmerIdsFromConfig))]
         public async Task CanAdjustPercentage(string deviceId)
         {
-            await TestCanAdjustPercentage(deviceId);
-        }
-
-        public async Task TestCanAdjustPercentage(string deviceId)
-        {
-            // Arrange
-            await InitializeDevice(deviceId);
-
-            // Ensure device is unlocked before testing switch functionality
-            await _lockTestHelper.EnsureDeviceIsUnlockedBeforeTest(Device!);
-
+            await InitializeDeviceAndEnsureUnlocked(deviceId);
             await _percentageTestHelper.CanAdjustPercentage(Device!);
         }
 
@@ -185,17 +132,7 @@ namespace KnxTest.Integration
         [MemberData(nameof(DimmerIdsFromConfig))]
         public async Task CanSetToMinimum(string deviceId)
         {
-            await TestCanSetToMinimum(deviceId);
-        }
-
-        public async Task TestCanSetToMinimum(string deviceId)
-        {
-            // Arrange
-            await InitializeDevice(deviceId);
-
-            // Ensure device is unlocked before testing switch functionality
-            await _lockTestHelper.EnsureDeviceIsUnlockedBeforeTest(Device!);
-
+            await InitializeDeviceAndEnsureUnlocked(deviceId);
             await _percentageTestHelper.CanSetToMinimum(Device!);
         }
 
@@ -203,17 +140,7 @@ namespace KnxTest.Integration
         [MemberData(nameof(DimmerIdsFromConfig))]
         public async Task CanSetToMaximum(string deviceId)
         {
-            await TestCanSetToMaximum(deviceId);
-        }
-
-        public async Task TestCanSetToMaximum(string deviceId)
-        {
-            // Arrange
-            await InitializeDevice(deviceId);
-
-            // Ensure device is unlocked before testing switch functionality
-            await _lockTestHelper.EnsureDeviceIsUnlockedBeforeTest(Device!);
-
+            await InitializeDeviceAndEnsureUnlocked(deviceId);
             await _percentageTestHelper.CanSetToMaximum(Device!);
         }
 
@@ -221,17 +148,7 @@ namespace KnxTest.Integration
         [MemberData(nameof(DimmerIdsFromConfig))]
         public async Task CanWaitForPercentageState(string deviceId)
         {
-           await TestCanWaitForPercentageState(deviceId);
-        }
-
-        public async Task TestCanWaitForPercentageState(string deviceId)
-        {
-            // Arrange
-            await InitializeDevice(deviceId);
-
-            // Ensure device is unlocked before testing switch functionality
-            await _lockTestHelper.EnsureDeviceIsUnlockedBeforeTest(Device!);
-
+            await InitializeDeviceAndEnsureUnlocked(deviceId);
             await _percentageTestHelper.CanWaitForPercentageState(Device!);
         }
 
@@ -239,20 +156,8 @@ namespace KnxTest.Integration
         [MemberData(nameof(DimmerIdsFromConfig))]
         public async Task CanSetSpecificPercentages(string deviceId)
         {
-            await TestCanSetSpecificPercentages(deviceId);
-        }
-
-        public async Task TestCanSetSpecificPercentages(string deviceId)
-        {
-            // Arrange
-            await InitializeDevice(deviceId);
-
-            // Ensure device is unlocked before testing switch functionality
-            await _lockTestHelper.EnsureDeviceIsUnlockedBeforeTest(Device!);
-
+            await InitializeDeviceAndEnsureUnlocked(deviceId);
             await _percentageTestHelper.CanSetSpecificPercentages(Device!);
-
-            await Task.CompletedTask;
         }
     }
 }
