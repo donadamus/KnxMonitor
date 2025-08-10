@@ -1,40 +1,40 @@
 namespace KnxModel
 {
-    public interface ISunProtectionCapableDevice : IIdentifable
+    public interface ISunProtectionBlockableDevice : IIdentifable
     {
         /// <summary>
-        /// Indicates whether sun protection is currently enabled.
+        /// Indicates whether sun protection control is currently locked.
         /// </summary>
         bool IsSunProtectionBlocked { get; }
 
         /// <summary>
-        /// Enable sun protection mode.
+        /// Block sun protection control (prevent changes).
         /// </summary>
         /// <param name="timeout">Maximum time to wait for operation.</param>
         Task BlockSunProtectionAsync(TimeSpan? timeout = null);
 
         /// <summary>
-        /// Disable sun protection mode.
+        /// Unblock sun protection control (allow changes).
         /// </summary>
         /// <param name="timeout">Maximum time to wait for operation.</param>
         Task UnblockSunProtectionAsync(TimeSpan? timeout = null);
 
         /// <summary>
-        /// Set sun protection state.
+        /// Set block state for sun protection control.
         /// </summary>
-        /// <param name="enabled">True to enable, false to disable.</param>
+        /// <param name="blocked">True to block, false to unblock.</param>
         /// <param name="timeout">Maximum time to wait for operation.</param>
-        Task SetSunProtectionBlockAsync(bool enabled, TimeSpan? timeout = null);
+        Task SetSunProtectionBlockStateAsync(bool blocked, TimeSpan? timeout = null);
 
         /// <summary>
-        /// Read current sun protection state from the KNX bus.
+        /// Read block state for sun protection control from the KNX bus.
         /// </summary>
         Task<bool> ReadSunProtectionBlockStateAsync();
 
         /// <summary>
-        /// Wait for a specific sun protection state.
+        /// Wait for a specific block state for sun protection control.
         /// </summary>
-        /// <param name="targetState">Expected sun protection state (true/false).</param>
+        /// <param name="targetState">Expected block state (true/false).</param>
         /// <param name="timeout">Maximum time to wait.</param>
         Task<bool> WaitForSunProtectionBlockStateAsync(bool targetState, TimeSpan? timeout = null);
     }
