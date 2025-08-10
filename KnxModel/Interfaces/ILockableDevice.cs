@@ -42,4 +42,17 @@ namespace KnxModel
         /// </summary>
         Task<bool> WaitForLockStateAsync(Lock targetState, TimeSpan timeout);
     }
+
+    public interface ISwitchStateLockableDevice : ILockableDevice, ISwitchable
+    {
+        Switch LockedSwitchState { get; }
+        bool IsSwitchLockActive { get; }
+
+    }
+    public interface IPercentageLockableDevice: ILockableDevice, IPercentageControllable
+    {
+        float LockedPercentage { get; }
+        bool IsPercentageLockActive { get; }
+    }
+
 }

@@ -5,7 +5,7 @@ namespace KnxModel
 {
     // Combines basic device functionality with switching and locking capabilities
     /// </summary>
-    public abstract class LightDeviceBase<TDevice, TAddressess> : LockableDeviceBase<TDevice, TAddressess>, ILightDevice
+    public abstract class LightDeviceBase<TDevice, TAddressess> : LockableDeviceBase<TDevice, TAddressess>, ILightDevice, ISwitchStateLockableDevice
         where TAddressess : ISwitchableAddress, ILockableAddress
     {
 
@@ -180,9 +180,13 @@ namespace KnxModel
         /// </summary>
         internal Lock? SavedLockState => _savedLockState;
 
+        public Switch LockedSwitchState => Switch.Off;
+
+        public bool IsSwitchLockActive => true;
+
         #endregion
 
-        
+
 
 
 

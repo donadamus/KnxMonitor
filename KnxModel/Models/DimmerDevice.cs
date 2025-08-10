@@ -8,7 +8,7 @@ namespace KnxModel
     
 
 
-    public class DimmerDevice : LightDeviceBase<DimmerDevice, DimmerAddresses>, IDimmerDevice
+    public class DimmerDevice : LightDeviceBase<DimmerDevice, DimmerAddresses>, IDimmerDevice, IPercentageLockableDevice
     {
         private readonly ILogger<DimmerDevice> _logger;
         private float _currentPercentage = -1.0f; // 0% brightness
@@ -88,6 +88,10 @@ namespace KnxModel
         #region IPercentageControllable Implementation
 
         public float CurrentPercentage => _currentPercentage;
+
+        public float LockedPercentage => 0;
+
+        public bool IsPercentageLockActive => true;
 
         public async Task SetPercentageAsync(float percentage, TimeSpan? timeout = null)
         {

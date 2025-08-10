@@ -11,7 +11,7 @@ namespace KnxModel
     /// Position: 0% = fully open, 100% = fully closed
     /// IsActive: true = moving, false = stopped
     /// </summary>
-    public class ShutterDevice : LockableDeviceBase<ShutterDevice, ShutterAddresses>, IShutterDevice
+    public class ShutterDevice : LockableDeviceBase<ShutterDevice, ShutterAddresses>, IShutterDevice, IPercentageLockableDevice
     {
         private readonly PercentageControllableDeviceHelper<ShutterDevice> _shutterHelper;
         private readonly ShutterDeviceHelper<ShutterDevice> _shutterMovementHelper;
@@ -141,7 +141,8 @@ namespace KnxModel
             }
 
             await base.RestoreSavedStateAsync(timeout ?? _defaulTimeout);
-
+            logger.LogInformation("ShutterDevice {DeviceId} initialized - Position: {Position}%, Lock: {LockState}, SunProtectionBlocked: {SunProtectionBlocked}",
+    Id, _currentPercentage, _currentLockState, _isSunProtectionBlocked);
             Console.WriteLine($"ShutterDevice {Id} state restored - Position: {_savedPercentage}%, Lock: {_savedLockState}, SunProtectionBlocked: {_savedSunProtectionBlocked}");
         }
 
@@ -185,6 +186,10 @@ namespace KnxModel
         public bool IsActive => _isActive;
 
         public bool IsSunProtectionBlocked => _isSunProtectionBlocked;
+
+        public float LockedPercentage => 100;
+
+        public bool IsPercentageLockActive => true;
 
         public async Task<bool> ReadActivityStatusAsync()
         {
