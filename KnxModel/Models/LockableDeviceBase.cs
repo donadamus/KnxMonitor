@@ -16,13 +16,13 @@ namespace KnxModel
         internal Lock _currentLockState = Lock.Unknown;
         internal DateTime _lastUpdated = DateTime.MinValue;
         internal Lock? _savedLockState;
-
+        internal TimeSpan _defaulTimeout;
         public TAddressess Addresses { get; }
 
 
         private readonly LockableDeviceHelper<TDevice> _lockableHelper;
 
-        public LockableDeviceBase(string id, string name, string subGroup, TAddressess addresses, IKnxService knxService, ILogger<TDevice> logger)
+        public LockableDeviceBase(string id, string name, string subGroup, TAddressess addresses, IKnxService knxService, ILogger<TDevice> logger, TimeSpan defaulTimeout)
         {
             Id = id ?? throw new ArgumentNullException(nameof(id));
             Name = name ?? throw new ArgumentNullException(nameof(name));
@@ -42,6 +42,7 @@ namespace KnxModel
 
             // Start listening to KNX events
             _eventManager.StartListening();
+            _defaulTimeout = defaulTimeout;
         }
 
         #region ILockableDevice Implementation

@@ -8,8 +8,8 @@ namespace KnxModel
     {
         private readonly ILogger<LightDevice> _logger;
 
-        public LightDevice(string id, string name, string subGroup, IKnxService knxService, ILogger<LightDevice> logger)
-            : base(id, name, subGroup, KnxAddressConfiguration.CreateLightAddresses(subGroup), knxService, logger)
+        public LightDevice(string id, string name, string subGroup, IKnxService knxService, ILogger<LightDevice> logger, TimeSpan defaultTimeout)
+            : base(id, name, subGroup, KnxAddressConfiguration.CreateLightAddresses(subGroup), knxService, logger, defaultTimeout)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }

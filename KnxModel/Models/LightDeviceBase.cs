@@ -20,8 +20,8 @@ namespace KnxModel
         private Switch? _savedSwitchState;
 
 
-        public LightDeviceBase(string id, string name, string subGroup, TAddressess addresses, IKnxService knxService, ILogger<TDevice> logger)
-            : base(id, name, subGroup, addresses,knxService, logger)
+        public LightDeviceBase(string id, string name, string subGroup, TAddressess addresses, IKnxService knxService, ILogger<TDevice> logger, TimeSpan defaulTimeout)
+            : base(id, name, subGroup, addresses,knxService, logger, defaulTimeout)
         {
             
 

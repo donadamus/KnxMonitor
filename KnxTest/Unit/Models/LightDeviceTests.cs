@@ -22,7 +22,7 @@ namespace KnxTest.Unit.Models
         {
             _mockLogger = new Mock<ILogger<LightDevice>>();
             // Initialize LightDevice with mock KNX service
-            _device = new LightDevice("L_TEST", "Test Light", "1", _mockKnxService.Object, _mockLogger.Object);
+            _device = new LightDevice("L_TEST", "Test Light", "1", _mockKnxService.Object, _mockLogger.Object, TimeSpan.FromSeconds(1));
         }
 
 

@@ -38,29 +38,14 @@ namespace KnxModel.Models.Helpers
             this.logger = logger;
         }
 
-        /// <summary>
-        /// Waits for the required cooldown period between shutter commands.
-        /// Physical shutters need a minimum 2-second delay between commands to prevent
-        /// timing-based position tracking synchronization issues.
-        /// </summary>
-        private async Task WaitForCooldownAsync()
-        {
-            var elapsed = DateTime.Now - _getLastUpdated();
-
-            if (elapsed < TimeSpan.FromSeconds(2) && elapsed > TimeSpan.Zero)
-            {
-                await Task.Delay(TimeSpan.FromSeconds(2) - elapsed);
-            }
-        }
 
         /// <summary>
-        /// Opens the shutter using UP command (MovementControl = true)
-        /// More reliable than percentage control for physical shutters
+        /// Opens the shutter using UP command (MovementControl = 1)
+        /// Device will echo confirmation on MovementFeedback (offset +100)
+        /// and send actual movement status on MovementStatusFeedback
         /// </summary>
         internal async Task OpenAsync(TimeSpan? timeout = null)
         {
-            await WaitForCooldownAsync();
-            
             // Unlock before opening if necessary
             if (_getCurrentLockState() == Lock.On)
             {
@@ -69,27 +54,24 @@ namespace KnxModel.Models.Helpers
             
             var addresses = _getAddresses();
             
-            // Send UP command (true) to MovementControl instead of percentage 0%
-            // This is more reliable for physical shutters that use timing-based positioning
-            logger.LogInformation("{DeviceType} {DeviceId} sending UP command (open)", _deviceType, _deviceId);
+            // Send UP command (1) to MovementControl
+            // Device will echo on MovementFeedback and send status on MovementStatusFeedback
+            logger.LogInformation("{DeviceType} {DeviceId} sending UP command (1)", _deviceType, _deviceId);
             await _knxService.WriteGroupValueAsync(addresses.MovementControl, true);
             
-            // Update internal state - opening means moving towards 0%
-            _updateActivity(true);
             _updateLastUpdated();
             
-            logger.LogInformation("{DeviceType} {DeviceId} opened with UP command", _deviceType, _deviceId);
-            Console.WriteLine($"{_deviceType} {_deviceId} opened with UP command");
+            logger.LogInformation("{DeviceType} {DeviceId} UP command sent", _deviceType, _deviceId);
+            Console.WriteLine($"{_deviceType} {_deviceId} UP command sent");
         }
 
         /// <summary>
-        /// Closes the shutter using DOWN command (MovementControl = false)
-        /// More reliable than percentage control for physical shutters
+        /// Closes the shutter using DOWN command (MovementControl = 0)
+        /// Device will echo confirmation on MovementFeedback (offset +100)
+        /// and send actual movement status on MovementStatusFeedback
         /// </summary>
         internal async Task CloseAsync(TimeSpan? timeout = null)
         {
-            await WaitForCooldownAsync();
-            
             // Unlock before closing if necessary
             if (_getCurrentLockState() == Lock.On)
             {
@@ -98,67 +80,67 @@ namespace KnxModel.Models.Helpers
             
             var addresses = _getAddresses();
             
-            // Send DOWN command (false) to MovementControl instead of percentage 100%
-            // This is more reliable for physical shutters that use timing-based positioning
-            logger.LogInformation("{DeviceType} {DeviceId} sending DOWN command (close)", _deviceType, _deviceId);
+            // Send DOWN command (0) to MovementControl
+            // Device will echo on MovementFeedback and send status on MovementStatusFeedback
+            logger.LogInformation("{DeviceType} {DeviceId} sending DOWN command (0)", _deviceType, _deviceId);
             await _knxService.WriteGroupValueAsync(addresses.MovementControl, false);
             
-            // Update internal state - closing means moving towards 100%
-            _updateActivity(true);
             _updateLastUpdated();
             
-            logger.LogInformation("{DeviceType} {DeviceId} closed with DOWN command", _deviceType, _deviceId);
-            Console.WriteLine($"{_deviceType} {_deviceId} closed with DOWN command");
+            logger.LogInformation("{DeviceType} {DeviceId} DOWN command sent", _deviceType, _deviceId);
+            Console.WriteLine($"{_deviceType} {_deviceId} DOWN command sent");
         }
 
         /// <summary>
-        /// Stops the shutter movement using StopControl command
+        /// Stops the shutter movement using StopControl trigger
+        /// Device will send status update on MovementStatusFeedback when stopped
         /// </summary>
         internal async Task StopAsync(TimeSpan? timeout = null)
         {
             var addresses = _getAddresses();
             
-            // Send KNX stop command to StopControl address
-            logger.LogInformation("{DeviceType} {DeviceId} sending STOP command", _deviceType, _deviceId);
+            // Send KNX stop trigger to StopControl address
+            // Device will respond with movement status on MovementStatusFeedback
+            logger.LogInformation("{DeviceType} {DeviceId} sending STOP trigger", _deviceType, _deviceId);
             await _knxService.WriteGroupValueAsync(addresses.StopControl, true);
             
-            // Update internal state - movement stopped
-            _updateActivity(false);
             _updateLastUpdated();
             
-            logger.LogInformation("{DeviceType} {DeviceId} stopped", _deviceType, _deviceId);
-            Console.WriteLine($"{_deviceType} {_deviceId} stopped");
+            logger.LogInformation("{DeviceType} {DeviceId} STOP trigger sent", _deviceType, _deviceId);
+            Console.WriteLine($"{_deviceType} {_deviceId} STOP trigger sent");
         }
 
         /// <summary>
         /// Processes incoming KNX messages for movement feedback and status updates
+        /// MovementFeedback: Echo from device confirming UP(1)/DOWN(0) command (offset +100)
+        /// MovementStatusFeedback: Device status when starting/stopping movement
         /// </summary>
         internal void ProcessMovementMessage(KnxGroupEventArgs e)
         {
             var addresses = _getAddresses();
             
-            // Handle movement control feedback (UP/DOWN commands feedback)
+            // Handle movement control feedback - echo from device confirming UP/DOWN command (offset +100)
             if (e.Destination == addresses.MovementFeedback)
             {
                 var movementDirection = e.Value.AsBoolean();
-                _updateActivity(true); // Movement started
+                // This is just confirmation echo, device will send actual status on MovementStatusFeedback
                 _updateLastUpdated();
                 
-                logger.LogInformation("{DeviceType} {DeviceId} movement feedback received: {Direction}", 
-                    _deviceType, _deviceId, movementDirection ? "UP" : "DOWN");
-                Console.WriteLine($"{_deviceType} {_deviceId} movement feedback: {(movementDirection ? "UP" : "DOWN")}");
+                logger.LogInformation("{DeviceType} {DeviceId} movement command confirmed: {Direction}", 
+                    _deviceType, _deviceId, movementDirection ? "UP(1)" : "DOWN(0)");
+                Console.WriteLine($"{_deviceType} {_deviceId} movement command confirmed: {(movementDirection ? "UP(1)" : "DOWN(0)")}");
             }
             
-            // Handle movement status feedback (is device currently moving?)
+            // Handle movement status feedback - actual device status when starting/stopping
             else if (e.Destination == addresses.MovementStatusFeedback)
             {
                 var isMoving = e.Value.AsBoolean();
-                _updateActivity(isMoving);
+                _updateActivity(isMoving); // Update activity based on actual movement status
                 _updateLastUpdated();
                 
-                logger.LogInformation("{DeviceType} {DeviceId} movement status feedback: {Status}", 
-                    _deviceType, _deviceId, isMoving ? "MOVING" : "STOPPED");
-                Console.WriteLine($"{_deviceType} {_deviceId} movement status: {(isMoving ? "MOVING" : "STOPPED")}");
+                logger.LogInformation("{DeviceType} {DeviceId} movement status changed: {Status}", 
+                    _deviceType, _deviceId, isMoving ? "STARTED" : "STOPPED");
+                Console.WriteLine($"{_deviceType} {_deviceId} movement status: {(isMoving ? "STARTED" : "STOPPED")}");
             }
         }
     }

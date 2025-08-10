@@ -3,11 +3,11 @@ using KnxModel;
 namespace KnxTest.Integration.Base
 {
     [Collection("KnxService collection")]
-    public abstract class LockableIntegrationTestBase<TDevice> : IntegrationTestBase
+    public abstract class LockableIntegrationTestBase<TDevice> : IntegrationTestBase<TDevice>
         where TDevice : ILockableDevice, IKnxDeviceBase
     {
         internal readonly LockTestHelper _lockTestHelper;
-        internal TDevice? Device { get; set; }
+        
         protected LockableIntegrationTestBase(KnxServiceFixture fixture) :base(fixture)
         {
             _lockTestHelper = new LockTestHelper();
@@ -34,22 +34,5 @@ namespace KnxTest.Integration.Base
         #endregion
 
 
-        public override void Dispose()
-        {
-            try
-            {
-                Device?.RestoreSavedStateAsync().GetAwaiter().GetResult();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Warning: Failed to restore device state during cleanup: {ex.Message}");
-            }
-            finally
-            {
-                Device?.Dispose();
-                base.Dispose();
-            }
-
-        }
     }
 }

@@ -18,7 +18,7 @@ namespace KnxTest.Unit.Models
         {
             // Initialize ShutterDevice with mock KNX service
             _logger = new Mock<ILogger<ShutterDevice>>().Object;
-            _device = new ShutterDevice("S_TEST", "Test Shutter", "1", _mockKnxService.Object, _logger);
+            _device = new ShutterDevice("S_TEST", "Test Shutter", "1", _mockKnxService.Object, _logger, TimeSpan.FromSeconds(1));
         }
 
         #region IKnxDeviceBase Tests

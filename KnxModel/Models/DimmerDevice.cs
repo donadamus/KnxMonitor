@@ -15,8 +15,8 @@ namespace KnxModel
         private float? _savedPercentage;
         private readonly PercentageControllableDeviceHelper<DimmerDevice> _percentageControllableHelper;
 
-        public DimmerDevice(string id, string name, string subGroup, IKnxService knxService, ILogger<DimmerDevice> logger)
-            : base(id, name, subGroup, KnxAddressConfiguration.CreateDimmerAddresses(subGroup), knxService, logger)
+        public DimmerDevice(string id, string name, string subGroup, IKnxService knxService, ILogger<DimmerDevice> logger, TimeSpan defaulTimeout)
+            : base(id, name, subGroup, KnxAddressConfiguration.CreateDimmerAddresses(subGroup), knxService, logger, defaulTimeout)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
@@ -36,6 +36,11 @@ namespace KnxModel
             _percentageControllableHelper.ProcessSwitchMessage(e);
 
         }
+        /// <summary>
+        /// Waits for the required cooldown period between shutter commands.
+        /// Physical shutters need a minimum 2-second delay between commands to prevent
+        /// timing-based position tracking synchronization issues.
+        /// </summary>
 
 
         public override async Task InitializeAsync()

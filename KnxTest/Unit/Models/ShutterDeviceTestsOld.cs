@@ -19,7 +19,7 @@ namespace KnxTest.Unit.Models
         public ShutterDeviceTestsOld()
         {
             _mockKnxService = new Mock<IKnxService>();
-            _shutterDevice = new ShutterDevice("shutter_001", "Living Room Shutter", "1", _mockKnxService.Object, null);
+            _shutterDevice = new ShutterDevice("shutter_001", "Living Room Shutter", "1", _mockKnxService.Object, null, TimeSpan.FromSeconds(1));
         }
 
         #region IKnxDeviceBase Tests
@@ -37,7 +37,7 @@ namespace KnxTest.Unit.Models
         public void Constructor_NullId_ThrowsArgumentNullException()
         {
             // Act & Assert
-            Action act = () => new ShutterDevice(null!, "Test", "1", _mockKnxService.Object, null);
+            Action act = () => new ShutterDevice(null!, "Test", "1", _mockKnxService.Object, null, TimeSpan.FromSeconds(1));
             act.Should().Throw<ArgumentNullException>();
         }
 

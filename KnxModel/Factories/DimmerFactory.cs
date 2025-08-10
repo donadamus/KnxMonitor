@@ -10,12 +10,13 @@ namespace KnxModel
     public static class DimmerFactory
     {
 
+        public static TimeSpan DefaultTimeout = TimeSpan.FromSeconds(10);
 
         public static DimmerDevice CreateDimmer(string dimmerId, IKnxService knxService, ILogger<DimmerDevice> logger)
         {
             if (DimmerConfigurations.TryGetValue(dimmerId, out var config))
             {
-                return new DimmerDevice(dimmerId, config.Name, config.SubGroup, knxService, logger);
+                return new DimmerDevice(dimmerId, config.Name, config.SubGroup, knxService, logger, DefaultTimeout);
             }
             //else if (DimmerFactory.DimmerConfigurations.TryGetValue(lightId, out var dimmerConfig))
             //{

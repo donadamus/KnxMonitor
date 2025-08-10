@@ -9,10 +9,11 @@ namespace KnxTest.Integration.Base
     /// <summary>
     /// Async version of DeviceTestBase for tests that require async cleanup
     /// </summary>
-    public abstract class IntegrationTestBase : IDisposable
+    public abstract class IntegrationTestBase<TDevice> : IDisposable
+        where TDevice : IKnxDeviceBase
     {
         protected readonly IKnxService _knxService;
-
+        internal TDevice? Device { get; set; }
         protected IntegrationTestBase(KnxServiceFixture fixture)
         {
             _knxService = fixture.KnxService;
@@ -22,7 +23,20 @@ namespace KnxTest.Integration.Base
 
         public virtual void Dispose()
         {
-            GC.SuppressFinalize(this);
+            try
+            {
+                Device?.RestoreSavedStateAsync().GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Warning: Failed to restore device state during cleanup: {ex.Message}");
+            }
+            finally
+            {
+                Device?.Dispose();
+                GC.SuppressFinalize(this);
+            }
+
         }
     }
 }

@@ -9,12 +9,13 @@ namespace KnxModel
     /// </summary>
     public static class ShutterFactory
     {
+        public static TimeSpan DefaultTimeout = TimeSpan.FromSeconds(30);
 
         public static ShutterDevice CreateShutter(string shutterId, IKnxService knxService, ILogger<ShutterDevice> logger)
         {
             if (ShutterConfigurations.TryGetValue(shutterId, out var config))
             {
-                return new ShutterDevice(shutterId, config.Name, config.SubGroup, knxService, logger);
+                return new ShutterDevice(shutterId, config.Name, config.SubGroup, knxService, logger, DefaultTimeout);
             }
             
             throw new ArgumentException($"Unknown light ID: {shutterId}");

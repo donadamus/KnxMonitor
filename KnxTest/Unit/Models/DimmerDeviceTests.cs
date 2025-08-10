@@ -18,7 +18,7 @@ namespace KnxTest.Unit.Models
         {
             // Initialize DimmerDevice with mock KNX service
             _logger = new Mock<ILogger<DimmerDevice>>().Object;
-            _device = new DimmerDevice("D_TEST", "Test Dimmer", "1", _mockKnxService.Object, _logger);
+            _device = new DimmerDevice("D_TEST", "Test Dimmer", "1", _mockKnxService.Object, _logger, TimeSpan.FromSeconds(1));
         }
 
         #region IKnxDeviceBase Tests
