@@ -34,7 +34,7 @@ namespace KnxModel
                 () => Addresses,
                 state => { _currentSwitchState = state; _lastUpdated = DateTime.Now; },
                 () => _currentSwitchState,
-                logger);
+                logger, defaulTimeout);
 
 
         }

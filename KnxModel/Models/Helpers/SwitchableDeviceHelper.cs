@@ -21,7 +21,7 @@ namespace KnxModel.Models.Helpers
             Func<ISwitchableAddress> getAddresses,
             Action<Switch> updateSwitchState,
             Func<Switch> getCurrentSwitchState,
-            ILogger<TDevice> logger) : base(knxService, deviceId, deviceType, logger)
+            ILogger<TDevice> logger, TimeSpan defaultTimeout) : base(knxService, deviceId, deviceType, logger, defaultTimeout)
         {
             _getAddresses = getAddresses ?? throw new ArgumentNullException(nameof(getAddresses));
             _updateSwitchState = updateSwitchState ?? throw new ArgumentNullException(nameof(updateSwitchState));

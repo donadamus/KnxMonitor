@@ -33,7 +33,8 @@ namespace KnxModel
                             () => Addresses,
                             state => { _currentPercentage = state; _lastUpdated = DateTime.Now; },
                             () => _currentPercentage,
-                            logger: logger
+                            logger: logger,
+                            defaulTimeout
                             );
 
             _shutterMovementHelper = new ShutterDeviceHelper<ShutterDevice>(
@@ -45,6 +46,7 @@ namespace KnxModel
                             () => _currentLockState,
                             () => UnlockAsync(),
                             logger: logger
+                            , defaulTimeout
                             );
 
             _eventManager.MessageReceived += OnKnxMessageReceived;
@@ -152,6 +154,10 @@ namespace KnxModel
 
         public bool IsActive => _isActive;
 
+        public bool IsSunProtectionEnabled => throw new NotImplementedException();
+
+        public bool IsSunProtectionBlocked => throw new NotImplementedException();
+
         public async Task<bool> ReadActivityStatusAsync()
         {
             // TODO: Read from KNX bus - MovementStatusFeedback address
@@ -236,6 +242,31 @@ namespace KnxModel
             {
                 await WaitForInactiveAsync(timeout);
             }
+        }
+
+        public Task BlockSunProtectionAsync(TimeSpan? timeout = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task UnblockSunProtectionAsync(TimeSpan? timeout = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SetSunProtectionBlockAsync(bool enabled, TimeSpan? timeout = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<bool> ReadSunProtectionBlockStateAsync()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<bool> WaitForSunProtectionBlockStateAsync(bool targetState, TimeSpan? timeout = null)
+        {
+            throw new NotImplementedException();
         }
 
         #endregion

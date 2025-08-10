@@ -17,7 +17,7 @@ namespace KnxTest.Integration.Base
             device.CurrentPercentage.Should().NotBe(-1, "Device percentage should be known before test");
             if (device.CurrentPercentage > 0)
             {
-                await SetDevicePercentageAndAssert(device, 0, TimeSpan.FromSeconds(10));
+                await SetDevicePercentageAndAssert(device, 0);
             }
             else
             {

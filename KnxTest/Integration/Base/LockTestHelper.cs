@@ -90,10 +90,23 @@ namespace KnxTest.Integration.Base
         public async Task LockPreventsStateChange(ILockableDevice device)
         {
             var switchableDevice = device as ISwitchable;
-            if (switchableDevice == null)
+            if (switchableDevice != null)
             {
-                throw new InvalidOperationException("Lock prevention test requires a switchable device (ILight)");
+                await LockPreventsStateChange(device, switchableDevice);
+                return;
             }
+
+            var percentageControllable = device as IPercentageControllable;
+            if (percentageControllable != null)
+            {
+                await LockPreventsStateChange(device, percentageControllable);
+            }
+
+            await Task.CompletedTask;
+        }
+
+        private async Task LockPreventsStateChange(ILockableDevice device, ISwitchable switchableDevice)
+        {
 
             // Ensure device is unlocked before starting tests
             await EnsureDeviceIsUnlockedBeforeTest(device);
@@ -113,6 +126,29 @@ namespace KnxTest.Integration.Base
             Console.WriteLine($"✅ Device {device.Id} lock properly prevents state changes");
             await Task.CompletedTask;
         }
+
+        private async Task LockPreventsStateChange(ILockableDevice device, IPercentageControllable percentageControllable)
+        {
+            throw new NotImplementedException("LockPreventsStateChange for IPercentageControllable not implemented yet");
+            // Ensure device is unlocked before starting tests
+            await EnsureDeviceIsUnlockedBeforeTest(device);
+
+            // Lock the device
+            await ChangeLockStateAndForceUpdateIfNeeded(device, Lock.On);
+
+            //var waitResult = await percentageControllable..WaitForSwitchStateAsync(Switch.Off, TimeSpan.FromSeconds(1));
+            //waitResult.Should().BeTrue("Device should be OFF after locking");
+            //switchableDevice.CurrentSwitchState.Should().Be(Switch.Off, 
+            //    "Device should be OFF after locking");
+
+            //await switchableDevice.TurnOnAsync(); // Attempt to turn ON while locked
+            //switchableDevice.CurrentSwitchState.Should().Be(Switch.Off, 
+            //    "Device should remain OFF after attempting to turn ON while locked");
+
+            //Console.WriteLine($"✅ Device {device.Id} lock properly prevents state changes");
+            await Task.CompletedTask;
+        }
+
 
         public async Task CanReadLockState(ILockableDevice device)
         {

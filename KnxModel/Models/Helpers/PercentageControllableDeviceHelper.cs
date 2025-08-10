@@ -17,7 +17,7 @@ namespace KnxModel.Models.Helpers
             Func<IPercentageControllableAddress> getAddresses,
             Action<float> updatePercentage,
             Func<float> getCurrentPercentage,
-            ILogger<T> logger) : base(knxService, deviceId, deviceType, logger)
+            ILogger<T> logger, TimeSpan defaultTimeout) : base(knxService, deviceId, deviceType, logger, defaultTimeout)
         {
             _getAddresses = getAddresses ?? throw new ArgumentNullException(nameof(getAddresses));
             _updatePercentage = updatePercentage ?? throw new ArgumentNullException(nameof(updatePercentage));

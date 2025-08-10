@@ -27,7 +27,8 @@ namespace KnxModel.Models.Helpers
             Action updateLastUpdated,
             Func<Lock> getCurrentLockState,
             Func<Task> unlockAsync,
-            ILogger<T> logger) : base(knxService, deviceId, deviceType, logger)
+            ILogger<T> logger,
+            TimeSpan defaultTimeout) : base(knxService, deviceId, deviceType, logger, defaultTimeout)
         {
             _getAddresses = getAddresses ?? throw new ArgumentNullException(nameof(getAddresses));
             _updateActivity = updateActivity ?? throw new ArgumentNullException(nameof(updateActivity));

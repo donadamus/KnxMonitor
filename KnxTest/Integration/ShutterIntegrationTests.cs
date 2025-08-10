@@ -125,6 +125,7 @@ namespace KnxTest.Integration
 
         internal override async Task InitializeDevice(string deviceId, bool saveCurrentState = true)
         {
+            Thread.Sleep(3000); // Ensure service is ready
             Console.WriteLine($"🆕 Creating new ShutterDevice {deviceId}");
             Device = ShutterFactory.CreateShutter(deviceId, _knxService, _logger);
             await Device.InitializeAsync();

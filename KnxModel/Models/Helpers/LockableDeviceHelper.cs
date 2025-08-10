@@ -22,7 +22,8 @@ namespace KnxModel.Models.Helpers
             Func<ILockableAddress> getAddresses,
             Action<Lock> updateLockState,
             Func<Lock> getCurrentLockState,
-            ILogger<TDevice> logger) : base(knxService, deviceId, deviceType, logger)
+            ILogger<TDevice> logger,
+            TimeSpan defaultTimeout) : base(knxService, deviceId, deviceType, logger, defaultTimeout)
         {
             _getAddresses = getAddresses ?? throw new ArgumentNullException(nameof(getAddresses));
             _updateLockState = updateLockState ?? throw new ArgumentNullException(nameof(updateLockState));

@@ -4,7 +4,7 @@ namespace KnxModel
     /// Interface for a Shutter device
     /// Combines basic device functionality with percentage control for position, locking, and activity status
     /// </summary>
-    public interface IShutterDevice : IKnxDeviceBase, IPercentageControllable, ILockableDevice, IActivityStatusReadable
+    public interface IShutterDevice : IKnxDeviceBase, IPercentageControllable, ILockableDevice, IActivityStatusReadable, ISunProtectionCapableDevice
     {
         // Shutter is a composition of:
         // - Basic device functionality (IKnxDeviceBase)

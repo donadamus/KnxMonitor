@@ -96,6 +96,11 @@ namespace KnxModel
         /// Middle group for shutter lock control (3)
         /// </summary>
         public const string SHUTTERS_LOCK_MIDDLE_GROUP = "3";
+
+        /// <summary>
+        /// Middle group for shutter lock control (3)
+        /// </summary>
+        public const string SHUTTERS_SUN_PROTECTION_BLOCK_MIDDLE_GROUP = "4";
         
         /// <summary>
         /// Middle group for shutter stop/step control (1)
@@ -342,9 +347,21 @@ namespace KnxModel
                 PercentageFeedback: CreateShutterPositionFeedbackAddress(subGroup),
                 LockControl: CreateShutterLockAddress(subGroup),
                 LockFeedback: CreateShutterLockFeedbackAddress(subGroup),
+                SunProtectionBlockControl: CreateShutterSunProtectionBlockAddress(subGroup),
+                SunProtectionBlockFeedback: CreateShutterSunProtectionBlockFeedbackAddress(subGroup),
                 StopControl: CreateShutterStopAddress(subGroup),
                 MovementStatusFeedback: CreateShutterMovementStatusFeedbackAddress(subGroup)
             );
+        }
+
+        private static string CreateShutterSunProtectionBlockFeedbackAddress(string subGroup)
+        {
+            return $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_SUN_PROTECTION_BLOCK_MIDDLE_GROUP}/{(int.Parse(subGroup) + SHUTTER_FEEDBACK_OFFSET)}";
+        }
+
+        private static string CreateShutterSunProtectionBlockAddress(string subGroup)
+        {
+            return $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_SUN_PROTECTION_BLOCK_MIDDLE_GROUP}/{subGroup}";
         }
 
         /// <summary>

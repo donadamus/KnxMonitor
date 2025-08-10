@@ -25,7 +25,7 @@ namespace KnxModel
                 () => Addresses,
                 percentage => { _currentPercentage = percentage; _lastUpdated = DateTime.Now; },
                 () => _currentPercentage,
-                logger);
+                logger, defaulTimeout);
 
             _eventManager.MessageReceived += OnKnxMessageReceived;
         }

@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 
 namespace KnxModel
 {
+
     /// <summary>
     /// Interface for devices that can be controlled with percentage values (0-100%)
     /// Used by dimmers for brightness and shutters for position

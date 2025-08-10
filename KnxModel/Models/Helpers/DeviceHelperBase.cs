@@ -4,7 +4,7 @@ namespace KnxModel.Models.Helpers
 {
     public class DeviceHelperBase<TDevice>
     {
-        protected readonly TimeSpan _defaultTimeout = TimeSpan.FromSeconds(5);
+        protected readonly TimeSpan _defaultTimeout;
         protected const int _pollingIntervalMs = 50; // Polling interval for wait operations
 
         protected readonly IKnxService _knxService;
@@ -12,12 +12,13 @@ namespace KnxModel.Models.Helpers
         protected readonly string _deviceType;
         protected readonly ILogger<TDevice> _logger;
 
-        public DeviceHelperBase(IKnxService knxService, string deviceId, string deviceType, ILogger<TDevice> logger)
+        public DeviceHelperBase(IKnxService knxService, string deviceId, string deviceType, ILogger<TDevice> logger, TimeSpan defaultTimeout)
         {
             _knxService = knxService ?? throw new ArgumentNullException(nameof(knxService));
             _deviceId = deviceId ?? throw new ArgumentNullException(nameof(deviceId));
             _deviceType = deviceType ?? throw new ArgumentNullException(nameof(deviceType));
             _logger = logger;
+            _defaultTimeout = defaultTimeout;
         }
 
         protected async Task<bool> WaitForConditionAsync(Func<bool> condition, TimeSpan? timeout = null, string description = "condition")

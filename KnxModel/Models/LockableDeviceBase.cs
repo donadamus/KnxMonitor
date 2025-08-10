@@ -38,7 +38,7 @@ namespace KnxModel
             () => Addresses,
             state => { _currentLockState = state; _lastUpdated = DateTime.Now; },
             () => _currentLockState,
-            logger);
+            logger, defaulTimeout);
 
             // Start listening to KNX events
             _eventManager.StartListening();
