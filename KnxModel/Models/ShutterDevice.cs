@@ -18,9 +18,11 @@ namespace KnxModel
         private readonly ILogger<ShutterDevice> logger;
         private float _currentPercentage = 0.0f; // Start fully open
         private bool _isActive = false; // Movement status: true = moving, false = stopped
+        private bool _isSunProtectionBlocked = false; // Sun protection block status
         
         // Saved state for testing
         private float? _savedPercentage;
+        private bool? _savedSunProtectionBlocked;
 
         /// <summary>
         /// Convenience constructor that automatically creates addresses based on subGroup
@@ -60,6 +62,26 @@ namespace KnxModel
             
             // Process movement feedback messages
             _shutterMovementHelper.ProcessMovementMessage(e);
+            
+            // Process sun protection block feedback
+            ProcessSunProtectionFeedback(e);
+        }
+
+        /// <summary>
+        /// Processes sun protection block feedback messages
+        /// </summary>
+        private void ProcessSunProtectionFeedback(KnxGroupEventArgs e)
+        {
+            if (e.Destination == Addresses.SunProtectionBlockFeedback)
+            {
+                var blockState = e.Value.AsBoolean();
+                _isSunProtectionBlocked = blockState;
+                _lastUpdated = DateTime.Now;
+                
+                logger.LogInformation("ShutterDevice {DeviceId} sun protection block feedback: {BlockState}", 
+                    Id, blockState ? "BLOCKED" : "UNBLOCKED");
+                Console.WriteLine($"ShutterDevice {Id} sun protection block: {(blockState ? "BLOCKED" : "UNBLOCKED")}");
+            }
         }
 
         private async Task WaitForCooldownAsync()
@@ -82,19 +104,21 @@ namespace KnxModel
             // Read initial states from KNX bus
             _currentPercentage = await ReadPercentageAsync();
             _currentLockState = await ReadLockStateAsync();
+            _isSunProtectionBlocked = await ReadSunProtectionBlockStateAsync();
             _lastUpdated = DateTime.Now;
             
-            logger.LogInformation("ShutterDevice {DeviceId} initialized - Position: {Position}%, Lock: {LockState}", 
-                Id, _currentPercentage, _currentLockState);
+            logger.LogInformation("ShutterDevice {DeviceId} initialized - Position: {Position}%, Lock: {LockState}, SunProtectionBlocked: {SunProtectionBlocked}", 
+                Id, _currentPercentage, _currentLockState, _isSunProtectionBlocked);
             
-            Console.WriteLine($"ShutterDevice {Id} initialized - Position: {_currentPercentage}%, Lock: {_currentLockState}");
+            Console.WriteLine($"ShutterDevice {Id} initialized - Position: {_currentPercentage}%, Lock: {_currentLockState}, SunProtectionBlocked: {_isSunProtectionBlocked}");
         }
 
         public override void SaveCurrentState()
         {
             base.SaveCurrentState();
             _savedPercentage = _currentPercentage;
-            Console.WriteLine($"ShutterDevice {Id} state saved - Position: {_savedPercentage}%, Lock: {_savedLockState}");
+            _savedSunProtectionBlocked = _isSunProtectionBlocked;
+            Console.WriteLine($"ShutterDevice {Id} state saved - Position: {_savedPercentage}%, Lock: {_savedLockState}, SunProtectionBlocked: {_savedSunProtectionBlocked}");
         }
 
         public override async Task RestoreSavedStateAsync(TimeSpan? timeout = null)
@@ -110,9 +134,15 @@ namespace KnxModel
                 await SetPercentageAsync(_savedPercentage.Value, timeout ?? _defaulTimeout);
             }
 
+            // Restore sun protection block state if it was saved and is different
+            if (_savedSunProtectionBlocked.HasValue && _savedSunProtectionBlocked.Value != _isSunProtectionBlocked)
+            {
+                await SetSunProtectionBlockStateAsync(_savedSunProtectionBlocked.Value, timeout ?? _defaulTimeout);
+            }
+
             await base.RestoreSavedStateAsync(timeout ?? _defaulTimeout);
 
-            Console.WriteLine($"ShutterDevice {Id} state restored");
+            Console.WriteLine($"ShutterDevice {Id} state restored - Position: {_savedPercentage}%, Lock: {_savedLockState}, SunProtectionBlocked: {_savedSunProtectionBlocked}");
         }
 
         #endregion
@@ -154,9 +184,7 @@ namespace KnxModel
 
         public bool IsActive => _isActive;
 
-        public bool IsSunProtectionEnabled => throw new NotImplementedException();
-
-        public bool IsSunProtectionBlocked => throw new NotImplementedException();
+        public bool IsSunProtectionBlocked => _isSunProtectionBlocked;
 
         public async Task<bool> ReadActivityStatusAsync()
         {
@@ -244,29 +272,75 @@ namespace KnxModel
             }
         }
 
-        public Task BlockSunProtectionAsync(TimeSpan? timeout = null)
+        public async Task BlockSunProtectionAsync(TimeSpan? timeout = null)
         {
-            throw new NotImplementedException();
+            logger.LogInformation("ShutterDevice {DeviceId} blocking sun protection", Id);
+            await _knxService.WriteGroupValueAsync(Addresses.SunProtectionBlockControl, true);
+            _isSunProtectionBlocked = true;
+            _lastUpdated = DateTime.Now;
+            
+            logger.LogInformation("ShutterDevice {DeviceId} sun protection blocked", Id);
+            Console.WriteLine($"ShutterDevice {Id} sun protection blocked");
         }
 
-        public Task UnblockSunProtectionAsync(TimeSpan? timeout = null)
+        public async Task UnblockSunProtectionAsync(TimeSpan? timeout = null)
         {
-            throw new NotImplementedException();
+            logger.LogInformation("ShutterDevice {DeviceId} unblocking sun protection", Id);
+            await _knxService.WriteGroupValueAsync(Addresses.SunProtectionBlockControl, false);
+            _isSunProtectionBlocked = false;
+            _lastUpdated = DateTime.Now;
+            
+            logger.LogInformation("ShutterDevice {DeviceId} sun protection unblocked", Id);
+            Console.WriteLine($"ShutterDevice {Id} sun protection unblocked");
         }
 
-        public Task SetSunProtectionBlockAsync(bool enabled, TimeSpan? timeout = null)
+        public async Task SetSunProtectionBlockStateAsync(bool blocked, TimeSpan? timeout = null)
         {
-            throw new NotImplementedException();
+            if (blocked)
+            {
+                await BlockSunProtectionAsync(timeout);
+            }
+            else
+            {
+                await UnblockSunProtectionAsync(timeout);
+            }
         }
 
-        public Task<bool> ReadSunProtectionBlockStateAsync()
+        public async Task<bool> ReadSunProtectionBlockStateAsync()
         {
-            throw new NotImplementedException();
+            logger.LogDebug("ShutterDevice {DeviceId} reading sun protection block state", Id);
+            
+            // Read actual state from KNX bus
+            var blockState = await _knxService.RequestGroupValue<bool>(Addresses.SunProtectionBlockFeedback);
+            _isSunProtectionBlocked = blockState;
+            _lastUpdated = DateTime.Now;
+            
+            logger.LogDebug("ShutterDevice {DeviceId} sun protection block state: {BlockState}", Id, blockState);
+            return blockState;
         }
 
-        public Task<bool> WaitForSunProtectionBlockStateAsync(bool targetState, TimeSpan? timeout = null)
+        public async Task<bool> WaitForSunProtectionBlockStateAsync(bool targetState, TimeSpan? timeout = null)
         {
-            throw new NotImplementedException();
+            var actualTimeout = timeout ?? _defaulTimeout;
+            var endTime = DateTime.Now + actualTimeout;
+            
+            logger.LogDebug("ShutterDevice {DeviceId} waiting for sun protection block state: {TargetState} (timeout: {Timeout})", 
+                Id, targetState, actualTimeout);
+            
+            while (DateTime.Now < endTime)
+            {
+                var currentState = await ReadSunProtectionBlockStateAsync();
+                if (currentState == targetState)
+                {
+                    logger.LogDebug("ShutterDevice {DeviceId} reached target sun protection block state: {TargetState}", Id, targetState);
+                    return true;
+                }
+                
+                await Task.Delay(100); // Check every 100ms
+            }
+            
+            logger.LogWarning("ShutterDevice {DeviceId} timeout waiting for sun protection block state: {TargetState}", Id, targetState);
+            return false;
         }
 
         #endregion

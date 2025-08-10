@@ -1,3 +1,4 @@
+using FluentAssertions;
 using KnxModel;
 using KnxTest.Integration.Base;
 using KnxTest.Integration.Interfaces;
@@ -32,6 +33,7 @@ namespace KnxTest.Integration
         public async Task CanAdjustPercentage(string deviceId)
         {
             await InitializeDeviceAndEnsureUnlocked(deviceId);
+            await EnsureSunProtectionIsBloced(Device!);
             await _percentageTestHelper.CanAdjustPercentage(Device!);
         }
 
@@ -64,6 +66,7 @@ namespace KnxTest.Integration
         public async Task CanSetPercentage(string deviceId)
         {
             await InitializeDeviceAndEnsureUnlocked(deviceId);
+            await EnsureSunProtectionIsBloced(Device!);
             await _percentageTestHelper.CanSetPercentage(Device!);
         }
 
@@ -72,7 +75,31 @@ namespace KnxTest.Integration
         public async Task CanSetSpecificPercentages(string deviceId)
         {
             await InitializeDeviceAndEnsureUnlocked(deviceId);
+            await EnsureSunProtectionIsBloced(Device!);
             await _percentageTestHelper.CanSetSpecificPercentages(Device!);
+        }
+
+        private async Task EnsureSunProtectionIsBloced(ShutterDevice device)
+        {
+    //        device..Should().NotBe(Lock.Unknown,
+    //"Device lock state should be known before test");
+
+            if (!device.IsSunProtectionBlocked)
+            {
+                await BlockSunProtection(device);
+            }
+
+            device.IsSunProtectionBlocked.Should().BeTrue(
+                $"Device {device.Id} should have sun protection blocked before test");
+            Console.WriteLine($"✅ Device {device.Id} is now unlocked");
+
+        }
+
+        private async Task BlockSunProtection(ShutterDevice device)
+        {
+            await device.BlockSunProtectionAsync();
+            device.IsSunProtectionBlocked.Should().BeTrue(
+                $"Device {device.Id} should have sun protection blocked after blocking");
         }
 
         [Theory]
@@ -80,6 +107,7 @@ namespace KnxTest.Integration
         public async Task CanSetToMaximum(string deviceId)
         {
             await InitializeDeviceAndEnsureUnlocked(deviceId);
+            await EnsureSunProtectionIsBloced(Device!);
             await _percentageTestHelper.CanSetToMaximum(Device!);
         }
 
@@ -88,6 +116,7 @@ namespace KnxTest.Integration
         public async Task CanSetToMinimum(string deviceId)
         {
             await InitializeDeviceAndEnsureUnlocked(deviceId);
+            await EnsureSunProtectionIsBloced(Device!);
             await _percentageTestHelper.CanSetToMinimum(Device!);
         }
 
@@ -96,6 +125,7 @@ namespace KnxTest.Integration
         public async Task CanWaitForPercentageState(string deviceId)
         {
             await InitializeDeviceAndEnsureUnlocked(deviceId);
+            await EnsureSunProtectionIsBloced(Device!);
             await _percentageTestHelper.CanWaitForPercentageState(Device!);
         }
 
@@ -112,6 +142,7 @@ namespace KnxTest.Integration
         public async Task PercentageRangeValidation(string deviceId)
         {
             await InitializeDeviceAndEnsureUnlocked(deviceId);
+            await EnsureSunProtectionIsBloced(Device!);
             await _percentageTestHelper.PercentageRangeValidation(Device!);
         }
 
