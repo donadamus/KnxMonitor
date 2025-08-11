@@ -101,6 +101,11 @@ namespace KnxModel
         /// Middle group for shutter lock control (3)
         /// </summary>
         public const string SHUTTERS_SUN_PROTECTION_BLOCK_MIDDLE_GROUP = "4";
+
+        /// <summary>
+        /// Middle group for shutter sun protection status (4) - receives current state with +100 offset
+        /// </summary>
+        public const string SHUTTERS_SUN_PROTECTION_STATUS_MIDDLE_GROUP = "4";
         
         /// <summary>
         /// Middle group for shutter stop/step control (1)
@@ -112,6 +117,13 @@ namespace KnxModel
         /// Control: 4/x/18 -> Feedback: 4/x/118
         /// </summary>
         public const int SHUTTER_FEEDBACK_OFFSET = 100;
+
+        /// <summary>
+        /// Feedback offset for shutter sun protection block - set to 0 because switch doesn't send automatic feedback
+        /// We treat write messages as feedback since sun protection block uses the same address for control and status
+        /// Control: 4/4/1 -> Feedback: 4/4/1 (same address)
+        /// </summary>
+        public const int SHUTTER_SUN_PROTECTION_BLOCK_FEEDBACK_OFFSET = 0;
         
         #endregion
         
@@ -314,6 +326,17 @@ namespace KnxModel
             return $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_STOP_MIDDLE_GROUP}/{feedbackSubGroup}";
         }
 
+        /// <summary>
+        /// Creates a shutter sun protection status address (current state with +100 offset)
+        /// </summary>
+        /// <param name="subGroup">Sub group number</param>
+        /// <returns>Complete KNX address for shutter sun protection status</returns>
+        public static string CreateShutterSunProtectionStatusAddress(string subGroup)
+        {
+            var statusSubGroup = (int.Parse(subGroup) + SHUTTER_FEEDBACK_OFFSET).ToString();
+            return $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_SUN_PROTECTION_STATUS_MIDDLE_GROUP}/{statusSubGroup}";
+        }
+
         #endregion
 
         #region Address Factory Methods
@@ -349,6 +372,7 @@ namespace KnxModel
                 LockFeedback: CreateShutterLockFeedbackAddress(subGroup),
                 SunProtectionBlockControl: CreateShutterSunProtectionBlockAddress(subGroup),
                 SunProtectionBlockFeedback: CreateShutterSunProtectionBlockFeedbackAddress(subGroup),
+                SunProtectionStatus: CreateShutterSunProtectionStatusAddress(subGroup),
                 StopControl: CreateShutterStopAddress(subGroup),
                 MovementStatusFeedback: CreateShutterMovementStatusFeedbackAddress(subGroup)
             );
@@ -356,7 +380,8 @@ namespace KnxModel
 
         private static string CreateShutterSunProtectionBlockFeedbackAddress(string subGroup)
         {
-            return $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_SUN_PROTECTION_BLOCK_MIDDLE_GROUP}/{(int.Parse(subGroup) + SHUTTER_FEEDBACK_OFFSET)}";
+            var feedbackSubGroup = (int.Parse(subGroup) + SHUTTER_SUN_PROTECTION_BLOCK_FEEDBACK_OFFSET).ToString();
+            return $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_SUN_PROTECTION_BLOCK_MIDDLE_GROUP}/{feedbackSubGroup}";
         }
 
         private static string CreateShutterSunProtectionBlockAddress(string subGroup)

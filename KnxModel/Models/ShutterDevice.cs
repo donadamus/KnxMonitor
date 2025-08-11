@@ -72,6 +72,7 @@ namespace KnxModel
         /// </summary>
         private void ProcessSunProtectionFeedback(KnxGroupEventArgs e)
         {
+            // Process sun protection block feedback (same address as control)
             if (e.Destination == Addresses.SunProtectionBlockFeedback)
             {
                 var blockState = e.Value.AsBoolean();
@@ -81,6 +82,16 @@ namespace KnxModel
                 logger.LogInformation("ShutterDevice {DeviceId} sun protection block feedback: {BlockState}", 
                     Id, blockState ? "BLOCKED" : "UNBLOCKED");
                 Console.WriteLine($"ShutterDevice {Id} sun protection block: {(blockState ? "BLOCKED" : "UNBLOCKED")}");
+            }
+            
+            // Process sun protection status feedback (offset +100)
+            if (e.Destination == Addresses.SunProtectionStatus)
+            {
+                var isActive = e.Value.AsBoolean();
+                // This is the actual sun protection state (1=Active), but for now we use block state
+                logger.LogInformation("ShutterDevice {DeviceId} sun protection status: {Status}", 
+                    Id, isActive ? "ACTIVE" : "INACTIVE");
+                Console.WriteLine($"ShutterDevice {Id} sun protection status: {(isActive ? "ACTIVE" : "INACTIVE")}");
             }
         }
 
