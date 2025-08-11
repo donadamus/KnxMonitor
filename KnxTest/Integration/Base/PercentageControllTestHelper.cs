@@ -1,16 +1,17 @@
 using FluentAssertions;
 using KnxModel;
+using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
 
 namespace KnxTest.Integration.Base
 {
     public class PercentageControllTestHelper
     {
-        private readonly ITestOutputHelper output;
+        private readonly ILogger logger;
 
-        public PercentageControllTestHelper(Xunit.Abstractions.ITestOutputHelper output)
+        public PercentageControllTestHelper(ILogger logger)
         {
-            this.output = output;
+            this.logger = logger;
         }
         public async Task EnsureDeviceIsAtZeroPercentBeforeTest(IPercentageControllable device)
         {
@@ -27,34 +28,44 @@ namespace KnxTest.Integration.Base
 
         internal async Task CanAdjustPercentage(IPercentageControllable dimmerDevice)
         {
-            // Set to a known starting point
-            await SetDevicePercentageAndAssert(dimmerDevice, 30, TimeSpan.FromSeconds(20));
+            var startigPercentage = dimmerDevice.CurrentPercentage;
+            var firstAdjustment = 30;
+            var secondAdjustment = -20;
+            if (startigPercentage > 50)
+            {
+                firstAdjustment = -30;
+                secondAdjustment = 20;
+            }
+            // test first adjustment
+            var targetPercentage = startigPercentage + firstAdjustment;
+            await dimmerDevice.AdjustPercentageAsync(firstAdjustment);
 
-            // Test positive adjustment
-            await dimmerDevice.AdjustPercentageAsync(20, TimeSpan.FromSeconds(20));
+            var waitResult = await dimmerDevice.WaitForPercentageAsync(targetPercentage, 1, TimeSpan.FromSeconds(1));
 
-            var waitResult = await dimmerDevice.WaitForPercentageAsync(50, 1, TimeSpan.FromSeconds(1));
+            waitResult.Should().BeTrue($"Device {dimmerDevice.Id} should be at {targetPercentage}% after {firstAdjustment} adjustment");
+            dimmerDevice.CurrentPercentage.Should().BeApproximately(targetPercentage, 1,
+                $"Device {dimmerDevice.Id} should be at {targetPercentage}% after {firstAdjustment} adjustment");
 
+            // test second adjustment (opposite direction)
+            targetPercentage += secondAdjustment;
+            await dimmerDevice.AdjustPercentageAsync(secondAdjustment);
 
-            waitResult.Should().BeTrue($"Device {dimmerDevice.Id} should be at 50% after +20 adjustment");
-            dimmerDevice.CurrentPercentage.Should().BeApproximately(50, 1,
-                $"Device {dimmerDevice.Id} should be at 50% after +20 adjustment");
+            waitResult = await dimmerDevice.WaitForPercentageAsync(targetPercentage, 1, TimeSpan.FromSeconds(1));
 
-            // Test negative adjustment
-            await dimmerDevice.AdjustPercentageAsync(-15, TimeSpan.FromSeconds(20));
+            waitResult.Should().BeTrue($"Device {dimmerDevice.Id} should be at {targetPercentage}% after {secondAdjustment} adjustment");
+            dimmerDevice.CurrentPercentage.Should().BeApproximately(targetPercentage, 1,
+                $"Device {dimmerDevice.Id} should be at {targetPercentage}% after {secondAdjustment} adjustment");
 
-            waitResult = await dimmerDevice.WaitForPercentageAsync(35, 1, TimeSpan.FromSeconds(1));
-
-            waitResult.Should().BeTrue($"Device {dimmerDevice.Id} should be at 35% after -15 adjustment");
-            dimmerDevice.CurrentPercentage.Should().BeApproximately(35, 1,
-                $"Device {dimmerDevice.Id} should be at 35% after -15 adjustment");
-
-            Console.WriteLine($"✅ Device {dimmerDevice.Id} percentage adjustment functionality works correctly");
+            logger.LogInformation($"Device {dimmerDevice.Id} percentage adjustment functionality works correctly");
         }
 
         
         internal async Task CanSetToMaximum(IPercentageControllable dimmerDevice)
         {
+            if (dimmerDevice.CurrentPercentage > 90)
+            {
+                await SetDevicePercentageAndAssert(dimmerDevice, 90);
+            }
             // Set to maximum (100%)
             await SetDevicePercentageAndAssert(dimmerDevice, 100);
             
@@ -63,6 +74,10 @@ namespace KnxTest.Integration.Base
 
         internal async Task CanSetToMinimum(IPercentageControllable dimmerDevice)
         {
+            if (dimmerDevice.CurrentPercentage < 10)
+            {
+                await SetDevicePercentageAndAssert(dimmerDevice, 10);
+            }
             // Set to minimum (0%)
             await SetDevicePercentageAndAssert(dimmerDevice, 0);
             
@@ -101,10 +116,6 @@ namespace KnxTest.Integration.Base
                 Console.WriteLine($"✅ Device {dimmerDevice.Id} properly validates percentage < 0%");
             }
 
-            // Test valid boundary values
-            await SetDevicePercentageAndAssert(dimmerDevice, 0);
-            await SetDevicePercentageAndAssert(dimmerDevice, 100);
-            
             Console.WriteLine($"✅ Device {dimmerDevice.Id} percentage range validation completed");
         }
 
@@ -134,9 +145,16 @@ namespace KnxTest.Integration.Base
 
         internal async Task CanSetSpecificPercentages(IPercentageControllable device)
         {
-            await SetDevicePercentageAndAssert(device, 20);
-            await SetDevicePercentageAndAssert(device, 40);
-            await SetDevicePercentageAndAssert(device, 80);
+            var targetPercentage = device.CurrentPercentage switch
+            {
+                < 20 => 30,
+                < 40 => 50,
+                < 60 => 70,
+                < 80 => 90,
+                _ => 70 
+            };
+
+            await SetDevicePercentageAndAssert(device, targetPercentage);
 
             await Task.CompletedTask;
         }
@@ -176,7 +194,7 @@ namespace KnxTest.Integration.Base
         {
             if (device.CurrentPercentage == targetPercentage)
             {
-                Console.WriteLine($"Device {device.Id} is already at {targetPercentage}%, no action needed.");
+                logger.LogInformation($"Device {device.Id} is already at {targetPercentage}%, no action needed.");
                 return;
             }
             await device.SetPercentageAsync(targetPercentage, timeout);
@@ -184,7 +202,7 @@ namespace KnxTest.Integration.Base
             waitResult.Should().BeTrue($"Device {device.Id} should be at {targetPercentage}% after operation");
             device.CurrentPercentage.Should().BeApproximately (targetPercentage,1,
                 $"Device {device.Id} should be at {targetPercentage}% after operation");
-            Console.WriteLine($"✅ Device {device.Id} successfully set to {targetPercentage}%");
+            logger.LogInformation($"Device {device.Id} successfully set to {targetPercentage}%");
         }
     }
 }

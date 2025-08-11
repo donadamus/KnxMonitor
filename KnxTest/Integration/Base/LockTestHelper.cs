@@ -141,7 +141,7 @@ namespace KnxTest.Integration.Base
 
             var expectedPercentage = percentageControllable.LockedPercentage;
             var waitResult = await percentageControllable.WaitForPercentageAsync(expectedPercentage, 1);
-            waitResult.Should().BeTrue("Device should be OFF after locking");
+            waitResult.Should().BeTrue("waitResult should be true when waiting for locked percentage");
             percentageControllable.CurrentPercentage.Should().BeApproximately(expectedPercentage, 1,
                 $"Device should be at {expectedPercentage}% after locking");
 

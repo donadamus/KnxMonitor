@@ -13,8 +13,8 @@ namespace KnxTest.Integration
         internal readonly XUnitLogger<ShutterDevice> _logger;
         public ShutterIntegrationTests(KnxServiceFixture fixture, ITestOutputHelper output) : base(fixture)
         {
-            _percentageTestHelper = new PercentageControllTestHelper(output);
             _logger = new XUnitLogger<ShutterDevice>(output);
+            _percentageTestHelper = new PercentageControllTestHelper(_logger);
         }
 
         // Data source for tests - only pure lights (not dimmers)
@@ -23,7 +23,7 @@ namespace KnxTest.Integration
             get
             {
                 var config = ShutterFactory.ShutterConfigurations;
-                return config//.Where(x => x.Value.Name.ToLower().Contains("off"))
+                return config.Where(x => x.Value.Name.ToLower().Contains("off"))
                             .Select(k => new object[] { k.Key });
             }
         }

@@ -63,8 +63,8 @@ namespace KnxTest.Integration
         internal readonly XUnitLogger<DimmerDevice> _logger;
         public DimmerIntegrationTests(KnxServiceFixture fixture, ITestOutputHelper output) : base(fixture)
         {
-            _percentageTestHelper = new PercentageControllTestHelper(output);
             _logger = new XUnitLogger<DimmerDevice>(output);
+            _percentageTestHelper = new PercentageControllTestHelper(_logger);
         }
 
         // Data source for tests - only pure lights (not dimmers)
