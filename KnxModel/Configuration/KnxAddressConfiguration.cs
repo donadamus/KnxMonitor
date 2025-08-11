@@ -126,6 +126,25 @@ namespace KnxModel
         public const int SHUTTER_SUN_PROTECTION_BLOCK_FEEDBACK_OFFSET = 0;
         
         #endregion
+
+        #region Clock Control Configuration
+
+        /// <summary>
+        /// Main group for clock synchronization (0)
+        /// </summary>
+        public const string CLOCK_MAIN_GROUP = "0";
+
+        /// <summary>
+        /// Middle group for clock time synchronization (0)
+        /// </summary>
+        public const string CLOCK_TIME_MIDDLE_GROUP = "0";
+
+        /// <summary>
+        /// Sub group for clock time synchronization (1)
+        /// </summary>
+        public const string CLOCK_TIME_SUB_GROUP = "1";
+
+        #endregion
         
         #region Dimmer Address Creation Methods
         
@@ -337,6 +356,15 @@ namespace KnxModel
             return $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_SUN_PROTECTION_STATUS_MIDDLE_GROUP}/{statusSubGroup}";
         }
 
+        /// <summary>
+        /// Creates a clock time synchronization address
+        /// </summary>
+        /// <returns>Complete KNX address for clock time synchronization (fixed at 0/0/1)</returns>
+        public static string CreateClockTimeAddress()
+        {
+            return $"{CLOCK_MAIN_GROUP}/{CLOCK_TIME_MIDDLE_GROUP}/{CLOCK_TIME_SUB_GROUP}";
+        }
+
         #endregion
 
         #region Address Factory Methods
@@ -403,6 +431,17 @@ namespace KnxModel
                 BrightnessFeedback: CreateDimmerBrightnessFeedbackAddress(subGroup),
                 LockControl: CreateDimmerLockAddress(subGroup),
                 LockFeedback: CreateDimmerLockFeedbackAddress(subGroup)
+            );
+        }
+
+        /// <summary>
+        /// Creates a complete ClockAddresses object for a clock device
+        /// </summary>
+        /// <returns>Complete ClockAddresses object</returns>
+        public static ClockAddresses CreateClockAddresses()
+        {
+            return new ClockAddresses(
+                TimeControl: CreateClockTimeAddress()
             );
         }
 

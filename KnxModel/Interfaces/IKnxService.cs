@@ -11,6 +11,7 @@ namespace KnxModel
         void WriteGroupValue(string address, float percentage);
         Task<T> RequestGroupValue<T>(string address);
         Task WriteGroupValueAsync(string address, bool value);
+        Task WriteGroupValueAsync(string address, byte[] data);
     }
 
     public record KnxGroupEventArgs(

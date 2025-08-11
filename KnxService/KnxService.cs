@@ -128,6 +128,14 @@ namespace KnxService
             await _knxBus.WriteGroupValueAsync(groupAddress, groupValue);
         }
 
+        public async Task WriteGroupValueAsync(string address, byte[] data)
+        {
+            var groupAddress = new GroupAddress(address);
+            var groupValue = new GroupValue(data);
+            await _knxRateLimiter.WaitAsync(KnxOperationType.WriteGroupValue);
+            await _knxBus.WriteGroupValueAsync(groupAddress, groupValue);
+        }
+
         public void WriteGroupValue(string address, float percentage)
         {
             if (percentage < 0.0f || percentage > 100.0f)
