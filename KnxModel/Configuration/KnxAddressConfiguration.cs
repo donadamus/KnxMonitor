@@ -169,9 +169,9 @@ namespace KnxModel
         public const string BRIGHTNESS_THRESHOLD_2_SUB_GROUP = "4";
 
         /// <summary>
-        /// Sub group for outdoor temperature threshold (7)
+        /// Sub group for outdoor temperature threshold (8)
         /// </summary>
-        public const string OUTDOOR_TEMPERATURE_THRESHOLD_SUB_GROUP = "7";
+        public const string OUTDOOR_TEMPERATURE_THRESHOLD_SUB_GROUP = "8";
 
         #endregion
         

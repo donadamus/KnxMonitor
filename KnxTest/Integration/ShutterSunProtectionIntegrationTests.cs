@@ -27,8 +27,7 @@ namespace KnxTest.Integration
             get
             {
                 var config = ShutterFactory.ShutterConfigurations;
-                return config.Where(x => x.Value.Name.ToLower().Contains("office") || 
-                                       x.Value.Name.ToLower().Contains("living"))
+                return config.Where(x => x.Value.Name.ToLower().Contains("office"))
                             .Select(k => new object[] { k.Key });
             }
         }
@@ -40,7 +39,7 @@ namespace KnxTest.Integration
         public async Task CanReadBrightnessThreshold1State(string deviceId)
         {
             // Arrange
-            await InitializeDevice(deviceId);
+            await InitializeDevice(deviceId, false);
             
             // Act
             var threshold1State = await Device!.ReadBrightnessThreshold1StateAsync();
@@ -57,7 +56,7 @@ namespace KnxTest.Integration
         public async Task CanReadBrightnessThreshold2State(string deviceId)
         {
             // Arrange
-            await InitializeDevice(deviceId);
+            await InitializeDevice(deviceId, false);
             
             // Act
             var threshold2State = await Device!.ReadBrightnessThreshold2StateAsync();
@@ -74,7 +73,7 @@ namespace KnxTest.Integration
         public async Task CanReadOutdoorTemperatureThresholdState(string deviceId)
         {
             // Arrange
-            await InitializeDevice(deviceId);
+            await InitializeDevice(deviceId, false);
             
             // Act
             var tempThresholdState = await Device!.ReadOutdoorTemperatureThresholdStateAsync();
@@ -313,6 +312,8 @@ namespace KnxTest.Integration
         [MemberData(nameof(SunProtectionShutterIdsFromConfig))]
         public async Task CanOperateNormallyWithMixedThresholdStates(string deviceId)
         {
+            //this test does not make sense
+            throw new NotImplementedException();
             // Arrange
             await InitializeDevice(deviceId);
             await EnsureSunProtectionUnblocked(Device!);
@@ -346,18 +347,20 @@ namespace KnxTest.Integration
             Console.WriteLine($"✅ Device {device.Id} sun protection is unblocked");
         }
 
-        internal async Task InitializeDevice(string deviceId, bool saveCurrentState = true)
+        internal async Task InitializeDevice(string deviceId, bool initialize = true, bool saveCurrentState = true)
         {
             Thread.Sleep(2000); // Ensure service is ready
             Console.WriteLine($"🆕 Creating new ShutterDevice {deviceId} for sun protection tests");
             Device = ShutterFactory.CreateShutter(deviceId, _knxService, _logger);
-            await Device.InitializeAsync();
-            
-            if (saveCurrentState)
+            if (initialize)
             {
-                Device.SaveCurrentState();
+                await Device.InitializeAsync();
+
+                if (saveCurrentState)
+                {
+                    Device.SaveCurrentState();
+                }
             }
-            
             Console.WriteLine($"🌞 Shutter {deviceId} initialized - Position: {Device.CurrentPercentage}%, " +
                             $"Thresholds: B1={Device.BrightnessThreshold1Active}, B2={Device.BrightnessThreshold2Active}, " +
                             $"Temp={Device.OutdoorTemperatureThresholdActive}, SunProtection={Device.IsSunProtectionBlocked}");

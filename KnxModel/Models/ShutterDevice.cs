@@ -348,22 +348,12 @@ namespace KnxModel
         {
             logger.LogInformation("ShutterDevice {DeviceId} blocking sun protection", Id);
             await _knxService.WriteGroupValueAsync(Addresses.SunProtectionBlockControl, true);
-            _isSunProtectionBlocked = true;
-            _lastUpdated = DateTime.Now;
-            
-            logger.LogInformation("ShutterDevice {DeviceId} sun protection blocked", Id);
-            Console.WriteLine($"ShutterDevice {Id} sun protection blocked");
         }
 
         public async Task UnblockSunProtectionAsync(TimeSpan? timeout = null)
         {
             logger.LogInformation("ShutterDevice {DeviceId} unblocking sun protection", Id);
             await _knxService.WriteGroupValueAsync(Addresses.SunProtectionBlockControl, false);
-            _isSunProtectionBlocked = false;
-            _lastUpdated = DateTime.Now;
-            
-            logger.LogInformation("ShutterDevice {DeviceId} sun protection unblocked", Id);
-            Console.WriteLine($"ShutterDevice {Id} sun protection unblocked");
         }
 
         public async Task SetSunProtectionBlockStateAsync(bool blocked, TimeSpan? timeout = null)
@@ -384,10 +374,7 @@ namespace KnxModel
             
             // Read actual state from KNX bus
             var blockState = await _knxService.RequestGroupValue<bool>(Addresses.SunProtectionBlockFeedback);
-            _isSunProtectionBlocked = blockState;
-            _lastUpdated = DateTime.Now;
             
-            logger.LogDebug("ShutterDevice {DeviceId} sun protection block state: {BlockState}", Id, blockState);
             return blockState;
         }
 
@@ -429,10 +416,7 @@ namespace KnxModel
             
             // Read actual state from KNX bus
             var thresholdState = await _knxService.RequestGroupValue<bool>(Addresses.BrightnessThreshold1);
-            _brightnessThreshold1Active = thresholdState;
-            _lastUpdated = DateTime.Now;
             
-            logger.LogDebug("ShutterDevice {DeviceId} brightness threshold 1 state: {State}", Id, thresholdState);
             return thresholdState;
         }
 
@@ -442,10 +426,7 @@ namespace KnxModel
             
             // Read actual state from KNX bus
             var thresholdState = await _knxService.RequestGroupValue<bool>(Addresses.BrightnessThreshold2);
-            _brightnessThreshold2Active = thresholdState;
-            _lastUpdated = DateTime.Now;
             
-            logger.LogDebug("ShutterDevice {DeviceId} brightness threshold 2 state: {State}", Id, thresholdState);
             return thresholdState;
         }
 
@@ -455,10 +436,7 @@ namespace KnxModel
             
             // Read actual state from KNX bus
             var thresholdState = await _knxService.RequestGroupValue<bool>(Addresses.OutdoorTemperatureThreshold);
-            _outdoorTemperatureThresholdActive = thresholdState;
-            _lastUpdated = DateTime.Now;
             
-            logger.LogDebug("ShutterDevice {DeviceId} outdoor temperature threshold state: {State}", Id, thresholdState);
             return thresholdState;
         }
 
