@@ -1,5 +1,6 @@
 using FluentAssertions;
 using KnxModel;
+using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
 
 namespace KnxTest.Integration.Helpers

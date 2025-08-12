@@ -346,7 +346,7 @@ namespace KnxTest.Integration
             Console.WriteLine($"✅ Device {device.Id} sun protection is unblocked");
         }
 
-        internal override async Task InitializeDevice(string deviceId, bool saveCurrentState = true)
+        internal async Task InitializeDevice(string deviceId, bool saveCurrentState = true)
         {
             Thread.Sleep(2000); // Ensure service is ready
             Console.WriteLine($"🆕 Creating new ShutterDevice {deviceId} for sun protection tests");
