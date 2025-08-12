@@ -145,7 +145,67 @@ namespace KnxModel
         public const string CLOCK_TIME_SUB_GROUP = "1";
 
         #endregion
+
+        #region Sun Protection Threshold Configuration
+
+        /// <summary>
+        /// Main group for environmental sensors and thresholds (0)
+        /// </summary>
+        public const string ENVIRONMENT_MAIN_GROUP = "0";
+
+        /// <summary>
+        /// Middle group for threshold feedback (2)
+        /// </summary>
+        public const string THRESHOLD_MIDDLE_GROUP = "2";
+
+        /// <summary>
+        /// Sub group for brightness threshold 1 (3)
+        /// </summary>
+        public const string BRIGHTNESS_THRESHOLD_1_SUB_GROUP = "3";
+
+        /// <summary>
+        /// Sub group for brightness threshold 2 (4)
+        /// </summary>
+        public const string BRIGHTNESS_THRESHOLD_2_SUB_GROUP = "4";
+
+        /// <summary>
+        /// Sub group for outdoor temperature threshold (7)
+        /// </summary>
+        public const string OUTDOOR_TEMPERATURE_THRESHOLD_SUB_GROUP = "7";
+
+        #endregion
         
+        #region Sun Protection Threshold Address Creation Methods
+        
+        /// <summary>
+        /// Creates brightness threshold 1 address
+        /// </summary>
+        /// <returns>Complete KNX address for brightness threshold 1</returns>
+        public static string CreateBrightnessThreshold1Address()
+        {
+            return $"{ENVIRONMENT_MAIN_GROUP}/{THRESHOLD_MIDDLE_GROUP}/{BRIGHTNESS_THRESHOLD_1_SUB_GROUP}";
+        }
+        
+        /// <summary>
+        /// Creates brightness threshold 2 address
+        /// </summary>
+        /// <returns>Complete KNX address for brightness threshold 2</returns>
+        public static string CreateBrightnessThreshold2Address()
+        {
+            return $"{ENVIRONMENT_MAIN_GROUP}/{THRESHOLD_MIDDLE_GROUP}/{BRIGHTNESS_THRESHOLD_2_SUB_GROUP}";
+        }
+        
+        /// <summary>
+        /// Creates outdoor temperature threshold address
+        /// </summary>
+        /// <returns>Complete KNX address for outdoor temperature threshold</returns>
+        public static string CreateOutdoorTemperatureThresholdAddress()
+        {
+            return $"{ENVIRONMENT_MAIN_GROUP}/{THRESHOLD_MIDDLE_GROUP}/{OUTDOOR_TEMPERATURE_THRESHOLD_SUB_GROUP}";
+        }
+        
+        #endregion
+
         #region Dimmer Address Creation Methods
         
         /// <summary>
@@ -402,7 +462,10 @@ namespace KnxModel
                 SunProtectionBlockFeedback: CreateShutterSunProtectionBlockFeedbackAddress(subGroup),
                 SunProtectionStatus: CreateShutterSunProtectionStatusAddress(subGroup),
                 StopControl: CreateShutterStopAddress(subGroup),
-                MovementStatusFeedback: CreateShutterMovementStatusFeedbackAddress(subGroup)
+                MovementStatusFeedback: CreateShutterMovementStatusFeedbackAddress(subGroup),
+                BrightnessThreshold1: CreateBrightnessThreshold1Address(),
+                BrightnessThreshold2: CreateBrightnessThreshold2Address(),
+                OutdoorTemperatureThreshold: CreateOutdoorTemperatureThresholdAddress()
             );
         }
 

@@ -11,7 +11,7 @@ namespace KnxModel
     /// Position: 0% = fully open, 100% = fully closed
     /// IsActive: true = moving, false = stopped
     /// </summary>
-    public class ShutterDevice : LockableDeviceBase<ShutterDevice, ShutterAddresses>, IShutterDevice, IPercentageLockableDevice
+    public class ShutterDevice : LockableDeviceBase<ShutterDevice, ShutterAddresses>, IShutterDevice, IPercentageLockableDevice, ISunProtectionThresholdCapableDevice
     {
         private readonly PercentageControllableDeviceHelper<ShutterDevice> _shutterHelper;
         private readonly ShutterDeviceHelper<ShutterDevice> _shutterMovementHelper;
@@ -19,6 +19,11 @@ namespace KnxModel
         private float _currentPercentage = 0.0f; // Start fully open
         private bool _isActive = false; // Movement status: true = moving, false = stopped
         private bool _isSunProtectionBlocked = false; // Sun protection block status
+        
+        // Sun protection threshold states
+        private bool _brightnessThreshold1Active = false;
+        private bool _brightnessThreshold2Active = false;
+        private bool _outdoorTemperatureThresholdActive = false;
         
         // Saved state for testing
         private float? _savedPercentage;
@@ -65,6 +70,9 @@ namespace KnxModel
             
             // Process sun protection block feedback
             ProcessSunProtectionFeedback(e);
+            
+            // Process threshold feedback
+            ProcessThresholdFeedback(e);
         }
 
         /// <summary>
@@ -95,6 +103,48 @@ namespace KnxModel
             }
         }
 
+        /// <summary>
+        /// Processes threshold feedback messages for sun protection
+        /// </summary>
+        private void ProcessThresholdFeedback(KnxGroupEventArgs e)
+        {
+            // Process brightness threshold 1 feedback
+            if (e.Destination == Addresses.BrightnessThreshold1)
+            {
+                var thresholdActive = e.Value.AsBoolean();
+                _brightnessThreshold1Active = thresholdActive;
+                _lastUpdated = DateTime.Now;
+                
+                logger.LogInformation("ShutterDevice {DeviceId} brightness threshold 1: {State}", 
+                    Id, thresholdActive ? "ACTIVE" : "INACTIVE");
+                Console.WriteLine($"ShutterDevice {Id} brightness threshold 1: {(thresholdActive ? "ACTIVE" : "INACTIVE")}");
+            }
+            
+            // Process brightness threshold 2 feedback
+            if (e.Destination == Addresses.BrightnessThreshold2)
+            {
+                var thresholdActive = e.Value.AsBoolean();
+                _brightnessThreshold2Active = thresholdActive;
+                _lastUpdated = DateTime.Now;
+                
+                logger.LogInformation("ShutterDevice {DeviceId} brightness threshold 2: {State}", 
+                    Id, thresholdActive ? "ACTIVE" : "INACTIVE");
+                Console.WriteLine($"ShutterDevice {Id} brightness threshold 2: {(thresholdActive ? "ACTIVE" : "INACTIVE")}");
+            }
+            
+            // Process outdoor temperature threshold feedback
+            if (e.Destination == Addresses.OutdoorTemperatureThreshold)
+            {
+                var thresholdActive = e.Value.AsBoolean();
+                _outdoorTemperatureThresholdActive = thresholdActive;
+                _lastUpdated = DateTime.Now;
+                
+                logger.LogInformation("ShutterDevice {DeviceId} outdoor temperature threshold: {State}", 
+                    Id, thresholdActive ? "ACTIVE" : "INACTIVE");
+                Console.WriteLine($"ShutterDevice {Id} outdoor temperature threshold: {(thresholdActive ? "ACTIVE" : "INACTIVE")}");
+            }
+        }
+
         private async Task WaitForCooldownAsync()
         {
             var elapsed = DateTime.Now - LastUpdated;
@@ -116,12 +166,18 @@ namespace KnxModel
             _currentPercentage = await ReadPercentageAsync();
             _currentLockState = await ReadLockStateAsync();
             _isSunProtectionBlocked = await ReadSunProtectionBlockStateAsync();
+            
+            // Read initial threshold states
+            _brightnessThreshold1Active = await ReadBrightnessThreshold1StateAsync();
+            _brightnessThreshold2Active = await ReadBrightnessThreshold2StateAsync();
+            _outdoorTemperatureThresholdActive = await ReadOutdoorTemperatureThresholdStateAsync();
+            
             _lastUpdated = DateTime.Now;
             
-            logger.LogInformation("ShutterDevice {DeviceId} initialized - Position: {Position}%, Lock: {LockState}, SunProtectionBlocked: {SunProtectionBlocked}", 
-                Id, _currentPercentage, _currentLockState, _isSunProtectionBlocked);
+            logger.LogInformation("ShutterDevice {DeviceId} initialized - Position: {Position}%, Lock: {LockState}, SunProtectionBlocked: {SunProtectionBlocked}, Thresholds: B1={BrightThreshold1}, B2={BrightThreshold2}, Temp={TempThreshold}", 
+                Id, _currentPercentage, _currentLockState, _isSunProtectionBlocked, _brightnessThreshold1Active, _brightnessThreshold2Active, _outdoorTemperatureThresholdActive);
             
-            Console.WriteLine($"ShutterDevice {Id} initialized - Position: {_currentPercentage}%, Lock: {_currentLockState}, SunProtectionBlocked: {_isSunProtectionBlocked}");
+            Console.WriteLine($"ShutterDevice {Id} initialized - Position: {_currentPercentage}%, Lock: {_currentLockState}, SunProtectionBlocked: {_isSunProtectionBlocked}, Thresholds: B1={_brightnessThreshold1Active}, B2={_brightnessThreshold2Active}, Temp={_outdoorTemperatureThresholdActive}");
         }
 
         public override void SaveCurrentState()
@@ -356,6 +412,125 @@ namespace KnxModel
             }
             
             logger.LogWarning("ShutterDevice {DeviceId} timeout waiting for sun protection block state: {TargetState}", Id, targetState);
+            return false;
+        }
+
+        #endregion
+
+        #region ISunProtectionThresholdCapableDevice Implementation
+
+        public bool BrightnessThreshold1Active => _brightnessThreshold1Active;
+        public bool BrightnessThreshold2Active => _brightnessThreshold2Active;
+        public bool OutdoorTemperatureThresholdActive => _outdoorTemperatureThresholdActive;
+
+        public async Task<bool> ReadBrightnessThreshold1StateAsync()
+        {
+            logger.LogDebug("ShutterDevice {DeviceId} reading brightness threshold 1 state", Id);
+            
+            // Read actual state from KNX bus
+            var thresholdState = await _knxService.RequestGroupValue<bool>(Addresses.BrightnessThreshold1);
+            _brightnessThreshold1Active = thresholdState;
+            _lastUpdated = DateTime.Now;
+            
+            logger.LogDebug("ShutterDevice {DeviceId} brightness threshold 1 state: {State}", Id, thresholdState);
+            return thresholdState;
+        }
+
+        public async Task<bool> ReadBrightnessThreshold2StateAsync()
+        {
+            logger.LogDebug("ShutterDevice {DeviceId} reading brightness threshold 2 state", Id);
+            
+            // Read actual state from KNX bus
+            var thresholdState = await _knxService.RequestGroupValue<bool>(Addresses.BrightnessThreshold2);
+            _brightnessThreshold2Active = thresholdState;
+            _lastUpdated = DateTime.Now;
+            
+            logger.LogDebug("ShutterDevice {DeviceId} brightness threshold 2 state: {State}", Id, thresholdState);
+            return thresholdState;
+        }
+
+        public async Task<bool> ReadOutdoorTemperatureThresholdStateAsync()
+        {
+            logger.LogDebug("ShutterDevice {DeviceId} reading outdoor temperature threshold state", Id);
+            
+            // Read actual state from KNX bus
+            var thresholdState = await _knxService.RequestGroupValue<bool>(Addresses.OutdoorTemperatureThreshold);
+            _outdoorTemperatureThresholdActive = thresholdState;
+            _lastUpdated = DateTime.Now;
+            
+            logger.LogDebug("ShutterDevice {DeviceId} outdoor temperature threshold state: {State}", Id, thresholdState);
+            return thresholdState;
+        }
+
+        public async Task<bool> WaitForBrightnessThreshold1StateAsync(bool targetState, TimeSpan? timeout = null)
+        {
+            var actualTimeout = timeout ?? _defaulTimeout;
+            var endTime = DateTime.Now + actualTimeout;
+            
+            logger.LogDebug("ShutterDevice {DeviceId} waiting for brightness threshold 1 state: {TargetState} (timeout: {Timeout})", 
+                Id, targetState, actualTimeout);
+            
+            while (DateTime.Now < endTime)
+            {
+                var currentState = await ReadBrightnessThreshold1StateAsync();
+                if (currentState == targetState)
+                {
+                    logger.LogDebug("ShutterDevice {DeviceId} reached target brightness threshold 1 state: {TargetState}", Id, targetState);
+                    return true;
+                }
+                
+                await Task.Delay(100); // Check every 100ms
+            }
+            
+            logger.LogWarning("ShutterDevice {DeviceId} timeout waiting for brightness threshold 1 state: {TargetState}", Id, targetState);
+            return false;
+        }
+
+        public async Task<bool> WaitForBrightnessThreshold2StateAsync(bool targetState, TimeSpan? timeout = null)
+        {
+            var actualTimeout = timeout ?? _defaulTimeout;
+            var endTime = DateTime.Now + actualTimeout;
+            
+            logger.LogDebug("ShutterDevice {DeviceId} waiting for brightness threshold 2 state: {TargetState} (timeout: {Timeout})", 
+                Id, targetState, actualTimeout);
+            
+            while (DateTime.Now < endTime)
+            {
+                var currentState = await ReadBrightnessThreshold2StateAsync();
+                if (currentState == targetState)
+                {
+                    logger.LogDebug("ShutterDevice {DeviceId} reached target brightness threshold 2 state: {TargetState}", Id, targetState);
+                    return true;
+                }
+                
+                await Task.Delay(100); // Check every 100ms
+            }
+            
+            logger.LogWarning("ShutterDevice {DeviceId} timeout waiting for brightness threshold 2 state: {TargetState}", Id, targetState);
+            return false;
+        }
+
+        public async Task<bool> WaitForOutdoorTemperatureThresholdStateAsync(bool targetState, TimeSpan? timeout = null)
+        {
+            var actualTimeout = timeout ?? _defaulTimeout;
+            var endTime = DateTime.Now + actualTimeout;
+            
+            logger.LogDebug("ShutterDevice {DeviceId} waiting for outdoor temperature threshold state: {TargetState} (timeout: {Timeout})", 
+                Id, targetState, actualTimeout);
+            
+            while (DateTime.Now < endTime)
+            {
+                var currentState = await ReadOutdoorTemperatureThresholdStateAsync();
+                if (currentState == targetState)
+                {
+                    logger.LogDebug("ShutterDevice {DeviceId} reached target outdoor temperature threshold state: {TargetState}", Id, targetState);
+                    return true;
+                }
+                
+                await Task.Delay(100); // Check every 100ms
+            }
+            
+            logger.LogWarning("ShutterDevice {DeviceId} timeout waiting for outdoor temperature threshold state: {TargetState}", Id, targetState);
             return false;
         }
 

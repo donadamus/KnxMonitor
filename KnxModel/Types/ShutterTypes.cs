@@ -16,7 +16,10 @@ namespace KnxModel
         string SunProtectionBlockFeedback,         // 4/4/X - sun protection block feedback (same as control)
         string SunProtectionStatus,               // 4/4/{X+100} - current sun protection state
         string StopControl,          // 4/1/X - stop/step control
-        string MovementStatusFeedback // 4/1/{X+100} - movement status feedback
+        string MovementStatusFeedback, // 4/1/{X+100} - movement status feedback
+        string BrightnessThreshold1,   // 0/2/3 - brightness threshold 1 feedback
+        string BrightnessThreshold2,   // 0/2/4 - brightness threshold 2 feedback  
+        string OutdoorTemperatureThreshold // 0/2/7 - outdoor temperature threshold feedback
     ) : LockableAddresses(LockControl, LockFeedback), ILockableAddress, IPercentageControllableAddress;
 
     /// <summary>
