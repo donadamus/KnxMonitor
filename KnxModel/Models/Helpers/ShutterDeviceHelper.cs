@@ -144,5 +144,44 @@ namespace KnxModel.Models.Helpers
                 Console.WriteLine($"{_deviceType} {_deviceId} movement status: {(isMoving ? "STARTED" : "STOPPED")}");
             }
         }
+
+        /// <summary>
+        /// Waits for the shutter to become active (start moving)
+        /// </summary>
+        public async Task<bool> WaitForActiveAsync(TimeSpan? timeout = null)
+        {
+            return await WaitForConditionAsync(
+                () => ReadActivityStatus(),
+                timeout ?? _defaultTimeout,
+                "movement to start"
+            );
+        }
+
+        /// <summary>
+        /// Waits for the shutter to become inactive (stop moving)
+        /// </summary>
+        public async Task<bool> WaitForInactiveAsync(TimeSpan? timeout = null)
+        {
+            return await WaitForConditionAsync(
+                () => !ReadActivityStatus(),
+                timeout ?? _defaultTimeout,
+                "movement to stop"
+            );
+        }
+
+        /// <summary>
+        /// Reads current activity status (mock implementation for now)
+        /// In real implementation this would read from KNX MovementStatusFeedback
+        /// </summary>
+        private bool ReadActivityStatus()
+        {
+            // TODO: Read from KNX bus - MovementStatusFeedback address
+            // For now, return false as we don't have real feedback
+            // var isMoving = await _knxService.RequestGroupValue<bool>(addresses.MovementStatusFeedback);
+            
+            // This is a mock - in reality we'd need to track the actual state
+            // For now assume not moving
+            return false;
+        }
     }
 }

@@ -15,6 +15,7 @@ namespace KnxModel
     {
         private readonly PercentageControllableDeviceHelper<ShutterDevice> _shutterHelper;
         private readonly ShutterDeviceHelper<ShutterDevice> _shutterMovementHelper;
+        private readonly SunProtectionDeviceHelper<ShutterDevice> _sunProtectionHelper;
         private readonly ILogger<ShutterDevice> logger;
         private float _currentPercentage = 0.0f; // Start fully open
         private bool _isActive = false; // Movement status: true = moving, false = stopped
@@ -54,6 +55,17 @@ namespace KnxModel
                             () => UnlockAsync(),
                             logger: logger
                             , defaulTimeout
+                            );
+
+            _sunProtectionHelper = new SunProtectionDeviceHelper<ShutterDevice>(
+                            _knxService, Id, "ShutterDevice",
+                            () => Addresses,
+                            () => _isSunProtectionBlocked,
+                            () => _brightnessThreshold1Active,
+                            () => _brightnessThreshold2Active,
+                            () => _outdoorTemperatureThresholdActive,
+                            logger: logger,
+                            defaulTimeout
                             );
 
             _eventManager.MessageReceived += OnKnxMessageReceived;
@@ -273,48 +285,12 @@ namespace KnxModel
 
         public async Task<bool> WaitForInactiveAsync(TimeSpan? timeout = null)
         {
-            var actualTimeout = timeout ?? TimeSpan.FromSeconds(30); // Default 30 seconds for movement
-            var endTime = DateTime.Now + actualTimeout;
-            
-            Console.WriteLine($"ShutterDevice {Id} waiting for movement to stop (timeout: {actualTimeout.TotalSeconds}s)");
-            
-            while (DateTime.Now < endTime)
-            {
-                var isActive = await ReadActivityStatusAsync();
-                if (!isActive)
-                {
-                    Console.WriteLine($"ShutterDevice {Id} movement stopped");
-                    return true;
-                }
-                
-                await Task.Delay(100); // Check every 100ms
-            }
-            
-            Console.WriteLine($"ShutterDevice {Id} timeout waiting for movement to stop");
-            return false;
+            return await _shutterMovementHelper.WaitForInactiveAsync(timeout);
         }
 
         public async Task<bool> WaitForActiveAsync(TimeSpan? timeout = null)
         {
-            var actualTimeout = timeout ?? TimeSpan.FromSeconds(5); // Default 5 seconds to start moving
-            var endTime = DateTime.Now + actualTimeout;
-            
-            Console.WriteLine($"ShutterDevice {Id} waiting for movement to start (timeout: {actualTimeout.TotalSeconds}s)");
-            
-            while (DateTime.Now < endTime)
-            {
-                var isActive = await ReadActivityStatusAsync();
-                if (isActive)
-                {
-                    Console.WriteLine($"ShutterDevice {Id} movement started");
-                    return true;
-                }
-                
-                await Task.Delay(100); // Check every 100ms
-            }
-            
-            Console.WriteLine($"ShutterDevice {Id} timeout waiting for movement to start");
-            return false;
+            return await _shutterMovementHelper.WaitForActiveAsync(timeout);
         }
 
         #endregion
@@ -380,26 +356,7 @@ namespace KnxModel
 
         public async Task<bool> WaitForSunProtectionBlockStateAsync(bool targetState, TimeSpan? timeout = null)
         {
-            var actualTimeout = timeout ?? _defaulTimeout;
-            var endTime = DateTime.Now + actualTimeout;
-            
-            logger.LogDebug("ShutterDevice {DeviceId} waiting for sun protection block state: {TargetState} (timeout: {Timeout})", 
-                Id, targetState, actualTimeout);
-            
-            while (DateTime.Now < endTime)
-            {
-                var currentState = await ReadSunProtectionBlockStateAsync();
-                if (currentState == targetState)
-                {
-                    logger.LogDebug("ShutterDevice {DeviceId} reached target sun protection block state: {TargetState}", Id, targetState);
-                    return true;
-                }
-                
-                await Task.Delay(100); // Check every 100ms
-            }
-            
-            logger.LogWarning("ShutterDevice {DeviceId} timeout waiting for sun protection block state: {TargetState}", Id, targetState);
-            return false;
+            return await _sunProtectionHelper.WaitForSunProtectionBlockStateAsync(targetState, timeout);
         }
 
         #endregion
@@ -442,74 +399,17 @@ namespace KnxModel
 
         public async Task<bool> WaitForBrightnessThreshold1StateAsync(bool targetState, TimeSpan? timeout = null)
         {
-            var actualTimeout = timeout ?? _defaulTimeout;
-            var endTime = DateTime.Now + actualTimeout;
-            
-            logger.LogDebug("ShutterDevice {DeviceId} waiting for brightness threshold 1 state: {TargetState} (timeout: {Timeout})", 
-                Id, targetState, actualTimeout);
-            
-            while (DateTime.Now < endTime)
-            {
-                var currentState = await ReadBrightnessThreshold1StateAsync();
-                if (currentState == targetState)
-                {
-                    logger.LogDebug("ShutterDevice {DeviceId} reached target brightness threshold 1 state: {TargetState}", Id, targetState);
-                    return true;
-                }
-                
-                await Task.Delay(100); // Check every 100ms
-            }
-            
-            logger.LogWarning("ShutterDevice {DeviceId} timeout waiting for brightness threshold 1 state: {TargetState}", Id, targetState);
-            return false;
+            return await _sunProtectionHelper.WaitForBrightnessThreshold1StateAsync(targetState, timeout);
         }
 
         public async Task<bool> WaitForBrightnessThreshold2StateAsync(bool targetState, TimeSpan? timeout = null)
         {
-            var actualTimeout = timeout ?? _defaulTimeout;
-            var endTime = DateTime.Now + actualTimeout;
-            
-            logger.LogDebug("ShutterDevice {DeviceId} waiting for brightness threshold 2 state: {TargetState} (timeout: {Timeout})", 
-                Id, targetState, actualTimeout);
-            
-            while (DateTime.Now < endTime)
-            {
-                var currentState = await ReadBrightnessThreshold2StateAsync();
-                if (currentState == targetState)
-                {
-                    logger.LogDebug("ShutterDevice {DeviceId} reached target brightness threshold 2 state: {TargetState}", Id, targetState);
-                    return true;
-                }
-                
-                await Task.Delay(100); // Check every 100ms
-            }
-            
-            logger.LogWarning("ShutterDevice {DeviceId} timeout waiting for brightness threshold 2 state: {TargetState}", Id, targetState);
-            return false;
+            return await _sunProtectionHelper.WaitForBrightnessThreshold2StateAsync(targetState, timeout);
         }
 
         public async Task<bool> WaitForOutdoorTemperatureThresholdStateAsync(bool targetState, TimeSpan? timeout = null)
         {
-            var actualTimeout = timeout ?? _defaulTimeout;
-            var endTime = DateTime.Now + actualTimeout;
-            
-            logger.LogDebug("ShutterDevice {DeviceId} waiting for outdoor temperature threshold state: {TargetState} (timeout: {Timeout})", 
-                Id, targetState, actualTimeout);
-            
-            while (DateTime.Now < endTime)
-            {
-                var currentState = await ReadOutdoorTemperatureThresholdStateAsync();
-                if (currentState == targetState)
-                {
-                    logger.LogDebug("ShutterDevice {DeviceId} reached target outdoor temperature threshold state: {TargetState}", Id, targetState);
-                    return true;
-                }
-                
-                await Task.Delay(100); // Check every 100ms
-            }
-            
-            logger.LogWarning("ShutterDevice {DeviceId} timeout waiting for outdoor temperature threshold state: {TargetState}", Id, targetState);
-            return false;
+            return await _sunProtectionHelper.WaitForOutdoorTemperatureThresholdStateAsync(targetState, timeout);
         }
 
         #endregion
