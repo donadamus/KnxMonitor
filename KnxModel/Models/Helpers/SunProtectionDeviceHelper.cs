@@ -7,32 +7,20 @@ namespace KnxModel.Models.Helpers
     /// Handles sun protection block state and threshold state waiting
     /// </summary>
     public class SunProtectionDeviceHelper<T> : DeviceHelperBase<T>
-        where T : class
+        where T : ISunProtectionBlockableDevice, ISunProtectionThresholdCapableDevice, IKnxDeviceBase
     {
         private readonly Func<ShutterAddresses> _getAddresses;
-        private readonly Func<bool> _getCurrentSunProtectionBlockState;
-        private readonly Func<bool> _getCurrentBrightnessThreshold1State;
-        private readonly Func<bool> _getCurrentBrightnessThreshold2State;
-        private readonly Func<bool> _getCurrentOutdoorTemperatureThresholdState;
         private readonly new ILogger<T> _logger;
 
-        public SunProtectionDeviceHelper(
+        public SunProtectionDeviceHelper(T owner,
             IKnxService knxService,
             string deviceId,
             string deviceType,
             Func<ShutterAddresses> getAddresses,
-            Func<bool> getCurrentSunProtectionBlockState,
-            Func<bool> getCurrentBrightnessThreshold1State,
-            Func<bool> getCurrentBrightnessThreshold2State,
-            Func<bool> getCurrentOutdoorTemperatureThresholdState,
             ILogger<T> logger,
-            TimeSpan defaultTimeout) : base(knxService, deviceId, deviceType, logger, defaultTimeout)
+            TimeSpan defaultTimeout) : base(owner, knxService, deviceId, deviceType, logger, defaultTimeout)
         {
             _getAddresses = getAddresses ?? throw new ArgumentNullException(nameof(getAddresses));
-            _getCurrentSunProtectionBlockState = getCurrentSunProtectionBlockState ?? throw new ArgumentNullException(nameof(getCurrentSunProtectionBlockState));
-            _getCurrentBrightnessThreshold1State = getCurrentBrightnessThreshold1State ?? throw new ArgumentNullException(nameof(getCurrentBrightnessThreshold1State));
-            _getCurrentBrightnessThreshold2State = getCurrentBrightnessThreshold2State ?? throw new ArgumentNullException(nameof(getCurrentBrightnessThreshold2State));
-            _getCurrentOutdoorTemperatureThresholdState = getCurrentOutdoorTemperatureThresholdState ?? throw new ArgumentNullException(nameof(getCurrentOutdoorTemperatureThresholdState));
             _logger = logger;
         }
 
@@ -42,7 +30,7 @@ namespace KnxModel.Models.Helpers
         public async Task<bool> WaitForSunProtectionBlockStateAsync(bool targetState, TimeSpan? timeout = null)
         {
             return await WaitForConditionAsync(
-                () => _getCurrentSunProtectionBlockState() == targetState,
+                () => owner.IsSunProtectionBlocked == targetState,
                 timeout ?? _defaultTimeout,
                 $"sun protection block state {targetState}"
             );
@@ -54,7 +42,7 @@ namespace KnxModel.Models.Helpers
         public async Task<bool> WaitForBrightnessThreshold1StateAsync(bool targetState, TimeSpan? timeout = null)
         {
             return await WaitForConditionAsync(
-                () => _getCurrentBrightnessThreshold1State() == targetState,
+                () => owner.BrightnessThreshold1Active == targetState,
                 timeout ?? _defaultTimeout,
                 $"brightness threshold 1 state {targetState}"
             );
@@ -66,7 +54,7 @@ namespace KnxModel.Models.Helpers
         public async Task<bool> WaitForBrightnessThreshold2StateAsync(bool targetState, TimeSpan? timeout = null)
         {
             return await WaitForConditionAsync(
-                () => _getCurrentBrightnessThreshold2State() == targetState,
+                () => owner.BrightnessThreshold2Active == targetState,
                 timeout ?? _defaultTimeout,
                 $"brightness threshold 2 state {targetState}"
             );
@@ -78,7 +66,7 @@ namespace KnxModel.Models.Helpers
         public async Task<bool> WaitForOutdoorTemperatureThresholdStateAsync(bool targetState, TimeSpan? timeout = null)
         {
             return await WaitForConditionAsync(
-                () => _getCurrentOutdoorTemperatureThresholdState() == targetState,
+                () => owner.OutdoorTemperatureThresholdActive == targetState,
                 timeout ?? _defaultTimeout,
                 $"outdoor temperature threshold state {targetState}"
             );

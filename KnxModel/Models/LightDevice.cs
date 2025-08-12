@@ -12,6 +12,7 @@ namespace KnxModel
             : base(id, name, subGroup, KnxAddressConfiguration.CreateLightAddresses(subGroup), knxService, logger, defaultTimeout)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            Initialize(this);
         }
 
         public override async Task InitializeAsync()

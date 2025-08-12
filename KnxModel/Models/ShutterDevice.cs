@@ -36,7 +36,7 @@ namespace KnxModel
         public ShutterDevice(string id, string name, string subGroup, IKnxService knxService, ILogger<ShutterDevice> logger, TimeSpan defaulTimeout)
             : base(id, name, subGroup, KnxAddressConfiguration.CreateShutterAddresses(subGroup), knxService, logger, defaulTimeout)
         {
-            _shutterHelper = new PercentageControllableDeviceHelper<ShutterDevice>(
+            _shutterHelper = new PercentageControllableDeviceHelper<ShutterDevice>(this,
                             _knxService, Id, "ShutterDevice",
                             () => Addresses,
                             state => { _currentPercentage = state; _lastUpdated = DateTime.Now; },
@@ -45,7 +45,7 @@ namespace KnxModel
                             defaulTimeout
                             );
 
-            _shutterMovementHelper = new ShutterDeviceHelper<ShutterDevice>(
+            _shutterMovementHelper = new ShutterDeviceHelper<ShutterDevice>(this,
                             _knxService, Id, "ShutterDevice",
                             () => Addresses,
                             active => { _isActive = active; },
@@ -57,13 +57,9 @@ namespace KnxModel
                             , defaulTimeout
                             );
 
-            _sunProtectionHelper = new SunProtectionDeviceHelper<ShutterDevice>(
+            _sunProtectionHelper = new SunProtectionDeviceHelper<ShutterDevice>(this,
                             _knxService, Id, "ShutterDevice",
                             () => Addresses,
-                            () => _isSunProtectionBlocked,
-                            () => _brightnessThreshold1Active,
-                            () => _brightnessThreshold2Active,
-                            () => _outdoorTemperatureThresholdActive,
                             logger: logger,
                             defaulTimeout
                             );

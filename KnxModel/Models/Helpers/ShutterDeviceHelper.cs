@@ -7,7 +7,7 @@ namespace KnxModel.Models.Helpers
     /// Handles movement control commands and activity state management
     /// </summary>
     public class ShutterDeviceHelper<T> : DeviceHelperBase<T>
-        where T : class
+        where T : IKnxDeviceBase
     {
         private readonly Func<ShutterAddresses> _getAddresses;
         private readonly Action<bool> _updateActivity;
@@ -17,7 +17,7 @@ namespace KnxModel.Models.Helpers
         private readonly Func<Task> _unlockAsync;
         private readonly ILogger<T> logger;
 
-        public ShutterDeviceHelper(
+        public ShutterDeviceHelper(T owner,
             IKnxService knxService,
             string deviceId,
             string deviceType,
@@ -28,7 +28,7 @@ namespace KnxModel.Models.Helpers
             Func<Lock> getCurrentLockState,
             Func<Task> unlockAsync,
             ILogger<T> logger,
-            TimeSpan defaultTimeout) : base(knxService, deviceId, deviceType, logger, defaultTimeout)
+            TimeSpan defaultTimeout) : base(owner, knxService, deviceId, deviceType, logger, defaultTimeout)
         {
             _getAddresses = getAddresses ?? throw new ArgumentNullException(nameof(getAddresses));
             _updateActivity = updateActivity ?? throw new ArgumentNullException(nameof(updateActivity));

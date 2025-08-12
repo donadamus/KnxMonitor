@@ -3,17 +3,19 @@ using Microsoft.Extensions.Logging;
 namespace KnxModel.Models.Helpers
 {
     public class DeviceHelperBase<TDevice>
+        where TDevice : IKnxDeviceBase
     {
         protected readonly TimeSpan _defaultTimeout;
         protected const int _pollingIntervalMs = 50; // Polling interval for wait operations
-
+        protected readonly TDevice owner;
         protected readonly IKnxService _knxService;
         protected readonly string _deviceId;
         protected readonly string _deviceType;
         protected readonly ILogger<TDevice> _logger;
 
-        public DeviceHelperBase(IKnxService knxService, string deviceId, string deviceType, ILogger<TDevice> logger, TimeSpan defaultTimeout)
+        public DeviceHelperBase(TDevice owner, IKnxService knxService, string deviceId, string deviceType, ILogger<TDevice> logger, TimeSpan defaultTimeout)
         {
+            this.owner = owner;
             _knxService = knxService ?? throw new ArgumentNullException(nameof(knxService));
             _deviceId = deviceId ?? throw new ArgumentNullException(nameof(deviceId));
             _deviceType = deviceType ?? throw new ArgumentNullException(nameof(deviceType));

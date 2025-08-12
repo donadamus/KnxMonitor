@@ -10,12 +10,13 @@ namespace KnxModel.Models.Helpers
     /// Handles lock state management and KNX communication for ILockableDevice implementations
     /// </summary>
     public class LockableDeviceHelper<TDevice> : DeviceHelperBase<TDevice>
+        where TDevice : IKnxDeviceBase
     {
         private readonly Func<ILockableAddress> _getAddresses;
         private readonly Action<Lock> _updateLockState;
         private readonly Func<Lock> _getCurrentLockState;
 
-        public LockableDeviceHelper(
+        public LockableDeviceHelper(TDevice owner,
             IKnxService knxService,
             string deviceId,
             string deviceType,
@@ -23,7 +24,7 @@ namespace KnxModel.Models.Helpers
             Action<Lock> updateLockState,
             Func<Lock> getCurrentLockState,
             ILogger<TDevice> logger,
-            TimeSpan defaultTimeout) : base(knxService, deviceId, deviceType, logger, defaultTimeout)
+            TimeSpan defaultTimeout) : base(owner, knxService, deviceId, deviceType, logger, defaultTimeout)
         {
             _getAddresses = getAddresses ?? throw new ArgumentNullException(nameof(getAddresses));
             _updateLockState = updateLockState ?? throw new ArgumentNullException(nameof(updateLockState));

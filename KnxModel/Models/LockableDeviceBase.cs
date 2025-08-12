@@ -3,11 +3,16 @@ using Microsoft.Extensions.Logging;
 
 namespace KnxModel
 {
+
+    
+
     public abstract class LockableDeviceBase<TDevice, TAddressess> : ILockableDevice, IDisposable, IIdentifable
+        where TDevice : IKnxDeviceBase
         where TAddressess : ILockableAddress
     {
         internal readonly KnxEventManager _eventManager;
         internal readonly IKnxService _knxService;
+        private readonly ILogger<TDevice> _logger;
 
         public string Id { get; }
         public string Name { get; }
@@ -20,7 +25,7 @@ namespace KnxModel
         public TAddressess Addresses { get; }
 
 
-        private readonly LockableDeviceHelper<TDevice> _lockableHelper;
+        private LockableDeviceHelper<TDevice> _lockableHelper;
 
         public LockableDeviceBase(string id, string name, string subGroup, TAddressess addresses, IKnxService knxService, ILogger<TDevice> logger, TimeSpan defaulTimeout)
         {
@@ -28,21 +33,27 @@ namespace KnxModel
             Name = name ?? throw new ArgumentNullException(nameof(name));
             SubGroup = subGroup ?? throw new ArgumentNullException(nameof(subGroup));
             _knxService = knxService ?? throw new ArgumentNullException(nameof(knxService));
+            _logger = logger;
             Addresses = addresses ?? throw new ArgumentNullException(nameof(addresses));
             // Initialize event manager
             _eventManager = new KnxEventManager(_knxService, Id, "LockableDevice");
             _eventManager.MessageReceived += OnKnxMessageReceived;
 
-            _lockableHelper = new LockableDeviceHelper<TDevice>(
-            _knxService, Id, "LightDevice",
-            () => Addresses,
-            state => { _currentLockState = state; _lastUpdated = DateTime.Now; },
-            () => _currentLockState,
-            logger, defaulTimeout);
+
 
             // Start listening to KNX events
             _eventManager.StartListening();
             _defaulTimeout = defaulTimeout;
+        }
+
+        internal virtual void Initialize(TDevice owner)
+        {
+            _lockableHelper = new LockableDeviceHelper<TDevice>(owner,
+                                _knxService, Id, "LightDevice",
+                                () => Addresses,
+                                state => { _currentLockState = state; _lastUpdated = DateTime.Now; },
+                                () => _currentLockState,
+                                _logger, _defaulTimeout);
         }
 
         #region ILockableDevice Implementation

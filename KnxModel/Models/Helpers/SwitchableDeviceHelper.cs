@@ -9,23 +9,21 @@ namespace KnxModel.Models.Helpers
     /// Handles switch state management and KNX communication for ISwitchable implementations
     /// </summary>
     public class SwitchableDeviceHelper<TDevice> : DeviceHelperBase<TDevice>
+        where TDevice : IKnxDeviceBase, ILightDevice
     {
         private readonly Func<ISwitchableAddress> _getAddresses;
         private readonly Action<Switch> _updateSwitchState;
-        private readonly Func<Switch> _getCurrentSwitchState;
 
-        public SwitchableDeviceHelper(
+        public SwitchableDeviceHelper(TDevice owner,
             IKnxService knxService,
             string deviceId,
             string deviceType,
             Func<ISwitchableAddress> getAddresses,
             Action<Switch> updateSwitchState,
-            Func<Switch> getCurrentSwitchState,
-            ILogger<TDevice> logger, TimeSpan defaultTimeout) : base(knxService, deviceId, deviceType, logger, defaultTimeout)
+            ILogger<TDevice> logger, TimeSpan defaultTimeout) : base(owner, knxService, deviceId, deviceType, logger, defaultTimeout)
         {
             _getAddresses = getAddresses ?? throw new ArgumentNullException(nameof(getAddresses));
             _updateSwitchState = updateSwitchState ?? throw new ArgumentNullException(nameof(updateSwitchState));
-            _getCurrentSwitchState = getCurrentSwitchState ?? throw new ArgumentNullException(nameof(getCurrentSwitchState));
         } 
 
         /// <summary>
@@ -64,7 +62,7 @@ namespace KnxModel.Models.Helpers
         /// </summary>
         public async Task ToggleAsync(TimeSpan? timeout = null)
         {
-            var currentState = _getCurrentSwitchState();
+            var currentState = owner.CurrentSwitchState;
             var targetState = currentState switch
             {
                 Switch.On => Switch.Off,
@@ -83,7 +81,7 @@ namespace KnxModel.Models.Helpers
             await SetBitFunctionAsync(
                 address: _getAddresses().Control,
                 value: switchState == Switch.On,
-                condition: () => _getCurrentSwitchState() == switchState,
+                condition: () => owner.CurrentSwitchState == switchState,
                 timeout: timeout ?? _defaultTimeout
             );
         }
@@ -112,7 +110,7 @@ namespace KnxModel.Models.Helpers
         public async Task<bool> WaitForSwitchStateAsync(Switch switchState, TimeSpan? timeout = null)
         {
             return await WaitForConditionAsync(
-                () => _getCurrentSwitchState() == switchState,
+                () => owner.CurrentSwitchState == switchState,
                 timeout ?? _defaultTimeout,
                 $"switch state {switchState}"
             );

@@ -3,21 +3,21 @@ using Microsoft.Extensions.Logging;
 namespace KnxModel.Models.Helpers
 {
     public class PercentageControllableDeviceHelper<T> : DeviceHelperBase<T>
-        where T : class
+        where T : IKnxDeviceBase
     {
         private readonly Func<IPercentageControllableAddress> _getAddresses;
         private readonly Action<float> _updatePercentage;
         private readonly Func<float> _getCurrentPercentage;
         private readonly ILogger<T> logger;
 
-        public PercentageControllableDeviceHelper(
+        public PercentageControllableDeviceHelper(T owner,
             IKnxService knxService,
             string deviceId,
             string deviceType,
             Func<IPercentageControllableAddress> getAddresses,
             Action<float> updatePercentage,
             Func<float> getCurrentPercentage,
-            ILogger<T> logger, TimeSpan defaultTimeout) : base(knxService, deviceId, deviceType, logger, defaultTimeout)
+            ILogger<T> logger, TimeSpan defaultTimeout) : base(owner, knxService, deviceId, deviceType, logger, defaultTimeout)
         {
             _getAddresses = getAddresses ?? throw new ArgumentNullException(nameof(getAddresses));
             _updatePercentage = updatePercentage ?? throw new ArgumentNullException(nameof(updatePercentage));

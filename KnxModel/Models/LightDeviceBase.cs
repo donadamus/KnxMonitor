@@ -6,11 +6,12 @@ namespace KnxModel
     // Combines basic device functionality with switching and locking capabilities
     /// </summary>
     public abstract class LightDeviceBase<TDevice, TAddressess> : LockableDeviceBase<TDevice, TAddressess>, ILightDevice, ISwitchStateLockableDevice
+        where TDevice : IKnxDeviceBase, ILightDevice, ILockableDevice
         where TAddressess : ISwitchableAddress, ILockableAddress
     {
 
         
-        private readonly SwitchableDeviceHelper<TDevice> _switchableHelper;
+        private SwitchableDeviceHelper<TDevice> _switchableHelper;
 
         
         internal Switch _currentSwitchState = Switch.Unknown;
@@ -18,7 +19,7 @@ namespace KnxModel
         
         // Saved state for testing
         private Switch? _savedSwitchState;
-
+        private readonly ILogger<TDevice> _logger;
 
         public LightDeviceBase(string id, string name, string subGroup, TAddressess addresses, IKnxService knxService, ILogger<TDevice> logger, TimeSpan defaulTimeout)
             : base(id, name, subGroup, addresses,knxService, logger, defaulTimeout)
@@ -27,21 +28,25 @@ namespace KnxModel
 
             // Initialize event manager
             _eventManager.MessageReceived += OnKnxMessageReceived;
+            _logger = logger;
+        }
 
+
+        internal override void Initialize(TDevice owner)
+        {
+            base.Initialize(owner);
             // Initialize helpers
-            _switchableHelper = new SwitchableDeviceHelper<TDevice>(
+            _switchableHelper = new SwitchableDeviceHelper<TDevice>(owner,
                 _knxService, Id, "LightDevice",
                 () => Addresses,
                 state => { _currentSwitchState = state; _lastUpdated = DateTime.Now; },
-                () => _currentSwitchState,
-                logger, defaulTimeout);
-
-
+                _logger, _defaulTimeout);
         }
+
 
         #region IKnxDeviceBase Implementation
 
-       
+
 
         #endregion
 

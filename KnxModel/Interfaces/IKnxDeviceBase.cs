@@ -8,8 +8,6 @@ namespace KnxModel
     /// </summary>
     public interface IKnxDeviceBase : IIdentifable, IDisposable
     {
-
-
         /// <summary>
         /// Human-readable name of the device
         /// </summary>
@@ -40,4 +38,5 @@ namespace KnxModel
         /// </summary>
         Task RestoreSavedStateAsync(TimeSpan? timeout = null);
     }
+
 }

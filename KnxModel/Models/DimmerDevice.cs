@@ -20,7 +20,9 @@ namespace KnxModel
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            _percentageControllableHelper = new PercentageControllableDeviceHelper<DimmerDevice>(
+            Initialize(this);
+
+            _percentageControllableHelper = new PercentageControllableDeviceHelper<DimmerDevice>(this,
                 _knxService, Id, "DimmerDevice",
                 () => Addresses,
                 percentage => { _currentPercentage = percentage; _lastUpdated = DateTime.Now; },
