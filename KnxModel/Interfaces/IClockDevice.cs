@@ -33,7 +33,7 @@ namespace KnxModel
         /// <summary>
         /// Send current time to KNX bus (Master mode)
         /// </summary>
-        Task SendTimeAsync();
+        Task SendTimeAsync(DateTime? datetime = null);
 
         /// <summary>
         /// Force synchronization with system time

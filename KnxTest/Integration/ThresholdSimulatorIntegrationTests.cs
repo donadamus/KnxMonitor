@@ -16,15 +16,20 @@ namespace KnxTest.Integration
     {
         internal readonly XUnitLogger<ShutterDevice> _shutterLogger;
         internal readonly XUnitLogger<ThresholdSimulatorDevice> _simulatorLogger;
+        internal readonly XUnitLogger<ClockDevice> _clockLogger;
         private readonly TimeSpan _defaultTimeout = TimeSpan.FromSeconds(10);
         private readonly TimeSpan _thresholdResponseTimeout = TimeSpan.FromSeconds(5);
 
         private ThresholdSimulatorDevice? _thresholdSimulator;
+        private ClockDevice? _clockDevice;
 
         public ThresholdSimulatorIntegrationTests(KnxServiceFixture fixture, ITestOutputHelper output) : base(fixture)
         {
             _shutterLogger = new XUnitLogger<ShutterDevice>(output);
             _simulatorLogger = new XUnitLogger<ThresholdSimulatorDevice>(output);
+            _clockLogger = new XUnitLogger<ClockDevice>(output);
+
+            _clockDevice = ClockFactory.CreateClockDevice("C01", "Clock", ClockMode.Master, _knxService, _clockLogger, _defaultTimeout);
         }
 
         // Data source for tests - shutters with sun protection capability
@@ -155,6 +160,9 @@ namespace KnxTest.Integration
         public async Task ShutterDevice_RespondsToSimulatedThresholds_ModerateBrightness(string deviceId)
         {
             // Arrange
+
+            await _clockDevice!.SendTimeAsync(DateTime.Now.AddDays(1));
+
             await InitializeThresholdSimulator();
             await InitializeShutterDevice(deviceId);
             await EnsureSunProtectionUnblocked(Device!);

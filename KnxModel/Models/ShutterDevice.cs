@@ -53,6 +53,8 @@ namespace KnxModel
 
             _eventManager.MessageReceived += OnKnxMessageReceived;
             this.logger = logger;
+
+            Initialize(this);
         }
 
         private void OnKnxMessageReceived(object? sender, KnxGroupEventArgs e)

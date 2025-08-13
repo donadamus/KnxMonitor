@@ -172,8 +172,15 @@ namespace KnxModel
         public DateTime? LastTimeReceived => _lastTimeReceived;
         public bool HasValidTime => _hasValidTime;
 
-        public async Task SendTimeAsync()
+        public async Task SendTimeAsync(DateTime? datetime = null)
         {
+            if (datetime != null)
+            {
+                _hasValidTime = true;
+                _currentDateTime = datetime.Value;
+            }
+
+
             if (!_hasValidTime)
             {
                 _logger.LogWarning("ClockDevice {DeviceId} cannot send time - no valid time available", Id);
