@@ -73,6 +73,13 @@ public record LockableAddresses(
         string BrightnessControl { get; }
         string BrightnessFeedback { get; }
     }
+    public interface IMovementControllableAddress
+    {
+        string MovementControl { get; }
+        string MovementFeedback { get; }
+        string MovementStatusFeedback { get; }
+        string StopControl { get; }
+    }
 
 
     /// <summary>

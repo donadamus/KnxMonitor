@@ -7,37 +7,13 @@ namespace KnxModel.Models.Helpers
     /// Handles movement control commands and activity state management
     /// </summary>
     public class ShutterDeviceHelper<T, TAddress> : DeviceHelperBase<T, TAddress>
-        where T : IKnxDeviceBase
+        where T : IActivityStatusReadable, ILockableDevice, IKnxDeviceBase
+        where TAddress : IMovementControllableAddress
     {
-        private readonly Func<ShutterAddresses> _getAddresses;
-        private readonly Action<bool> _updateActivity;
-        private readonly Func<DateTime> _getLastUpdated;
-        private readonly Action _updateLastUpdated;
-        private readonly Func<Lock> _getCurrentLockState;
-        private readonly Func<Task> _unlockAsync;
-        private readonly ILogger<T> logger;
-
-        public ShutterDeviceHelper(T owner,
-            TAddress address,
-            IKnxService knxService,
-            string deviceId,
-            string deviceType,
-            Func<ShutterAddresses> getAddresses,
-            Action<bool> updateActivity,
-            Func<DateTime> getLastUpdated,
-            Action updateLastUpdated,
-            Func<Lock> getCurrentLockState,
-            Func<Task> unlockAsync,
-            ILogger<T> logger,
-            TimeSpan defaultTimeout) : base(owner, address, knxService, deviceId, deviceType, logger, defaultTimeout)
+        public ShutterDeviceHelper(T owner, TAddress addresses, IKnxService knxService, string deviceId, string deviceType,
+            ILogger<T> logger, TimeSpan defaultTimeout) 
+            : base(owner, addresses, knxService, deviceId, deviceType, logger, defaultTimeout)
         {
-            _getAddresses = getAddresses ?? throw new ArgumentNullException(nameof(getAddresses));
-            _updateActivity = updateActivity ?? throw new ArgumentNullException(nameof(updateActivity));
-            _getLastUpdated = getLastUpdated ?? throw new ArgumentNullException(nameof(getLastUpdated));
-            _updateLastUpdated = updateLastUpdated ?? throw new ArgumentNullException(nameof(updateLastUpdated));
-            _getCurrentLockState = getCurrentLockState ?? throw new ArgumentNullException(nameof(getCurrentLockState));
-            _unlockAsync = unlockAsync ?? throw new ArgumentNullException(nameof(unlockAsync));
-            this.logger = logger;
         }
 
 
@@ -49,21 +25,21 @@ namespace KnxModel.Models.Helpers
         internal async Task OpenAsync(TimeSpan? timeout = null)
         {
             // Unlock before opening if necessary
-            if (_getCurrentLockState() == Lock.On)
+            if (owner.CurrentLockState == Lock.On)
             {
-                await _unlockAsync();
+                await owner.UnlockAsync(timeout);
             }
-            
-            var addresses = _getAddresses();
             
             // Send UP command (1) to MovementControl
             // Device will echo on MovementFeedback and send status on MovementStatusFeedback
-            logger.LogInformation("{DeviceType} {DeviceId} sending UP command (1)", _deviceType, _deviceId);
+            _logger.LogInformation("{DeviceType} {DeviceId} sending UP command (1)", _deviceType, _deviceId);
             await _knxService.WriteGroupValueAsync(addresses.MovementControl, true);
             
-            _updateLastUpdated();
+            // Update last updated through dynamic access
+            var deviceBase = owner as dynamic;
+            deviceBase._lastUpdated = DateTime.Now;
             
-            logger.LogInformation("{DeviceType} {DeviceId} UP command sent", _deviceType, _deviceId);
+            _logger.LogInformation("{DeviceType} {DeviceId} UP command sent", _deviceType, _deviceId);
             Console.WriteLine($"{_deviceType} {_deviceId} UP command sent");
         }
 
@@ -75,21 +51,21 @@ namespace KnxModel.Models.Helpers
         internal async Task CloseAsync(TimeSpan? timeout = null)
         {
             // Unlock before closing if necessary
-            if (_getCurrentLockState() == Lock.On)
+            if (owner.CurrentLockState == Lock.On)
             {
-                await _unlockAsync();
+                await owner.UnlockAsync(timeout);
             }
-            
-            var addresses = _getAddresses();
             
             // Send DOWN command (0) to MovementControl
             // Device will echo on MovementFeedback and send status on MovementStatusFeedback
-            logger.LogInformation("{DeviceType} {DeviceId} sending DOWN command (0)", _deviceType, _deviceId);
+            _logger.LogInformation("{DeviceType} {DeviceId} sending DOWN command (0)", _deviceType, _deviceId);
             await _knxService.WriteGroupValueAsync(addresses.MovementControl, false);
             
-            _updateLastUpdated();
+            // Update last updated through dynamic access
+            var deviceBase = owner as dynamic;
+            deviceBase._lastUpdated = DateTime.Now;
             
-            logger.LogInformation("{DeviceType} {DeviceId} DOWN command sent", _deviceType, _deviceId);
+            _logger.LogInformation("{DeviceType} {DeviceId} DOWN command sent", _deviceType, _deviceId);
             Console.WriteLine($"{_deviceType} {_deviceId} DOWN command sent");
         }
 
@@ -99,16 +75,16 @@ namespace KnxModel.Models.Helpers
         /// </summary>
         internal async Task StopAsync(TimeSpan? timeout = null)
         {
-            var addresses = _getAddresses();
-            
             // Send KNX stop trigger to StopControl address
             // Device will respond with movement status on MovementStatusFeedback
-            logger.LogInformation("{DeviceType} {DeviceId} sending STOP trigger", _deviceType, _deviceId);
+            _logger.LogInformation("{DeviceType} {DeviceId} sending STOP trigger", _deviceType, _deviceId);
             await _knxService.WriteGroupValueAsync(addresses.StopControl, true);
             
-            _updateLastUpdated();
+            // Update last updated through dynamic access
+            var deviceBase = owner as dynamic;
+            deviceBase._lastUpdated = DateTime.Now;
             
-            logger.LogInformation("{DeviceType} {DeviceId} STOP trigger sent", _deviceType, _deviceId);
+            _logger.LogInformation("{DeviceType} {DeviceId} STOP trigger sent", _deviceType, _deviceId);
             Console.WriteLine($"{_deviceType} {_deviceId} STOP trigger sent");
         }
 
@@ -119,16 +95,17 @@ namespace KnxModel.Models.Helpers
         /// </summary>
         internal void ProcessMovementMessage(KnxGroupEventArgs e)
         {
-            var addresses = _getAddresses();
-            
             // Handle movement control feedback - echo from device confirming UP/DOWN command (offset +100)
             if (e.Destination == addresses.MovementFeedback)
             {
                 var movementDirection = e.Value.AsBoolean();
                 // This is just confirmation echo, device will send actual status on MovementStatusFeedback
-                _updateLastUpdated();
                 
-                logger.LogInformation("{DeviceType} {DeviceId} movement command confirmed: {Direction}", 
+                // Update last updated through dynamic access
+                var deviceBase = owner as dynamic;
+                deviceBase._lastUpdated = DateTime.Now;
+                
+                _logger.LogInformation("{DeviceType} {DeviceId} movement command confirmed: {Direction}", 
                     _deviceType, _deviceId, movementDirection ? "UP(1)" : "DOWN(0)");
                 Console.WriteLine($"{_deviceType} {_deviceId} movement command confirmed: {(movementDirection ? "UP(1)" : "DOWN(0)")}");
             }
@@ -137,10 +114,13 @@ namespace KnxModel.Models.Helpers
             else if (e.Destination == addresses.MovementStatusFeedback)
             {
                 var isMoving = e.Value.AsBoolean();
-                _updateActivity(isMoving); // Update activity based on actual movement status
-                _updateLastUpdated();
                 
-                logger.LogInformation("{DeviceType} {DeviceId} movement status changed: {Status}", 
+                // Update activity state through dynamic access
+                var deviceBase = owner as dynamic;
+                deviceBase._isActive = isMoving;
+                deviceBase._lastUpdated = DateTime.Now;
+                
+                _logger.LogInformation("{DeviceType} {DeviceId} movement status changed: {Status}", 
                     _deviceType, _deviceId, isMoving ? "STARTED" : "STOPPED");
                 Console.WriteLine($"{_deviceType} {_deviceId} movement status: {(isMoving ? "STARTED" : "STOPPED")}");
             }
@@ -171,18 +151,11 @@ namespace KnxModel.Models.Helpers
         }
 
         /// <summary>
-        /// Reads current activity status (mock implementation for now)
-        /// In real implementation this would read from KNX MovementStatusFeedback
+        /// Reads current activity status from owner device
         /// </summary>
         private bool ReadActivityStatus()
         {
-            // TODO: Read from KNX bus - MovementStatusFeedback address
-            // For now, return false as we don't have real feedback
-            // var isMoving = await _knxService.RequestGroupValue<bool>(addresses.MovementStatusFeedback);
-            
-            // This is a mock - in reality we'd need to track the actual state
-            // For now assume not moving
-            return false;
+            return owner.IsActive;
         }
     }
 }

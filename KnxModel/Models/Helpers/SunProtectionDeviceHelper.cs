@@ -9,20 +9,10 @@ namespace KnxModel.Models.Helpers
     public class SunProtectionDeviceHelper<T, TAddress> : DeviceHelperBase<T, TAddress>
         where T : ISunProtectionBlockableDevice, ISunProtectionThresholdCapableDevice, IKnxDeviceBase
     {
-        private readonly Func<ShutterAddresses> _getAddresses;
-        private readonly new ILogger<T> _logger;
-
-        public SunProtectionDeviceHelper(T owner,
-            TAddress address,
-            IKnxService knxService,
-            string deviceId,
-            string deviceType,
-            Func<ShutterAddresses> getAddresses,
-            ILogger<T> logger,
-            TimeSpan defaultTimeout) : base(owner, address, knxService, deviceId, deviceType, logger, defaultTimeout)
+        public SunProtectionDeviceHelper(T owner, TAddress addresses, IKnxService knxService, string deviceId, string deviceType,
+            ILogger<T> logger, TimeSpan defaultTimeout) 
+            : base(owner, addresses, knxService, deviceId, deviceType, logger, defaultTimeout)
         {
-            _getAddresses = getAddresses ?? throw new ArgumentNullException(nameof(getAddresses));
-            _logger = logger;
         }
 
         /// <summary>

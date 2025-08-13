@@ -43,21 +43,12 @@ namespace KnxModel
 
             _shutterMovementHelper = new ShutterDeviceHelper<ShutterDevice, ShutterAddresses>(this, this.Addresses,
                             _knxService, Id, "ShutterDevice",
-                            () => Addresses,
-                            active => { _isActive = active; },
-                            () => _lastUpdated,
-                            () => { _lastUpdated = DateTime.Now; },
-                            () => _currentLockState,
-                            () => UnlockAsync(),
-                            logger: logger
-                            , defaulTimeout
+                            logger, defaulTimeout
                             );
 
             _sunProtectionHelper = new SunProtectionDeviceHelper<ShutterDevice, ShutterAddresses>(this, this.Addresses,
                             _knxService, Id, "ShutterDevice",
-                            () => Addresses,
-                            logger: logger,
-                            defaulTimeout
+                            logger, defaulTimeout
                             );
 
             _eventManager.MessageReceived += OnKnxMessageReceived;
