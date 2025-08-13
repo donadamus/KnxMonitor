@@ -7,7 +7,7 @@ namespace KnxModel
     
 
     public abstract class LockableDeviceBase<TDevice, TAddressess> : ILockableDevice, IDisposable, IIdentifable
-        where TDevice : IKnxDeviceBase
+        where TDevice : IKnxDeviceBase, ILockableDevice
         where TAddressess : ILockableAddress
     {
         internal readonly KnxEventManager _eventManager;
@@ -25,7 +25,7 @@ namespace KnxModel
         public TAddressess Addresses { get; }
 
 
-        private LockableDeviceHelper<TDevice> _lockableHelper;
+        private LockableDeviceHelper<TDevice, TAddressess>? _lockableHelper;
 
         public LockableDeviceBase(string id, string name, string subGroup, TAddressess addresses, IKnxService knxService, ILogger<TDevice> logger, TimeSpan defaulTimeout)
         {
@@ -48,12 +48,11 @@ namespace KnxModel
 
         internal virtual void Initialize(TDevice owner)
         {
-            _lockableHelper = new LockableDeviceHelper<TDevice>(owner,
-                                _knxService, Id, "LightDevice",
-                                () => Addresses,
-                                state => { _currentLockState = state; _lastUpdated = DateTime.Now; },
-                                () => _currentLockState,
-                                _logger, _defaulTimeout);
+            _lockableHelper = new LockableDeviceHelper<TDevice, TAddressess>(owner, 
+                                Addresses,
+                                _knxService, 
+                                _logger, 
+                                _defaulTimeout);
         }
 
         #region ILockableDevice Implementation
@@ -62,25 +61,25 @@ namespace KnxModel
 
         public async Task LockAsync(TimeSpan? timeout = null)
         {
-            await _lockableHelper.LockAsync(timeout);
+            await (_lockableHelper ?? throw new InvalidOperationException("Helper not initialized")).LockAsync(timeout);
         }
         public async Task SetLockAsync(Lock lockState, TimeSpan? timeout = null)
         {
-            await _lockableHelper.SetLockAsync(lockState, timeout);
+            await (_lockableHelper ?? throw new InvalidOperationException("Helper not initialized")).SetLockAsync(lockState, timeout);
         }
         public async Task UnlockAsync(TimeSpan? timeout = null)
         {
-            await _lockableHelper.UnlockAsync(timeout);
+            await (_lockableHelper ?? throw new InvalidOperationException("Helper not initialized")).UnlockAsync(timeout);
         }
 
         public async Task<Lock> ReadLockStateAsync()
         {
-            return await _lockableHelper.ReadLockStateAsync();
+            return await (_lockableHelper ?? throw new InvalidOperationException("Helper not initialized")).ReadLockStateAsync();
         }
 
         public async Task<bool> WaitForLockStateAsync(Lock targetState, TimeSpan timeout)
         {
-            return await _lockableHelper.WaitForLockStateAsync(targetState, timeout);
+            return await (_lockableHelper ?? throw new InvalidOperationException("Helper not initialized")).WaitForLockStateAsync(targetState, timeout);
         }
 
         #endregion
@@ -90,7 +89,7 @@ namespace KnxModel
         private void OnKnxMessageReceived(object? sender, KnxGroupEventArgs e)
         {
             // Process lockable messages (LockControl/LockFeedback) 
-            _lockableHelper.ProcessLockMessage(e);
+            _lockableHelper?.ProcessLockMessage(e);
         }
 
         #endregion

@@ -11,7 +11,7 @@ namespace KnxModel
     {
 
         
-        private SwitchableDeviceHelper<TDevice> _switchableHelper;
+        private SwitchableDeviceHelper<TDevice, TAddressess>? _switchableHelper;
 
         
         internal Switch _currentSwitchState = Switch.Unknown;
@@ -36,11 +36,11 @@ namespace KnxModel
         {
             base.Initialize(owner);
             // Initialize helpers
-            _switchableHelper = new SwitchableDeviceHelper<TDevice>(owner,
-                _knxService, Id, "LightDevice",
-                () => Addresses,
-                state => { _currentSwitchState = state; _lastUpdated = DateTime.Now; },
-                _logger, _defaulTimeout);
+            _switchableHelper = new SwitchableDeviceHelper<TDevice, TAddressess>(owner, 
+                Addresses,
+                _knxService, 
+                _logger, 
+                _defaulTimeout);
         }
 
 
@@ -55,7 +55,7 @@ namespace KnxModel
         private void OnKnxMessageReceived(object? sender, KnxGroupEventArgs e)
         {
             // Process switchable messages (Control/Feedback)
-            _switchableHelper.ProcessSwitchMessage(e);
+            _switchableHelper?.ProcessSwitchMessage(e);
         }
 
         #endregion
@@ -116,27 +116,27 @@ namespace KnxModel
 
         public async Task TurnOnAsync(TimeSpan? timeout = null)
         {
-            await _switchableHelper.TurnOnAsync(timeout);
+            await (_switchableHelper ?? throw new InvalidOperationException("Helper not initialized")).TurnOnAsync(timeout);
         }
 
         public async Task TurnOffAsync(TimeSpan? timeout = null)
         {
-            await _switchableHelper.TurnOffAsync(timeout);
+            await (_switchableHelper ?? throw new InvalidOperationException("Helper not initialized")).TurnOffAsync(timeout);
         }
 
         public async Task ToggleAsync(TimeSpan? timeout = null)
         {
-            await _switchableHelper.ToggleAsync(timeout);
+            await (_switchableHelper ?? throw new InvalidOperationException("Helper not initialized")).ToggleAsync(timeout);
         }
 
         public async Task<Switch> ReadSwitchStateAsync()
         {
-            return await _switchableHelper.ReadSwitchStateAsync();
+            return await (_switchableHelper ?? throw new InvalidOperationException("Helper not initialized")).ReadSwitchStateAsync();
         }
 
         public async Task<bool> WaitForSwitchStateAsync(Switch targetState, TimeSpan? timeout = null)
         {
-            return await _switchableHelper.WaitForSwitchStateAsync(targetState, timeout);
+            return await (_switchableHelper ?? throw new InvalidOperationException("Helper not initialized")).WaitForSwitchStateAsync(targetState, timeout);
         }
 
         #endregion

@@ -9,26 +9,16 @@ namespace KnxModel.Models.Helpers
     /// Helper class for implementing lockable device functionality
     /// Handles lock state management and KNX communication for ILockableDevice implementations
     /// </summary>
-    public class LockableDeviceHelper<TDevice> : DeviceHelperBase<TDevice>
-        where TDevice : IKnxDeviceBase
+    public class LockableDeviceHelper<TDevice, TAddress> : DeviceHelperBase<TDevice, TAddress>
+        where TDevice : IKnxDeviceBase, ILockableDevice
+        where TAddress : ILockableAddress
     {
-        private readonly Func<ILockableAddress> _getAddresses;
-        private readonly Action<Lock> _updateLockState;
-        private readonly Func<Lock> _getCurrentLockState;
-
         public LockableDeviceHelper(TDevice owner,
+            TAddress address,
             IKnxService knxService,
-            string deviceId,
-            string deviceType,
-            Func<ILockableAddress> getAddresses,
-            Action<Lock> updateLockState,
-            Func<Lock> getCurrentLockState,
             ILogger<TDevice> logger,
-            TimeSpan defaultTimeout) : base(owner, knxService, deviceId, deviceType, logger, defaultTimeout)
+            TimeSpan defaultTimeout) : base(owner, address, knxService, owner.Id, "LockableDevice", logger, defaultTimeout)
         {
-            _getAddresses = getAddresses ?? throw new ArgumentNullException(nameof(getAddresses));
-            _updateLockState = updateLockState ?? throw new ArgumentNullException(nameof(updateLockState));
-            _getCurrentLockState = getCurrentLockState ?? throw new ArgumentNullException(nameof(getCurrentLockState));
         }
 
         /// <summary>
@@ -36,12 +26,17 @@ namespace KnxModel.Models.Helpers
         /// </summary>
         public void ProcessLockMessage(KnxGroupEventArgs e)
         {
-            var addresses = _getAddresses();
             if (e.Destination == addresses.LockFeedback)
             {
                 var isLocked = e.Value.AsBoolean();
                 var lockState = isLocked ? Lock.On : Lock.Off;
-                _updateLockState(lockState);
+                
+                // Update state through internal access to the device base
+                // This requires that TDevice inherits from LockableDeviceBase
+                var deviceBase = owner as dynamic;
+                deviceBase._currentLockState = lockState;
+                deviceBase._lastUpdated = DateTime.Now;
+                
                 Console.WriteLine($"{_deviceType} {_deviceId} lock state updated via feedback: {(isLocked ? "LOCKED" : "UNLOCKED")}");
             }
         }
@@ -68,9 +63,9 @@ namespace KnxModel.Models.Helpers
         public async Task SetLockAsync(Lock lockState, TimeSpan? timeout = null)
         {
             await SetBitFunctionAsync(
-                address: _getAddresses().LockControl,
+                address: addresses.LockControl,
                 value: lockState == Lock.On,
-                condition: () => _getCurrentLockState() == lockState,
+                condition: () => owner.CurrentLockState == lockState,
                 timeout: timeout ?? _defaultTimeout);
         }
 
@@ -81,7 +76,6 @@ namespace KnxModel.Models.Helpers
         {
             try
             {
-                var addresses = _getAddresses();
                 var lockState = await _knxService.RequestGroupValue<bool>(addresses.LockFeedback);
                 return lockState ? Lock.On : Lock.Off;
             }
@@ -98,9 +92,9 @@ namespace KnxModel.Models.Helpers
         public async Task<bool> WaitForLockStateAsync(Lock lockState, TimeSpan timeout)
         {
             return await WaitForConditionAsync(
-                () => _getCurrentLockState() == lockState,
+                () => owner.CurrentLockState == lockState,
                 timeout,
-                "lock state {lockState}"
+                $"lock state {lockState}"
             );
         }
     }

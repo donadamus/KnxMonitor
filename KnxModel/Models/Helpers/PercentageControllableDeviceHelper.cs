@@ -1,33 +1,21 @@
 using Microsoft.Extensions.Logging;
+using System;
 
 namespace KnxModel.Models.Helpers
 {
-    public class PercentageControllableDeviceHelper<T> : DeviceHelperBase<T>
-        where T : IKnxDeviceBase
+    public class PercentageControllableDeviceHelper<T, TAddress> : DeviceHelperBase<T, TAddress>
+        where T : IPercentageControllable, IKnxDeviceBase
+        where TAddress : IPercentageControllableAddress
     {
-        private readonly Func<IPercentageControllableAddress> _getAddresses;
-        private readonly Action<float> _updatePercentage;
-        private readonly Func<float> _getCurrentPercentage;
-        private readonly ILogger<T> logger;
-
-        public PercentageControllableDeviceHelper(T owner,
-            IKnxService knxService,
-            string deviceId,
-            string deviceType,
-            Func<IPercentageControllableAddress> getAddresses,
-            Action<float> updatePercentage,
-            Func<float> getCurrentPercentage,
-            ILogger<T> logger, TimeSpan defaultTimeout) : base(owner, knxService, deviceId, deviceType, logger, defaultTimeout)
+        public PercentageControllableDeviceHelper(T owner, TAddress addresses, IKnxService knxService, string deviceId, string deviceType,
+            ILogger<T> logger, TimeSpan defaultTimeout) 
+            : base(owner, addresses, knxService, deviceId, deviceType, logger, defaultTimeout)
         {
-            _getAddresses = getAddresses ?? throw new ArgumentNullException(nameof(getAddresses));
-            _updatePercentage = updatePercentage ?? throw new ArgumentNullException(nameof(updatePercentage));
-            _getCurrentPercentage = getCurrentPercentage ?? throw new ArgumentNullException(nameof(getCurrentPercentage));
-            this.logger = logger;
         }
 
         internal async Task AdjustPercentageAsync(float increment, TimeSpan? timeout)
         {
-            var newPercentage = _getCurrentPercentage() + increment;
+            var newPercentage = owner.CurrentPercentage + increment;
             newPercentage = Math.Max(0.0f, Math.Min(100.0f, newPercentage)); // Clamp to 0-100
 
             await SetPercentageAsync(newPercentage, timeout);
@@ -35,11 +23,15 @@ namespace KnxModel.Models.Helpers
 
         internal void ProcessSwitchMessage(KnxGroupEventArgs e)
         {
-            var addresses = _getAddresses();
             if (e.Destination == addresses.PercentageFeedback)
             {
                 var brightness = e.Value.AsPercentageValue();
-                _updatePercentage(brightness);
+                
+                // Update state through dynamic access to the device base
+                var deviceBase = owner as dynamic;
+                deviceBase._currentPercentage = brightness;
+                deviceBase._lastUpdated = DateTime.Now;
+                
                 Console.WriteLine($"{_deviceType} {_deviceId} brightness updated via feedback: {brightness}%");
             }
         }
@@ -48,7 +40,6 @@ namespace KnxModel.Models.Helpers
         {
             try
             {
-                var addresses = _getAddresses();
                 return await _knxService.RequestGroupValue<float>(addresses.PercentageFeedback);
             }
             catch (Exception ex)
@@ -67,9 +58,9 @@ namespace KnxModel.Models.Helpers
 
             // Use brightness as float directly (0-100) - KnxService converts to KNX byte range
             await SetFloatFunctionAsync(
-                _getAddresses().PercentageControl,
+                addresses.PercentageControl,
                 percentage,
-                () => Math.Abs(_getCurrentPercentage() - percentage) <= 1, // Allow 1% tolerance
+                () => Math.Abs(owner.CurrentPercentage - percentage) <= 1, // Allow 1% tolerance
                 timeout
             );
         }
@@ -82,9 +73,9 @@ namespace KnxModel.Models.Helpers
             }
 
             return await WaitForConditionAsync(
-                () => Math.Abs(_getCurrentPercentage() - targetPercentage) <= tolerance,
+                () => Math.Abs(owner.CurrentPercentage - targetPercentage) <= tolerance,
                 timeout ?? _defaultTimeout,
-                $"percentage {targetPercentage} ± {tolerance}"
+                $"percentage {targetPercentage} Â± {tolerance}"
             );
         }
     }

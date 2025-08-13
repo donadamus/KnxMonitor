@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 
 namespace KnxModel.Models.Helpers
 {
-    public class DeviceHelperBase<TDevice>
+    public class DeviceHelperBase<TDevice, TAddress>
         where TDevice : IKnxDeviceBase
     {
         protected readonly TimeSpan _defaultTimeout;
@@ -12,10 +12,12 @@ namespace KnxModel.Models.Helpers
         protected readonly string _deviceId;
         protected readonly string _deviceType;
         protected readonly ILogger<TDevice> _logger;
+        protected TAddress addresses;
 
-        public DeviceHelperBase(TDevice owner, IKnxService knxService, string deviceId, string deviceType, ILogger<TDevice> logger, TimeSpan defaultTimeout)
+        public DeviceHelperBase(TDevice owner, TAddress address, IKnxService knxService, string deviceId, string deviceType, ILogger<TDevice> logger, TimeSpan defaultTimeout)
         {
             this.owner = owner;
+            addresses = address ?? throw new ArgumentNullException(nameof(address));
             _knxService = knxService ?? throw new ArgumentNullException(nameof(knxService));
             _deviceId = deviceId ?? throw new ArgumentNullException(nameof(deviceId));
             _deviceType = deviceType ?? throw new ArgumentNullException(nameof(deviceType));

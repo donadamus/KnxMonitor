@@ -13,9 +13,9 @@ namespace KnxModel
     /// </summary>
     public class ShutterDevice : LockableDeviceBase<ShutterDevice, ShutterAddresses>, IShutterDevice, IPercentageLockableDevice, ISunProtectionThresholdCapableDevice
     {
-        private readonly PercentageControllableDeviceHelper<ShutterDevice> _shutterHelper;
-        private readonly ShutterDeviceHelper<ShutterDevice> _shutterMovementHelper;
-        private readonly SunProtectionDeviceHelper<ShutterDevice> _sunProtectionHelper;
+        private readonly PercentageControllableDeviceHelper<ShutterDevice, ShutterAddresses> _shutterHelper;
+        private readonly ShutterDeviceHelper<ShutterDevice, ShutterAddresses> _shutterMovementHelper;
+        private readonly SunProtectionDeviceHelper<ShutterDevice, ShutterAddresses> _sunProtectionHelper;
         private readonly ILogger<ShutterDevice> logger;
         private float _currentPercentage = 0.0f; // Start fully open
         private bool _isActive = false; // Movement status: true = moving, false = stopped
@@ -36,16 +36,12 @@ namespace KnxModel
         public ShutterDevice(string id, string name, string subGroup, IKnxService knxService, ILogger<ShutterDevice> logger, TimeSpan defaulTimeout)
             : base(id, name, subGroup, KnxAddressConfiguration.CreateShutterAddresses(subGroup), knxService, logger, defaulTimeout)
         {
-            _shutterHelper = new PercentageControllableDeviceHelper<ShutterDevice>(this,
+            _shutterHelper = new PercentageControllableDeviceHelper<ShutterDevice, ShutterAddresses>(this, this.Addresses,
                             _knxService, Id, "ShutterDevice",
-                            () => Addresses,
-                            state => { _currentPercentage = state; _lastUpdated = DateTime.Now; },
-                            () => _currentPercentage,
-                            logger: logger,
-                            defaulTimeout
+                            logger, defaulTimeout
                             );
 
-            _shutterMovementHelper = new ShutterDeviceHelper<ShutterDevice>(this,
+            _shutterMovementHelper = new ShutterDeviceHelper<ShutterDevice, ShutterAddresses>(this, this.Addresses,
                             _knxService, Id, "ShutterDevice",
                             () => Addresses,
                             active => { _isActive = active; },
@@ -57,7 +53,7 @@ namespace KnxModel
                             , defaulTimeout
                             );
 
-            _sunProtectionHelper = new SunProtectionDeviceHelper<ShutterDevice>(this,
+            _sunProtectionHelper = new SunProtectionDeviceHelper<ShutterDevice, ShutterAddresses>(this, this.Addresses,
                             _knxService, Id, "ShutterDevice",
                             () => Addresses,
                             logger: logger,

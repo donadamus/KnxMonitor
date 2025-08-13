@@ -8,22 +8,16 @@ namespace KnxModel.Models.Helpers
     /// Helper class for implementing switchable device functionality
     /// Handles switch state management and KNX communication for ISwitchable implementations
     /// </summary>
-    public class SwitchableDeviceHelper<TDevice> : DeviceHelperBase<TDevice>
+    public class SwitchableDeviceHelper<TDevice, TAddress> : DeviceHelperBase<TDevice, TAddress>
         where TDevice : IKnxDeviceBase, ILightDevice
+        where TAddress : ISwitchableAddress
     {
-        private readonly Func<ISwitchableAddress> _getAddresses;
-        private readonly Action<Switch> _updateSwitchState;
-
         public SwitchableDeviceHelper(TDevice owner,
+            TAddress address,
             IKnxService knxService,
-            string deviceId,
-            string deviceType,
-            Func<ISwitchableAddress> getAddresses,
-            Action<Switch> updateSwitchState,
-            ILogger<TDevice> logger, TimeSpan defaultTimeout) : base(owner, knxService, deviceId, deviceType, logger, defaultTimeout)
+            ILogger<TDevice> logger, 
+            TimeSpan defaultTimeout) : base(owner, address, knxService, owner.Id, "SwitchableDevice", logger, defaultTimeout)
         {
-            _getAddresses = getAddresses ?? throw new ArgumentNullException(nameof(getAddresses));
-            _updateSwitchState = updateSwitchState ?? throw new ArgumentNullException(nameof(updateSwitchState));
         } 
 
         /// <summary>
@@ -31,12 +25,16 @@ namespace KnxModel.Models.Helpers
         /// </summary>
         public void ProcessSwitchMessage(KnxGroupEventArgs e)
         {
-            var addresses = _getAddresses();
             if (e.Destination == addresses.Feedback)
             {
                 var isOn = e.Value.AsBoolean();
                 var switchState = isOn ? Switch.On : Switch.Off;
-                _updateSwitchState(switchState);
+                
+                // Update state through dynamic access to the device base
+                var deviceBase = owner as dynamic;
+                deviceBase._currentSwitchState = switchState;
+                deviceBase._lastUpdated = DateTime.Now;
+                
                 Console.WriteLine($"{_deviceType} {_deviceId} switch state updated via feedback: {switchState}");
             }
         }
@@ -79,7 +77,7 @@ namespace KnxModel.Models.Helpers
         public async Task SetSwitchStateAsync(Switch switchState, TimeSpan? timeout = null)
         {
             await SetBitFunctionAsync(
-                address: _getAddresses().Control,
+                address: addresses.Control,
                 value: switchState == Switch.On,
                 condition: () => owner.CurrentSwitchState == switchState,
                 timeout: timeout ?? _defaultTimeout
@@ -93,7 +91,6 @@ namespace KnxModel.Models.Helpers
         {
             try
             {
-                var addresses = _getAddresses();
                 var switchState = await _knxService.RequestGroupValue<bool>(addresses.Feedback);
                 return switchState ? Switch.On : Switch.Off;
             }

@@ -13,7 +13,7 @@ namespace KnxModel
         private readonly ILogger<DimmerDevice> _logger;
         private float _currentPercentage = -1.0f; // 0% brightness
         private float? _savedPercentage;
-        private readonly PercentageControllableDeviceHelper<DimmerDevice> _percentageControllableHelper;
+        private readonly PercentageControllableDeviceHelper<DimmerDevice, DimmerAddresses> _percentageControllableHelper;
 
         public DimmerDevice(string id, string name, string subGroup, IKnxService knxService, ILogger<DimmerDevice> logger, TimeSpan defaulTimeout)
             : base(id, name, subGroup, KnxAddressConfiguration.CreateDimmerAddresses(subGroup), knxService, logger, defaulTimeout)
@@ -22,11 +22,8 @@ namespace KnxModel
 
             Initialize(this);
 
-            _percentageControllableHelper = new PercentageControllableDeviceHelper<DimmerDevice>(this,
+            _percentageControllableHelper = new PercentageControllableDeviceHelper<DimmerDevice, DimmerAddresses>(this, this.Addresses,
                 _knxService, Id, "DimmerDevice",
-                () => Addresses,
-                percentage => { _currentPercentage = percentage; _lastUpdated = DateTime.Now; },
-                () => _currentPercentage,
                 logger, defaulTimeout);
 
             _eventManager.MessageReceived += OnKnxMessageReceived;
