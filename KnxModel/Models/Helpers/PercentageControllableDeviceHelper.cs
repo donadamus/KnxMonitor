@@ -32,7 +32,7 @@ namespace KnxModel.Models.Helpers
                 deviceBase._currentPercentage = brightness;
                 deviceBase._lastUpdated = DateTime.Now;
                 
-                Console.WriteLine($"{_deviceType} {_deviceId} brightness updated via feedback: {brightness}%");
+                _logger.LogInformation("{DeviceType} {DeviceId} brightness updated via feedback: {Brightness}%", _deviceType, _deviceId, brightness);
             }
         }
 
@@ -44,7 +44,7 @@ namespace KnxModel.Models.Helpers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to read brightness for {_deviceType} {_deviceId}: {ex.Message}");
+                _logger.LogError(ex, "Failed to read brightness for {DeviceType} {DeviceId}: {Message}", _deviceType, _deviceId, ex.Message);
                 throw;
             }
         }

@@ -28,10 +28,10 @@ namespace KnxModel.Models.Helpers
         protected async Task<bool> WaitForConditionAsync(Func<bool> condition, TimeSpan? timeout = null, string description = "condition")
         {
             var effectiveTimeout = timeout ?? _defaultTimeout;
-            Console.WriteLine($"Waiting for {_deviceType} {_deviceId} {description}");
+            _logger.LogInformation("Waiting for {DeviceType} {DeviceId} {Description}", _deviceType, _deviceId, description);
             if (condition())
                 {
-                Console.WriteLine($"✅ {_deviceType} {_deviceId} {description} already met");
+                _logger.LogInformation("✅ {DeviceType} {DeviceId} {Description} already met", _deviceType, _deviceId, description);
                 return true; // Condition already met
             }
 
@@ -63,12 +63,12 @@ namespace KnxModel.Models.Helpers
 
             if (completedTask == waitTask)
             {
-                Console.WriteLine($"✅ {_deviceType} {_deviceId} {description} achieved");
+                _logger.LogInformation("✅ {DeviceType} {DeviceId} {Description} achieved", _deviceType, _deviceId, description);
                 return await waitTask;
             }
             else
             {
-                Console.WriteLine($"⚠️ WARNING: {_deviceType} {_deviceId} {description} timeout");
+                _logger.LogWarning("⚠️ WARNING: {DeviceType} {DeviceId} {Description} timeout", _deviceType, _deviceId, description);
                 return false;
             }
         }
@@ -76,7 +76,7 @@ namespace KnxModel.Models.Helpers
         protected async Task SetBitFunctionAsync(string address, bool value, Func<bool> condition, TimeSpan? timeout = null)
         {
             var effectiveTimeout = timeout ?? _defaultTimeout;
-            Console.WriteLine($"Setting {_deviceType} {_deviceId} {address} to {value}");
+            _logger.LogInformation("Setting {DeviceType} {DeviceId} {Address} to {Value}", _deviceType, _deviceId, address, value);
 
             // Write the value to the KNX bus
             await _knxService.WriteGroupValueAsync(address, value);

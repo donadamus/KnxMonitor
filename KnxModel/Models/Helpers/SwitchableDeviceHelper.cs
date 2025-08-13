@@ -35,7 +35,7 @@ namespace KnxModel.Models.Helpers
                 deviceBase._currentSwitchState = switchState;
                 deviceBase._lastUpdated = DateTime.Now;
                 
-                Console.WriteLine($"{_deviceType} {_deviceId} switch state updated via feedback: {switchState}");
+                _logger.LogInformation("{DeviceType} {DeviceId} switch state updated via feedback: {SwitchState}", _deviceType, _deviceId, switchState);
             }
         }
 
@@ -96,7 +96,7 @@ namespace KnxModel.Models.Helpers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to read switch state for {_deviceType} {_deviceId}: {ex.Message}");
+                _logger.LogError(ex, "Failed to read switch state for {DeviceType} {DeviceId}: {Message}", _deviceType, _deviceId, ex.Message);
                 throw;
             }
         }

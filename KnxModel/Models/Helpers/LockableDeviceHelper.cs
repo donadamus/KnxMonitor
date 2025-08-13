@@ -37,7 +37,7 @@ namespace KnxModel.Models.Helpers
                 deviceBase._currentLockState = lockState;
                 deviceBase._lastUpdated = DateTime.Now;
                 
-                Console.WriteLine($"{_deviceType} {_deviceId} lock state updated via feedback: {(isLocked ? "LOCKED" : "UNLOCKED")}");
+                _logger.LogInformation("{DeviceType} {DeviceId} lock state updated via feedback: {LockState}", _deviceType, _deviceId, (isLocked ? "LOCKED" : "UNLOCKED"));
             }
         }
 
@@ -81,7 +81,7 @@ namespace KnxModel.Models.Helpers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to read lock state for {_deviceType} {_deviceId}: {ex.Message}");
+                _logger.LogError(ex, "Failed to read lock state for {DeviceType} {DeviceId}: {Message}", _deviceType, _deviceId, ex.Message);
                 throw;
             }
         }

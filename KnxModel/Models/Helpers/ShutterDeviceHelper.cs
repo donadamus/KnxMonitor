@@ -40,7 +40,6 @@ namespace KnxModel.Models.Helpers
             deviceBase._lastUpdated = DateTime.Now;
             
             _logger.LogInformation("{DeviceType} {DeviceId} UP command sent", _deviceType, _deviceId);
-            Console.WriteLine($"{_deviceType} {_deviceId} UP command sent");
         }
 
         /// <summary>
@@ -66,7 +65,6 @@ namespace KnxModel.Models.Helpers
             deviceBase._lastUpdated = DateTime.Now;
             
             _logger.LogInformation("{DeviceType} {DeviceId} DOWN command sent", _deviceType, _deviceId);
-            Console.WriteLine($"{_deviceType} {_deviceId} DOWN command sent");
         }
 
         /// <summary>
@@ -85,7 +83,6 @@ namespace KnxModel.Models.Helpers
             deviceBase._lastUpdated = DateTime.Now;
             
             _logger.LogInformation("{DeviceType} {DeviceId} STOP trigger sent", _deviceType, _deviceId);
-            Console.WriteLine($"{_deviceType} {_deviceId} STOP trigger sent");
         }
 
         /// <summary>
@@ -107,7 +104,6 @@ namespace KnxModel.Models.Helpers
                 
                 _logger.LogInformation("{DeviceType} {DeviceId} movement command confirmed: {Direction}", 
                     _deviceType, _deviceId, movementDirection ? "UP(1)" : "DOWN(0)");
-                Console.WriteLine($"{_deviceType} {_deviceId} movement command confirmed: {(movementDirection ? "UP(1)" : "DOWN(0)")}");
             }
             
             // Handle movement status feedback - actual device status when starting/stopping
@@ -122,7 +118,6 @@ namespace KnxModel.Models.Helpers
                 
                 _logger.LogInformation("{DeviceType} {DeviceId} movement status changed: {Status}", 
                     _deviceType, _deviceId, isMoving ? "STARTED" : "STOPPED");
-                Console.WriteLine($"{_deviceType} {_deviceId} movement status: {(isMoving ? "STARTED" : "STOPPED")}");
             }
         }
 
