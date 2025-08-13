@@ -173,6 +173,11 @@ namespace KnxModel
         /// </summary>
         public const string OUTDOOR_TEMPERATURE_THRESHOLD_SUB_GROUP = "8";
 
+        /// <summary>
+        /// Sub group for brightness threshold monitoring device block control (12)
+        /// </summary>
+        public const string BRIGHTNESS_THRESHOLD_MONITORING_BLOCK_SUB_GROUP = "12";
+
         #endregion
         
         #region Sun Protection Threshold Address Creation Methods
@@ -202,6 +207,15 @@ namespace KnxModel
         public static string CreateOutdoorTemperatureThresholdAddress()
         {
             return $"{ENVIRONMENT_MAIN_GROUP}/{THRESHOLD_MIDDLE_GROUP}/{OUTDOOR_TEMPERATURE_THRESHOLD_SUB_GROUP}";
+        }
+        
+        /// <summary>
+        /// Creates brightness threshold monitoring device block control address
+        /// </summary>
+        /// <returns>Complete KNX address for brightness threshold monitoring device block control</returns>
+        public static string CreateBrightnessThresholdMonitoringBlockAddress()
+        {
+            return $"{ENVIRONMENT_MAIN_GROUP}/{THRESHOLD_MIDDLE_GROUP}/{BRIGHTNESS_THRESHOLD_MONITORING_BLOCK_SUB_GROUP}";
         }
         
         #endregion
