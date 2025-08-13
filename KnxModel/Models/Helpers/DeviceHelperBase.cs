@@ -93,7 +93,7 @@ namespace KnxModel.Models.Helpers
         {
             var effectiveTimeout = timeout ?? _defaultTimeout;
             // Write the value to the KNX bus
-            _knxService.WriteGroupValue(address, value);
+            await _knxService.WriteGroupValueAsync(address, value);
             // Wait for the state to be updated
 
             await WaitForConditionAsync(

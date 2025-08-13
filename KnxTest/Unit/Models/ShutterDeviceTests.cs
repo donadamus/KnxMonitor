@@ -12,6 +12,8 @@ namespace KnxTest.Unit.Models
     {
         protected override ShutterDevice _device { get; }
 
+        private PercentageControllableDeviceTestHelper<ShutterDevice, ShutterAddresses> _percentageTestHelper;
+
         protected override ILogger<ShutterDevice> _logger { get; }
 
         public ShutterDeviceTests()
@@ -19,6 +21,8 @@ namespace KnxTest.Unit.Models
             // Initialize ShutterDevice with mock KNX service
             _logger = new Mock<ILogger<ShutterDevice>>().Object;
             _device = new ShutterDevice("S_TEST", "Test Shutter", "1", _mockKnxService.Object, _logger, TimeSpan.FromSeconds(1));
+            _percentageTestHelper = new PercentageControllableDeviceTestHelper<ShutterDevice, ShutterAddresses>(
+                _device, _device.Addresses, _mockKnxService);
         }
 
         #region IKnxDeviceBase Tests
@@ -40,8 +44,7 @@ namespace KnxTest.Unit.Models
         [Fact]
         public async Task SetPercentageAsync_ShouldSendCorrectTelegram()
         {
-            // TODO: Test that SetPercentageAsync sends correct percentage value to control address
-            throw new NotImplementedException("Test not implemented yet");
+            await _percentageTestHelper.SetPercentageAsync_ShouldSendCorrectTelegram();
         }
 
         [Theory]
@@ -50,19 +53,20 @@ namespace KnxTest.Unit.Models
         [InlineData(50)]  // Half
         [InlineData(75)]  // Three quarters
         [InlineData(100)] // Maximum percentage
-        public async Task SetPercentageAsync_WithValidValues_ShouldSendCorrectTelegram(byte percentage)
+        public async Task SetPercentageAsync_WithValidValues_ShouldSendCorrectTelegram(float percentage)
         {
             // TODO: Test SetPercentageAsync with various valid percentage values
-            throw new NotImplementedException("Test not implemented yet");
+            await _percentageTestHelper.SetPercentageAsync_WithValidValues_ShouldSendCorrectTelegram(percentage);
         }
 
         [Theory]
         [InlineData(101)] // Above maximum
         [InlineData(255)] // Byte maximum
-        public async Task SetPercentageAsync_WithInvalidValues_ShouldThrowException(byte percentage)
+        public async Task SetPercentageAsync_WithInvalidValues_ShouldThrowException(float percentage)
         {
             // TODO: Test that SetPercentageAsync throws exception for invalid percentage values
-            throw new NotImplementedException("Test not implemented yet");
+            await _percentageTestHelper.SetPercentageAsync_WithInvalidValues_ShouldThrowException(percentage);
+
         }
 
         [Fact]

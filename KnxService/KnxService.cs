@@ -150,6 +150,20 @@ namespace KnxService
             _knxRateLimiter.WaitAsync(KnxOperationType.WriteGroupValue).GetAwaiter().GetResult();
             _knxBus.WriteGroupValue(groupAddress, groupValue);
         }
+        public async Task WriteGroupValueAsync(string address, float percentage)
+        {
+            if (percentage < 0.0f || percentage > 100.0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(percentage), "Percentage must be between 0.0 and 100.0.");
+            }
+            
+            var groupAddress = new GroupAddress(address);
+            // Use 1-byte percentage like int version - most KNX devices expect this format
+            var knxRawValue = (byte)(percentage * 2.55f); // Convert 0.0-100.0% to 0-255 KNX range
+            var groupValue = new GroupValue(knxRawValue);
+            await _knxRateLimiter.WaitAsync(KnxOperationType.WriteGroupValue);
+            await _knxBus.WriteGroupValueAsync(groupAddress, groupValue);
+        }
 
         public event EventHandler<KnxGroupEventArgs> GroupMessageReceived;
 

@@ -36,7 +36,7 @@ namespace KnxTest.Unit.Models
         /// This allows for more flexible verification per device type
         /// When using .Verifiable() in setupts, call _mockKnxService.Verify() to verify only marked setups
         /// </summary>
-        protected virtual void VerifyExpectedCalls()
+        protected void VerifyExpectedCalls()
         {
             // Base implementation verifies only setups marked with .Verifiable()
             _mockKnxService.Verify();

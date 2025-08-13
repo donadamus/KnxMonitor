@@ -19,16 +19,6 @@ namespace KnxTest.Unit.Models
             
         }
 
-        protected override void VerifyExpectedCalls()
-        {
-            // Only verify calls that were explicitly set up in tests
-            // This allows the mock to be more flexible with different device types
-            // while still verifying the calls we care about
-            
-            // Example: You can add specific verifications here if needed
-            // _mockKnxService.Verify(s => s.RequestGroupValue<bool>(It.IsAny<KnxGroupAddress>()), Times.AtLeastOnce);
-        }
-
         #region IKnxDeviceBase Tests
 
         
