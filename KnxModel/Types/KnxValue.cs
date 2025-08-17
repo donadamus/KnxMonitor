@@ -181,6 +181,8 @@ namespace KnxModel
                 bool b => new[] { (byte)(b ? 1 : 0) },
                 byte b => new[] { b },
                 Percent p => new[] { p.KnxRawValue },
+                float f when f >= 0 && f <= 100 => new[] { (byte)(f * 2.55f) }, // Convert percentage to KNX byte
+                double d when d >= 0 && d <= 100 => new[] { (byte)(d * 2.55) }, // Convert percentage to KNX byte
                 int i when i >= 0 && i <= 255 => new[] { (byte)i },
                 int i => BitConverter.GetBytes(i),
                 string s when byte.TryParse(s, out var b) => new[] { b },

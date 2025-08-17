@@ -1,0 +1,783 @@
+# KNX MONITOR SOLUTION - CLASS TREE DOCUMENTATION
+
+## Solution Structure Overview
+This documentation shows the complete class hierarchy for all projects in the KnxMonitor solution.
+Each project contains classes organized by their inheritance relationships and public methods.
+
+???????????????????????????????????????????????????????????????????????????????????????????
+
+## 1. KNXMODEL PROJECT
+
+### Core Interfaces
+
+??? IIdentifable (interface)
+?   ??? string Id { get; }
+?
+??? IKnxDeviceBase (interface) : IIdentifable, IDisposable
+?   ??? string Name { get; }
+?   ??? string SubGroup { get; }
+?   ??? DateTime LastUpdated { get; }
+?   ??? Task InitializeAsync()
+?   ??? void SaveCurrentState()
+?   ??? Task RestoreSavedStateAsync(TimeSpan? timeout = null)
+?
+??? ILockableDevice (interface) : IIdentifable
+?   ??? Lock CurrentLockState { get; }
+?   ??? Task SetLockAsync(Lock lockState, TimeSpan? timeout = null)
+?   ??? Task LockAsync(TimeSpan? timeout = null)
+?   ??? Task UnlockAsync(TimeSpan? timeout = null)
+?   ??? Task<Lock> ReadLockStateAsync()
+?   ??? Task<bool> WaitForLockStateAsync(Lock targetState, TimeSpan timeout)
+?
+??? ISwitchable (interface) : IIdentifable
+?   ??? Switch CurrentSwitchState { get; }
+?   ??? Task TurnOnAsync(TimeSpan? timeout = null)
+?   ??? Task TurnOffAsync(TimeSpan? timeout = null)
+?   ??? Task ToggleAsync(TimeSpan? timeout = null)
+?   ??? Task<Switch> ReadSwitchStateAsync()
+?   ??? Task<bool> WaitForSwitchStateAsync(Switch targetState, TimeSpan? timeout = null)
+?
+??? IPercentageControllable (interface) : IIdentifable
+?   ??? float CurrentPercentage { get; }
+?   ??? Task SetPercentageAsync(float percentage, TimeSpan? timeout = null)
+?   ??? Task<float> ReadPercentageAsync()
+?   ??? Task<bool> WaitForPercentageAsync(float targetPercentage, double tolerance = 1.0, TimeSpan? timeout = null)
+?   ??? Task AdjustPercentageAsync(float increment, TimeSpan? timeout = null)
+?
+??? IActivityStatusReadable (interface) : IIdentifable
+?   ??? bool IsActive { get; }
+?   ??? Task<bool> ReadActivityStatusAsync()
+?   ??? Task<bool> WaitForInactiveAsync(TimeSpan? timeout = null)
+?   ??? Task<bool> WaitForActiveAsync(TimeSpan? timeout = null)
+
+### Specialized Interfaces
+
+??? ILightDevice (interface) : IKnxDeviceBase, ISwitchable, ILockableDevice
+?
+??? IDimmerDevice (interface) : ILightDevice, IPercentageControllable
+?   ??? Task FadeToAsync(float targetBrightness, TimeSpan duration)
+?
+??? IShutterDevice (interface) : IKnxDeviceBase, IPercentageControllable, ILockableDevice, IActivityStatusReadable
+?   ??? Task OpenAsync(TimeSpan? timeout = null)
+?   ??? Task CloseAsync(TimeSpan? timeout = null)
+?   ??? Task StopAsync(TimeSpan? timeout = null)
+?   ??? Task BlockSunProtectionAsync(TimeSpan? timeout = null)
+?   ??? Task UnblockSunProtectionAsync(TimeSpan? timeout = null)
+?   ??? Task SetSunProtectionBlockStateAsync(bool blocked, TimeSpan? timeout = null)
+?   ??? Task<bool> ReadSunProtectionBlockStateAsync()
+?   ??? Task<bool> WaitForSunProtectionBlockStateAsync(bool targetState, TimeSpan? timeout = null)
+?
+??? IClockDevice (interface) : IKnxDeviceBase
+?   ??? ClockMode Mode { get; }
+?   ??? DateTime CurrentDateTime { get; }
+?   ??? TimeSpan TimeStamp { get; }
+?   ??? DateTime? LastTimeReceived { get; }
+?   ??? bool HasValidTime { get; }
+?   ??? Task SendTimeAsync(DateTime? datetime = null)
+?   ??? Task SynchronizeWithSystemTimeAsync()
+?   ??? Task SwitchToMasterModeAsync()
+?   ??? Task SwitchToSlaveModeAsync()
+?
+??? ISunPositionProvider (interface)
+?   ??? double Latitude { get; set; }
+?   ??? double Longitude { get; set; }
+?   ??? SunPosition GetCurrentSunPosition()
+?   ??? SunPosition GetSunPosition(DateTime dateTime)
+?   ??? SunTimes GetTodaySunTimes()
+?   ??? SunTimes GetSunTimes(DateTime date)
+
+### Composite Interfaces
+
+??? ISwitchStateLockableDevice (interface) : ILockableDevice, ISwitchable
+?   ??? Switch LockedSwitchState { get; }
+?   ??? bool IsSwitchLockActive { get; }
+?
+??? IPercentageLockableDevice (interface) : ILockableDevice, IPercentageControllable
+?   ??? float LockedPercentage { get; }
+?   ??? bool IsPercentageLockActive { get; }
+
+### Sun Protection Interfaces
+
+??? ISunProtectionCapableDevice (interface) : IIdentifable
+?   ??? bool IsSunProtectionBlocked { get; }
+?   ??? Task BlockSunProtectionAsync(TimeSpan? timeout = null)
+?   ??? Task UnblockSunProtectionAsync(TimeSpan? timeout = null)
+?   ??? Task SetSunProtectionBlockStateAsync(bool blocked, TimeSpan? timeout = null)
+?   ??? Task<bool> ReadSunProtectionBlockStateAsync()
+?   ??? Task<bool> WaitForSunProtectionBlockStateAsync(bool targetState, TimeSpan? timeout = null)
+?
+??? IBrightnessThresholdCapableDevice (interface) : IIdentifable
+?   ??? bool BrightnessThreshold1Active { get; }
+?   ??? bool BrightnessThreshold2Active { get; }
+?   ??? Task<bool> ReadBrightnessThreshold1StateAsync()
+?   ??? Task<bool> ReadBrightnessThreshold2StateAsync()
+?   ??? Task<bool> WaitForBrightnessThreshold1StateAsync(bool targetState, TimeSpan? timeout = null)
+?   ??? Task<bool> WaitForBrightnessThreshold2StateAsync(bool targetState, TimeSpan? timeout = null)
+?
+??? ITemperatureThresholdCapableDevice (interface) : IIdentifable
+?   ??? bool OutdoorTemperatureThresholdActive { get; }
+?   ??? Task<bool> ReadOutdoorTemperatureThresholdStateAsync()
+?   ??? Task<bool> WaitForOutdoorTemperatureThresholdStateAsync(bool targetState, TimeSpan? timeout = null)
+?
+??? ISunProtectionThresholdCapableDevice (interface) : ISunProtectionCapableDevice, IBrightnessThresholdCapableDevice, ITemperatureThresholdCapableDevice
+?
+??? ISunProtectionDevice (interface) : IShutterDevice, ISunProtectionThresholdCapableDevice
+
+### Base Classes
+
+??? LockableDeviceBase<TDevice, TAddresses> (abstract class) : ILockableDevice, IDisposable, IIdentifable
+?   ??? string Id { get; }
+?   ??? string Name { get; }
+?   ??? string SubGroup { get; }
+?   ??? DateTime LastUpdated { get; }
+?   ??? Lock CurrentLockState { get; }
+?   ??? Task InitializeAsync() [abstract]
+?   ??? void SaveCurrentState() [virtual]
+?   ??? Task RestoreSavedStateAsync(TimeSpan? timeout = null) [virtual]
+?   ??? Task SetLockAsync(Lock lockState, TimeSpan? timeout = null)
+?   ??? Task LockAsync(TimeSpan? timeout = null)
+?   ??? Task UnlockAsync(TimeSpan? timeout = null)
+?   ??? Task<Lock> ReadLockStateAsync()
+?   ??? Task<bool> WaitForLockStateAsync(Lock targetState, TimeSpan timeout)
+?   ??? void Dispose()
+?
+?   ??? LightDeviceBase<TDevice, TAddresses> (abstract class) : LockableDeviceBase<TDevice, TAddresses>, ILightDevice, ISwitchStateLockableDevice
+?       ??? Switch CurrentSwitchState { get; }
+?       ??? Switch LockedSwitchState { get; }
+?       ??? bool IsSwitchLockActive { get; }
+?       ??? Task TurnOnAsync(TimeSpan? timeout = null)
+?       ??? Task TurnOffAsync(TimeSpan? timeout = null)
+?       ??? Task ToggleAsync(TimeSpan? timeout = null)
+?       ??? Task<Switch> ReadSwitchStateAsync()
+?       ??? Task<bool> WaitForSwitchStateAsync(Switch targetState, TimeSpan? timeout = null)
+?       ??? void SaveCurrentState() [override]
+?       ??? Task RestoreSavedStateAsync(TimeSpan? timeout = null) [virtual override]
+
+### Device Implementations
+
+??? LightDevice (class) : LightDeviceBase<LightDevice, LightAddresses>
+?   ??? LightDevice(string id, string name, string subGroup, IKnxService knxService, ILogger<LightDevice> logger, TimeSpan defaultTimeout)
+?   ??? Task InitializeAsync() [override]
+?
+??? DimmerDevice (class) : LightDeviceBase<DimmerDevice, DimmerAddresses>, IDimmerDevice, IPercentageLockableDevice
+?   ??? DimmerDevice(string id, string name, string subGroup, IKnxService knxService, ILogger<DimmerDevice> logger, TimeSpan defaultTimeout)
+?   ??? Task InitializeAsync() [override]
+?   ??? void SaveCurrentState() [override]
+?   ??? Task RestoreSavedStateAsync(TimeSpan? timeout = null) [override]
+?   ??? float CurrentPercentage { get; }
+?   ??? float LockedPercentage { get; }
+?   ??? bool IsPercentageLockActive { get; }
+?   ??? Task SetPercentageAsync(float percentage, TimeSpan? timeout = null)
+?   ??? Task<float> ReadPercentageAsync()
+?   ??? Task<bool> WaitForPercentageAsync(float targetPercentage, double tolerance = 1.0, TimeSpan? timeout = null)
+?   ??? Task FadeToAsync(float targetBrightness, TimeSpan duration)
+?   ??? Task AdjustPercentageAsync(float increment, TimeSpan? timeout = null)
+?
+??? ShutterDevice (class) : LockableDeviceBase<ShutterDevice, ShutterAddresses>, IShutterDevice, IPercentageLockableDevice, ISunProtectionThresholdCapableDevice
+?   ??? ShutterDevice(string id, string name, string subGroup, IKnxService knxService, ILogger<ShutterDevice> logger, TimeSpan defaultTimeout)
+?   ??? Task InitializeAsync() [override]
+?   ??? void SaveCurrentState() [override]
+?   ??? Task RestoreSavedStateAsync(TimeSpan? timeout = null) [override]
+?   ??? float CurrentPercentage { get; }
+?   ??? bool IsActive { get; }
+?   ??? bool IsSunProtectionBlocked { get; }
+?   ??? float LockedPercentage { get; }
+?   ??? bool IsPercentageLockActive { get; }
+?   ??? bool BrightnessThreshold1Active { get; }
+?   ??? bool BrightnessThreshold2Active { get; }
+?   ??? bool OutdoorTemperatureThresholdActive { get; }
+?   ??? Task SetPercentageAsync(float percentage, TimeSpan? timeout = null)
+?   ??? Task<float> ReadPercentageAsync()
+?   ??? Task<bool> WaitForPercentageAsync(float targetPercentage, double tolerance = 2.0, TimeSpan? timeout = null)
+?   ??? Task AdjustPercentageAsync(float delta, TimeSpan? timeout = null)
+?   ??? Task<bool> ReadActivityStatusAsync()
+?   ??? Task<bool> WaitForInactiveAsync(TimeSpan? timeout = null)
+?   ??? Task<bool> WaitForActiveAsync(TimeSpan? timeout = null)
+?   ??? Task OpenAsync(TimeSpan? timeout = null)
+?   ??? Task CloseAsync(TimeSpan? timeout = null)
+?   ??? Task StopAsync(TimeSpan? timeout = null)
+?   ??? Task BlockSunProtectionAsync(TimeSpan? timeout = null)
+?   ??? Task UnblockSunProtectionAsync(TimeSpan? timeout = null)
+?   ??? Task SetSunProtectionBlockStateAsync(bool blocked, TimeSpan? timeout = null)
+?   ??? Task<bool> ReadSunProtectionBlockStateAsync()
+?   ??? Task<bool> WaitForSunProtectionBlockStateAsync(bool targetState, TimeSpan? timeout = null)
+?   ??? Task<bool> ReadBrightnessThreshold1StateAsync()
+?   ??? Task<bool> ReadBrightnessThreshold2StateAsync()
+?   ??? Task<bool> ReadOutdoorTemperatureThresholdStateAsync()
+?   ??? Task<bool> WaitForBrightnessThreshold1StateAsync(bool targetState, TimeSpan? timeout = null)
+?   ??? Task<bool> WaitForBrightnessThreshold2StateAsync(bool targetState, TimeSpan? timeout = null)
+?   ??? Task<bool> WaitForOutdoorTemperatureThresholdStateAsync(bool targetState, TimeSpan? timeout = null)
+?
+??? ClockDevice (class) : IClockDevice, ISunPositionProvider, IDisposable
+?   ??? ClockDevice(string id, string name, ClockConfiguration configuration, IKnxService knxService, ILogger<ClockDevice> logger, TimeSpan defaultTimeout, double latitude = 51.1079, double longitude = 17.0385)
+?   ??? string Id { get; }
+?   ??? string Name { get; }
+?   ??? string SubGroup { get; }
+?   ??? DateTime LastUpdated { get; }
+?   ??? ClockMode Mode { get; }
+?   ??? DateTime CurrentDateTime { get; }
+?   ??? TimeSpan TimeStamp { get; }
+?   ??? DateTime? LastTimeReceived { get; }
+?   ??? bool HasValidTime { get; }
+?   ??? double Latitude { get; set; }
+?   ??? double Longitude { get; set; }
+?   ??? Task InitializeAsync()
+?   ??? void SaveCurrentState()
+?   ??? Task RestoreSavedStateAsync(TimeSpan? timeout = null)
+?   ??? Task SendTimeAsync(DateTime? datetime = null)
+?   ??? Task SynchronizeWithSystemTimeAsync()
+?   ??? Task SwitchToMasterModeAsync()
+?   ??? Task SwitchToSlaveModeAsync()
+?   ??? SunPosition GetCurrentSunPosition()
+?   ??? SunPosition GetSunPosition(DateTime dateTime)
+?   ??? SunTimes GetTodaySunTimes()
+?   ??? SunTimes GetSunTimes(DateTime date)
+?   ??? void Dispose()
+?
+??? ThresholdSimulatorDevice (class) : IKnxDeviceBase, IDisposable
+    ??? ThresholdSimulatorDevice(string id, string name, IKnxService knxService, ILogger<ThresholdSimulatorDevice> logger, TimeSpan defaultTimeout)
+    ??? string Id { get; }
+    ??? string Name { get; }
+    ??? string SubGroup { get; }
+    ??? DateTime LastUpdated { get; }
+    ??? Task InitializeAsync()
+    ??? void SaveCurrentState()
+    ??? Task RestoreSavedStateAsync(TimeSpan? timeout = null)
+    ??? Task SendBrightnessThreshold1Async(bool active)
+    ??? Task SendBrightnessThreshold2Async(bool active)
+    ??? Task SendOutdoorTemperatureThresholdAsync(bool active)
+    ??? void Dispose()
+
+### Helper Classes
+
+??? DeviceHelperBase<TDevice, TAddress> (class)
+?   ??? DeviceHelperBase(TDevice owner, TAddress address, IKnxService knxService, string deviceId, string deviceType, ILogger<TDevice> logger, TimeSpan defaultTimeout)
+?
+??? PercentageControllableDeviceHelper<T, TAddress> (class) : DeviceHelperBase<T, TAddress>
+?   ??? PercentageControllableDeviceHelper(T owner, TAddress addresses, IKnxService knxService, string deviceId, string deviceType, ILogger<T> logger, TimeSpan defaultTimeout)
+?   ??? Task AdjustPercentageAsync(float increment, TimeSpan? timeout)
+?   ??? void ProcessSwitchMessage(KnxGroupEventArgs e)
+?   ??? Task<float> ReadPercentageAsync()
+?   ??? Task SetPercentageAsync(float percentage, TimeSpan? timeout)
+?   ??? Task<bool> WaitForPercentageAsync(float targetPercentage, double tolerance, TimeSpan? timeout)
+?
+??? SwitchableDeviceHelper<T, TAddress> (class) : DeviceHelperBase<T, TAddress>
+?   ??? SwitchableDeviceHelper(T owner, TAddress addresses, IKnxService knxService, string deviceId, string deviceType, ILogger<T> logger, TimeSpan defaultTimeout)
+?   ??? void ProcessSwitchMessage(KnxGroupEventArgs e)
+?   ??? Task<Switch> ReadSwitchStateAsync()
+?   ??? Task SetSwitchAsync(Switch switchState, TimeSpan? timeout)
+?   ??? Task ToggleAsync(TimeSpan? timeout)
+?   ??? Task<bool> WaitForSwitchStateAsync(Switch targetState, TimeSpan? timeout)
+?
+??? LockableDeviceHelper<T, TAddress> (class) : DeviceHelperBase<T, TAddress>
+?   ??? LockableDeviceHelper(T owner, TAddress addresses, IKnxService knxService, string deviceId, string deviceType, ILogger<T> logger, TimeSpan defaultTimeout)
+?   ??? void ProcessLockMessage(KnxGroupEventArgs e)
+?   ??? Task<Lock> ReadLockStateAsync()
+?   ??? Task SetLockAsync(Lock lockState, TimeSpan? timeout)
+?   ??? Task<bool> WaitForLockStateAsync(Lock targetState, TimeSpan timeout)
+?
+??? ShutterDeviceHelper<T, TAddress> (class) : DeviceHelperBase<T, TAddress>
+?   ??? ShutterDeviceHelper(T owner, TAddress addresses, IKnxService knxService, string deviceId, string deviceType, ILogger<T> logger, TimeSpan defaultTimeout)
+?   ??? Task OpenAsync(TimeSpan? timeout)
+?   ??? Task CloseAsync(TimeSpan? timeout)
+?   ??? Task StopAsync(TimeSpan? timeout)
+?   ??? void ProcessMovementMessage(KnxGroupEventArgs e)
+?   ??? Task<bool> WaitForInactiveAsync(TimeSpan? timeout)
+?   ??? Task<bool> WaitForActiveAsync(TimeSpan? timeout)
+?
+??? SunProtectionDeviceHelper<T, TAddress> (class) : DeviceHelperBase<T, TAddress>
+    ??? SunProtectionDeviceHelper(T owner, TAddress addresses, IKnxService knxService, string deviceId, string deviceType, ILogger<T> logger, TimeSpan defaultTimeout)
+    ??? Task<bool> WaitForSunProtectionBlockStateAsync(bool targetState, TimeSpan? timeout)
+    ??? Task<bool> WaitForBrightnessThreshold1StateAsync(bool targetState, TimeSpan? timeout)
+    ??? Task<bool> WaitForBrightnessThreshold2StateAsync(bool targetState, TimeSpan? timeout)
+    ??? Task<bool> WaitForOutdoorTemperatureThresholdStateAsync(bool targetState, TimeSpan? timeout)
+
+### Service Interfaces
+
+??? IKnxService (interface) : IDisposable
+?   ??? event EventHandler<KnxGroupEventArgs> GroupMessageReceived
+?   ??? void WriteGroupValue(string address, bool value)
+?   ??? void WriteGroupValue(string address, float percentage)
+?   ??? Task<T> RequestGroupValue<T>(string address)
+?   ??? Task WriteGroupValueAsync(string address, bool value)
+?   ??? Task WriteGroupValueAsync(string address, byte[] data)
+?   ??? Task WriteGroupValueAsync(string address, float percentage)
+
+### Value Types and Records
+
+??? KnxValue (class)
+?   ??? object RawValue { get; }
+?   ??? byte[] RawData { get; }
+?   ??? int DataLength { get; }
+?   ??? DateTime Timestamp { get; }
+?   ??? KnxValue(object rawValue, byte[]? rawData = null)
+?   ??? bool AsBoolean()
+?   ??? Percent AsPercent()
+?   ??? float AsPercentageValue()
+?   ??? byte AsByte()
+?   ??? int AsInt()
+?   ??? string AsString()
+?   ??? T AutoConvert<T>()
+?   ??? object GetTypedValue(string? address = null)
+?   ??? string ToString() [override]
+?
+??? KnxGroupEventArgs (record)
+?   ??? string Destination
+?   ??? KnxValue Value
+?   ??? string? Source
+?   ??? DateTime Timestamp
+?   ??? string? MessageType
+?   ??? string? Priority
+?
+??? KnxGroupAddress (record)
+?   ??? string Main
+?   ??? string Middle
+?   ??? string Sub
+?   ??? string ToString() [override]
+
+### Enumerations
+
+??? Switch (enum)
+?   ??? Off = 0
+?   ??? On = 1
+?   ??? Unknown = -1
+?
+??? Lock (enum)
+?   ??? Off = 0
+?   ??? On = 1
+?   ??? Unknown = -1
+?
+??? ShutterDirection (enum)
+?   ??? Up = 0
+?   ??? Down = 1
+?
+??? ShutterMovementState (enum)
+?   ??? Inactive = 0
+?   ??? Active = 1
+?   ??? Unknown = -1
+?
+??? ClockMode (enum)
+    ??? Master = 0
+    ??? Slave = 1
+    ??? SlaveMaster = 2
+
+### Address Records
+
+??? LockableAddresses (record)
+?   ??? string LockControl
+?   ??? string LockFeedback
+?
+??? LightAddresses (record) : LockableAddresses
+?   ??? string SwitchControl (maps to Control)
+?   ??? string SwitchFeedback (maps to Feedback)
+?
+??? DimmerAddresses (record) : LightAddresses, IBrightnessControllableAddress, IPercentageControllableAddress
+?   ??? string BrightnessControl
+?   ??? string BrightnessFeedback
+?   ??? string PercentageControl
+?   ??? string PercentageFeedback
+?
+??? ShutterAddresses (record) : LockableAddresses, IPercentageControllableAddress, IMovementControllableAddress
+?   ??? string MovementControl
+?   ??? string MovementFeedback
+?   ??? string PercentageControl
+?   ??? string PercentageFeedback
+?   ??? string SunProtectionBlockControl
+?   ??? string SunProtectionBlockFeedback
+?   ??? string SunProtectionStatus
+?   ??? string StopControl
+?   ??? string MovementStatusFeedback
+?   ??? string BrightnessThreshold1
+?   ??? string BrightnessThreshold2
+?   ??? string OutdoorTemperatureThreshold
+?
+??? ClockAddresses (record)
+?   ??? string TimeControl
+?
+??? ThresholdSimulatorAddresses (record)
+    ??? string BrightnessThreshold1
+    ??? string BrightnessThreshold2
+    ??? string OutdoorTemperatureThreshold
+
+### Factory Classes
+
+??? LightFactory (static class)
+?   ??? TimeSpan DefaultTimeout
+?   ??? LightDevice CreateLight(string lightId, IKnxService knxService, ILogger<LightDevice> logger)
+?   ??? IEnumerable<string> GetAvailableLightIds()
+?   ??? LightConfig (record)
+?   ??? Dictionary<string, LightConfig> LightConfigurations
+?
+??? DimmerFactory (static class)
+?   ??? TimeSpan DefaultTimeout
+?   ??? DimmerDevice CreateDimmer(string dimmerId, IKnxService knxService, ILogger<DimmerDevice> logger)
+?   ??? IEnumerable<string> GetAvailableDimmerIds()
+?   ??? LightConfig (record)
+?   ??? Dictionary<string, LightConfig> DimmerConfigurations
+?
+??? ShutterFactory (static class)
+?   ??? TimeSpan DefaultTimeout
+?   ??? ShutterDevice CreateShutter(string shutterId, IKnxService knxService, ILogger<ShutterDevice> logger)
+?   ??? IEnumerable<string> GetAvailableShutterIds()
+?   ??? ShutterConfig (record)
+?   ??? Dictionary<string, ShutterConfig> ShutterConfigurations
+?
+??? ClockFactory (static class)
+?   ??? TimeSpan DefaultTimeout
+?   ??? ClockDevice CreateClock(string clockId, IKnxService knxService, ILogger<ClockDevice> logger, double latitude = 51.1079, double longitude = 17.0385)
+?   ??? IEnumerable<string> GetAvailableClockIds()
+?   ??? ClockConfig (record)
+?   ??? Dictionary<string, ClockConfig> ClockConfigurations
+?
+??? ThresholdSimulatorFactory (static class)
+    ??? TimeSpan DefaultTimeout
+    ??? ThresholdSimulatorDevice CreateThresholdSimulator(string simulatorId, IKnxService knxService, ILogger<ThresholdSimulatorDevice> logger)
+    ??? IEnumerable<string> GetAvailableSimulatorIds()
+    ??? SimulatorConfig (record)
+    ??? Dictionary<string, SimulatorConfig> SimulatorConfigurations
+
+### Configuration Classes
+
+??? KnxAddressConfiguration (static class)
+?   ??? LightAddresses CreateLightAddresses(string subGroup)
+?   ??? DimmerAddresses CreateDimmerAddresses(string subGroup)
+?   ??? ShutterAddresses CreateShutterAddresses(string subGroup)
+?   ??? ClockAddresses CreateClockAddresses()
+?   ??? ThresholdSimulatorAddresses CreateThresholdSimulatorAddresses()
+?
+??? KnxAddressTypeConfig (static class)
+?   ??? string GetAddressDescription(string address)
+?
+??? KnxEventManager (class) : IDisposable
+    ??? KnxEventManager(IKnxService knxService, string deviceId, string deviceType)
+    ??? event EventHandler<KnxGroupEventArgs> MessageReceived
+    ??? void Dispose()
+
+???????????????????????????????????????????????????????????????????????????????????????????
+
+## 2. KNXSERVICE PROJECT
+
+### Service Implementation
+
+??? KnxService (class) : IKnxService
+?   ??? KnxService()
+?   ??? event EventHandler<KnxGroupEventArgs> GroupMessageReceived
+?   ??? void WriteGroupValue(string address, bool value)
+?   ??? void WriteGroupValue(string address, float percentage)
+?   ??? Task<T> RequestGroupValue<T>(string address)
+?   ??? Task WriteGroupValueAsync(string address, bool value)
+?   ??? Task WriteGroupValueAsync(string address, byte[] data)
+?   ??? Task WriteGroupValueAsync(string address, float percentage)
+?   ??? void Dispose()
+?
+??? KnxRateLimiterManager (class)
+    ??? KnxRateLimiterManager()
+    ??? Task WaitAsync(KnxOperationType operationType)
+    ??? void Dispose()
+
+### Supporting Types
+
+??? KnxOperationType (enum)
+    ??? WriteGroupValue = 0
+    ??? ReadGroupValueAsync = 1
+
+???????????????????????????????????????????????????????????????????????????????????????????
+
+## 3. KNXTEST PROJECT
+
+### Base Test Classes
+
+??? IntegrationTestBase (abstract class) : IDisposable
+?   ??? IKnxService KnxService { get; }
+?   ??? void SetUp() [virtual]
+?   ??? void TearDown() [virtual]
+?   ??? void Dispose() [virtual]
+?
+??? LockableIntegrationTestBase<TDevice> (abstract class) : IntegrationTestBase
+?   ??? TDevice Device { get; }
+?   ??? void SetUp() [override]
+?   ??? void TearDown() [override]
+?   ??? Task TestLockUnlockAsync()
+?
+??? LightIntegrationTestsBase<TDevice> (abstract class) : LockableIntegrationTestBase<TDevice>
+?   ??? void SetUp() [override]
+?   ??? void TearDown() [override]
+?   ??? Task TestTurnOnOffAsync()
+?   ??? Task TestToggleAsync()
+
+### Unit Test Base Classes
+
+??? BaseKnxDeviceUnitTests<TDevice> (abstract class) : IDisposable
+?   ??? Mock<IKnxService> MockKnxService { get; }
+?   ??? TDevice Device { get; }
+?   ??? void SetUp() [virtual]
+?   ??? void TearDown() [virtual]
+?   ??? void Dispose() [virtual]
+?
+??? LockDeviceTestsBase<TDevice> (abstract class) : BaseKnxDeviceUnitTests<TDevice>
+?   ??? void SetUp() [override]
+?   ??? void TearDown() [override]
+?   ??? Task LockAsync_ShouldSendCorrectKnxCommand()
+?   ??? Task UnlockAsync_ShouldSendCorrectKnxCommand()
+?   ??? Task LockFeedback_ShouldUpdateCurrentLockState()
+?   ??? Task UnlockFeedback_ShouldUpdateCurrentLockState()
+?
+??? LightDeviceTestsBase<TDevice> (abstract class) : LockDeviceTestsBase<TDevice>
+?   ??? void SetUp() [override]
+?   ??? void TearDown() [override]
+?   ??? Task TurnOnAsync_ShouldSendCorrectKnxCommand()
+?   ??? Task TurnOffAsync_ShouldSendCorrectKnxCommand()
+?   ??? Task ToggleAsync_ShouldSendCorrectKnxCommand()
+?   ??? Task OnFeedback_ShouldUpdateCurrentSwitchState()
+?   ??? Task OffFeedback_ShouldUpdateCurrentSwitchState()
+?   ??? void SimultaneousFeedbacks_ShouldProcessAllCorrectly(Switch switchState, Lock lockState)
+?   ??? void InvalidFeedbackAddress_ShouldBeIgnored()
+
+### Specific Device Test Classes
+
+??? LightDeviceTests (class) : LightDeviceTestsBase<LightDevice>
+?   ??? void SetUp() [override]
+?   ??? void TearDown() [override]
+?
+??? DimmerDeviceTests (class) : LightDeviceTestsBase<DimmerDevice>
+?   ??? void SetUp() [override]
+?   ??? void TearDown() [override]
+?   ??? Task SetPercentageAsync_ShouldSendCorrectKnxCommand()
+?   ??? Task PercentageFeedback_ShouldUpdateCurrentPercentage()
+?   ??? Task FadeToAsync_ShouldGraduallyChangeBrightness()
+?   ??? Task AdjustPercentageAsync_ShouldChangeByDelta()
+?   ??? void SaveCurrentState_ShouldSaveBrightness()
+?   ??? Task RestoreSavedStateAsync_ShouldRestoreBrightness()
+?
+??? ShutterDeviceTests (class) : BaseKnxDeviceUnitTests<ShutterDevice>
+?   ??? void SetUp() [override]
+?   ??? void TearDown() [override]
+?   ??? Task SetPercentageAsync_ShouldSendCorrectKnxCommand()
+?   ??? Task PercentageFeedback_ShouldUpdateCurrentPercentage()
+?   ??? Task OpenAsync_ShouldSendUpCommand()
+?   ??? Task CloseAsync_ShouldSendDownCommand()
+?   ??? Task StopAsync_ShouldSendStopCommand()
+?   ??? Task BlockSunProtectionAsync_ShouldSendCorrectCommand()
+?   ??? Task UnblockSunProtectionAsync_ShouldSendCorrectCommand()
+?   ??? Task BrightnessThreshold1Feedback_ShouldUpdateState()
+?   ??? Task BrightnessThreshold2Feedback_ShouldUpdateState()
+?   ??? Task OutdoorTemperatureThresholdFeedback_ShouldUpdateState()
+?   ??? void SaveCurrentState_ShouldSaveAllStates()
+?   ??? Task RestoreSavedStateAsync_ShouldRestoreAllStates()
+?
+??? ClockDeviceTests (class) : BaseKnxDeviceUnitTests<ClockDevice>
+    ??? void SetUp() [override]
+    ??? void TearDown() [override]
+    ??? Task SendTimeAsync_ShouldSendCorrectKnxTimeFormat()
+    ??? Task SynchronizeWithSystemTimeAsync_ShouldUpdateTime()
+    ??? Task SwitchToMasterModeAsync_ShouldStartTimeTransmission()
+    ??? Task SwitchToSlaveModeAsync_ShouldStopTimeTransmission()
+    ??? Task GetCurrentSunPosition_ShouldCalculateCorrectPosition()
+    ??? Task GetSunTimes_ShouldCalculateCorrectTimes()
+    ??? void SaveCurrentState_ShouldSaveAllClockData()
+    ??? Task RestoreSavedStateAsync_ShouldRestoreAllClockData()
+
+### Integration Test Classes
+
+??? LightIntegrationTests (class) : LightIntegrationTestsBase<LightDevice>
+?   ??? void SetUp() [override]
+?   ??? void TearDown() [override]
+?
+??? DimmerIntegrationTests (class) : LightIntegrationTestsBase<DimmerDevice>
+?   ??? void SetUp() [override]
+?   ??? void TearDown() [override]
+?   ??? Task TestSetPercentageAsync()
+?   ??? Task TestFadeToAsync()
+?   ??? Task TestAdjustPercentageAsync()
+?
+??? ShutterIntegrationTests (class) : LockableIntegrationTestBase<ShutterDevice>
+?   ??? void SetUp() [override]
+?   ??? void TearDown() [override]
+?   ??? Task TestSetPercentageAsync()
+?   ??? Task TestOpenCloseAsync()
+?   ??? Task TestStopAsync()
+?   ??? Task TestSunProtectionBlockAsync()
+?   ??? Task TestThresholdFeedback()
+?
+??? ClockDeviceIntegrationTests (class) : IntegrationTestBase
+?   ??? ClockDevice Device { get; }
+?   ??? void SetUp() [override]
+?   ??? void TearDown() [override]
+?   ??? Task TestMasterModeTimeTransmission()
+?   ??? Task TestSlaveModeSynchronization()
+?   ??? Task TestSlaveMasterModeSwitch()
+?   ??? Task TestSunPositionCalculation()
+?
+??? ThresholdSimulatorIntegrationTests (class) : IntegrationTestBase
+?   ??? ThresholdSimulatorDevice Device { get; }
+?   ??? void SetUp() [override]
+?   ??? void TearDown() [override]
+?   ??? Task TestSendBrightnessThreshold1Async()
+?   ??? Task TestSendBrightnessThreshold2Async()
+?   ??? Task TestSendOutdoorTemperatureThresholdAsync()
+?
+??? SystemIntegrationTests (class) : IntegrationTestBase
+    ??? void SetUp() [override]
+    ??? void TearDown() [override]
+    ??? Task TestMultipleDeviceCommunication()
+    ??? Task TestSunProtectionScenarios()
+    ??? Task TestTimeBasedAutomation()
+
+### Test Helper Classes
+
+??? SwitchTestHelper (class)
+?   ??? SwitchTestHelper(IKnxService knxService)
+?   ??? Task TestSwitchOnAsync<T>(T device) where T : ISwitchable
+?   ??? Task TestSwitchOffAsync<T>(T device) where T : ISwitchable
+?   ??? Task TestToggleAsync<T>(T device) where T : ISwitchable
+?
+??? LockTestHelper (class)
+?   ??? LockTestHelper(IKnxService knxService)
+?   ??? Task TestLockAsync<T>(T device) where T : ILockableDevice
+?   ??? Task TestUnlockAsync<T>(T device) where T : ILockableDevice
+?
+??? PercentageControllTestHelper (class)
+?   ??? PercentageControllTestHelper(IKnxService knxService)
+?   ??? Task TestSetPercentageAsync<T>(T device, float percentage) where T : IPercentageControllable
+?   ??? Task TestAdjustPercentageAsync<T>(T device, float delta) where T : IPercentageControllable
+?   ??? Task TestWaitForPercentageAsync<T>(T device, float target, double tolerance) where T : IPercentageControllable
+?
+??? SunProtectionTestHelper (class)
+    ??? SunProtectionTestHelper(IKnxService knxService)
+    ??? Task TestSunProtectionBlockAsync<T>(T device) where T : ISunProtectionCapableDevice
+    ??? Task TestSunProtectionUnblockAsync<T>(T device) where T : ISunProtectionCapableDevice
+    ??? Task TestBrightnessThresholdAsync<T>(T device) where T : IBrightnessThresholdCapableDevice
+    ??? Task TestTemperatureThresholdAsync<T>(T device) where T : ITemperatureThresholdCapableDevice
+
+### Interface Test Classes
+
+??? IDeviceIntegrationTests (class)
+?   ??? IKnxService KnxService { get; }
+?   ??? Task TestInitializeAsync<T>(T device) where T : IKnxDeviceBase
+?   ??? Task TestSaveRestoreStateAsync<T>(T device) where T : IKnxDeviceBase
+?   ??? Task TestDisposeAsync<T>(T device) where T : IKnxDeviceBase, IDisposable
+?
+??? ISwitchableDeviceTests (class)
+?   ??? IKnxService KnxService { get; }
+?   ??? Task TestSwitchAsync<T>(T device) where T : ISwitchable
+?   ??? Task TestWaitForSwitchStateAsync<T>(T device) where T : ISwitchable
+?
+??? ILockableDeviceTests (class)
+?   ??? IKnxService KnxService { get; }
+?   ??? Task TestLockAsync<T>(T device) where T : ILockableDevice
+?   ??? Task TestWaitForLockStateAsync<T>(T device) where T : ILockableDevice
+?
+??? IPercentageControllableDeviceTests (class)
+    ??? IKnxService KnxService { get; }
+    ??? Task TestPercentageControlAsync<T>(T device) where T : IPercentageControllable
+    ??? Task TestWaitForPercentageAsync<T>(T device) where T : IPercentageControllable
+
+### Specialized Test Classes
+
+??? ShutterSunProtectionIntegrationTests (class) : IntegrationTestBase
+?   ??? ShutterDevice Device { get; }
+?   ??? void SetUp() [override]
+?   ??? void TearDown() [override]
+?   ??? Task TestSunProtectionWithBrightnessThreshold()
+?   ??? Task TestSunProtectionWithTemperatureThreshold()
+?   ??? Task TestCombinedThresholdScenarios()
+?
+??? ShutterSunProtectionScenariosTests (class) : IntegrationTestBase
+    ??? ShutterDevice Device { get; }
+    ??? ThresholdSimulatorDevice ThresholdSimulator { get; }
+    ??? void SetUp() [override]
+    ??? void TearDown() [override]
+    ??? Task TestAutomaticSunProtectionActivation()
+    ??? Task TestManualOverrideSunProtection()
+    ??? Task TestComplexWeatherScenarios()
+
+### Miscellaneous Test Classes
+
+??? KnxValueTests (class)
+?   ??? void AsBoolean_ShouldConvertCorrectly()
+?   ??? void AsPercentageValue_ShouldConvertCorrectly()
+?   ??? void AsByte_ShouldConvertCorrectly()
+?   ??? void AsInt_ShouldConvertCorrectly()
+?   ??? void AutoConvert_ShouldDetectCorrectType()
+?   ??? void GetTypedValue_ShouldReturnAppropriateType()
+?
+??? ShutterDeviceTestsOld (class) [DEPRECATED]
+    ??? void SetUp()
+    ??? void TearDown()
+    ??? [Legacy test methods - scheduled for removal]
+
+???????????????????????????????????????????????????????????????????????????????????????????
+
+## 4. KNXMONITOR PROJECT
+
+### Application Entry Point
+
+??? Program (class)
+?   ??? static void Main(string[] args)
+?   ??? static Task RunDimmerExampleAsync()
+?   ??? static Task RunShutterExampleAsync()
+?   ??? static Task RunClockExampleAsync()
+?   ??? static Task RunThresholdSimulatorExampleAsync()
+?   ??? static Task RunSystemDemoAsync()
+
+### Example Classes
+
+??? ClockDeviceExample (class)
+?   ??? ClockDeviceExample(IKnxService knxService, ILogger logger)
+?   ??? Task RunMasterModeExampleAsync()
+?   ??? Task RunSlaveModeExampleAsync()
+?   ??? Task RunSlaveMasterModeExampleAsync()
+?   ??? Task RunSunPositionExampleAsync()
+?   ??? void Dispose()
+?
+??? ThresholdSimulatorExample (class)
+    ??? ThresholdSimulatorExample(IKnxService knxService, ILogger logger)
+    ??? Task RunBrightnessThresholdExampleAsync()
+    ??? Task RunTemperatureThresholdExampleAsync()
+    ??? Task RunCombinedThresholdExampleAsync()
+    ??? void Dispose()
+
+???????????????????????????????????????????????????????????????????????????????????????????
+
+## PROJECT DEPENDENCIES
+
+KnxMonitor Project Dependencies:
+??? KnxModel (references)
+??? KnxService (references)
+??? Microsoft.Extensions.Logging (NuGet package)
+
+KnxTest Project Dependencies:
+??? KnxModel (references)
+??? KnxService (references)
+??? Microsoft.NET.Test.Sdk (NuGet package)
+??? xunit (NuGet package)
+??? xunit.runner.visualstudio (NuGet package)
+??? FluentAssertions (NuGet package)
+??? Moq (NuGet package)
+??? coverlet.collector (NuGet package)
+
+KnxService Project Dependencies:
+??? KnxModel (references)
+??? Knx.Falcon (NuGet package)
+
+KnxModel Project Dependencies:
+??? Microsoft.Extensions.Logging (NuGet package)
+??? CoordinateSharp (NuGet package)
+
+???????????????????????????????????????????????????????????????????????????????????????????
+
+## DESIGN PATTERNS USED
+
+1. **Factory Pattern**: Used in all Factory classes (LightFactory, DimmerFactory, etc.)
+2. **Helper Pattern**: Device-specific helpers (PercentageControllableDeviceHelper, etc.)
+3. **Strategy Pattern**: Different device behaviors through interface implementations
+4. **Observer Pattern**: KNX message handling through events
+5. **Template Method Pattern**: Base test classes with virtual methods
+6. **Builder Pattern**: KnxAddressConfiguration for creating address objects
+7. **Singleton Pattern**: Static factory configurations
+8. **Decorator Pattern**: Device capabilities through interface composition
+
+???????????????????????????????????????????????????????????????????????????????????????????
+
+This documentation represents the complete class hierarchy and public API for the KnxMonitor solution as of the current snapshot.
+Generated on: {DateTime.Now:yyyy-MM-dd HH:mm:ss}

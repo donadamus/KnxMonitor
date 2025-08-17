@@ -17,7 +17,7 @@ namespace KnxModel
         private readonly ShutterDeviceHelper<ShutterDevice, ShutterAddresses> _shutterMovementHelper;
         private readonly SunProtectionDeviceHelper<ShutterDevice, ShutterAddresses> _sunProtectionHelper;
         private readonly ILogger<ShutterDevice> logger;
-        private float _currentPercentage = 0.0f; // Start fully open
+        internal float _currentPercentage = 0.0f; // Start fully open
         private bool _isActive = false; // Movement status: true = moving, false = stopped
         private bool _isSunProtectionBlocked = false; // Sun protection block status
         

@@ -11,7 +11,7 @@ namespace KnxModel
     public class DimmerDevice : LightDeviceBase<DimmerDevice, DimmerAddresses>, IDimmerDevice, IPercentageLockableDevice
     {
         private readonly ILogger<DimmerDevice> _logger;
-        private float _currentPercentage = -1.0f; // 0% brightness
+        internal float _currentPercentage = -1.0f; // 0% brightness
         private float? _savedPercentage;
         private readonly PercentageControllableDeviceHelper<DimmerDevice, DimmerAddresses> _percentageControllableHelper;
 
@@ -141,6 +141,12 @@ namespace KnxModel
 
 
             await _percentageControllableHelper.AdjustPercentageAsync(increment, timeout);
+        }
+
+        internal void SetPercentageForTest(float currentPercentage)
+        {
+            _currentPercentage = currentPercentage;
+            _lastUpdated = DateTime.Now;
         }
 
         #endregion

@@ -191,13 +191,20 @@ namespace KnxModel
 
             // Convert DateTime to KNX datetime format (8 bytes)
             var timeBytes = ConvertDateTimeToKnxBytes(_currentDateTime);
+            
+            // Debug: Log the exact bytes being sent
+            Console.WriteLine($"ClockDevice {Id} DEBUG: Original DateTime: {_currentDateTime:yyyy-MM-dd HH:mm:ss}");
+            Console.WriteLine($"ClockDevice {Id} DEBUG: KNX bytes: [{string.Join(", ", timeBytes.Select(b => $"0x{b:X2}"))}]");
+            
+            // Verify round-trip conversion
+            var decodedTime = ConvertKnxBytesToDateTime(timeBytes);
+            Console.WriteLine($"ClockDevice {Id} DEBUG: Decoded back to: {decodedTime:yyyy-MM-dd HH:mm:ss}");
+            
             await _knxService.WriteGroupValueAsync(_addresses.TimeControl, timeBytes);
-
+            
             _logger.LogInformation("ClockDevice {DeviceId} time sent: {Time}", Id, _currentDateTime);
             Console.WriteLine($"ClockDevice {Id} time sent: {_currentDateTime:yyyy-MM-dd HH:mm:ss}");
-        }
-
-        public async Task SynchronizeWithSystemTimeAsync()
+        }        public async Task SynchronizeWithSystemTimeAsync()
         {
             _currentDateTime = DateTime.Now;
             _hasValidTime = true;
@@ -375,40 +382,82 @@ namespace KnxModel
 
         private static byte[] ConvertDateTimeToKnxBytes(DateTime dateTime)
         {
-            // Simplified KNX datetime conversion (8 bytes)
-            // In real implementation, this would follow KNX DPT 19.001 format
+            // KNX DPT 19.001 datetime format (8 bytes)
+            // According to KNX specification for date and time transmission
             var bytes = new byte[8];
             
-            // Year (2 bytes)
-            var year = (ushort)dateTime.Year;
-            bytes[0] = (byte)(year >> 8);
-            bytes[1] = (byte)(year & 0xFF);
+            // Byte 0: Year (full year - 1900, so 2025 = 125)
+            // Based on analysis: magistrala uses 0x7D=125 for year 2025
+            bytes[0] = (byte)(dateTime.Year - 1900);
             
-            // Month, Day, Hour, Minute, Second, DayOfWeek
-            bytes[2] = (byte)dateTime.Month;
-            bytes[3] = (byte)dateTime.Day;
-            bytes[4] = (byte)dateTime.Hour;
-            bytes[5] = (byte)dateTime.Minute;
-            bytes[6] = (byte)dateTime.Second;
-            bytes[7] = (byte)dateTime.DayOfWeek;
+            // Byte 1: Month (1-12)
+            bytes[1] = (byte)dateTime.Month;
+            
+            // Byte 2: Day of month (1-31)
+            bytes[2] = (byte)dateTime.Day;
+            
+            // Byte 3: Day of week (1=Monday, 7=Sunday) + Hour (0-23)
+            // KNX uses 1=Monday, .NET uses 0=Sunday, so we need conversion
+            var knxDayOfWeek = dateTime.DayOfWeek == DayOfWeek.Sunday ? 7 : (int)dateTime.DayOfWeek;
+            bytes[3] = (byte)((knxDayOfWeek << 5) | (dateTime.Hour & 0x1F));
+            
+            // Byte 4: Minutes (0-59)
+            bytes[4] = (byte)dateTime.Minute;
+            
+            // Byte 5: Seconds (0-59)
+            bytes[5] = (byte)dateTime.Second;
+            
+            // Byte 6: Fault (F), Working day (WD), No WD (NWD), No year (NY), No date (ND), No DoW (NDOW), No time (NT), Summer time (SUTI)
+            // For basic implementation, set all flags to 0 (valid data)
+            bytes[6] = 0x00;
+            
+            // Byte 7: Clock quality (CLQ)
+            // For basic implementation, set to 0 (clock without external synchronization)
+            bytes[7] = 0x00;
 
             return bytes;
         }
 
         private static DateTime ConvertKnxBytesToDateTime(byte[] bytes)
         {
-            // Simplified KNX datetime conversion from 8 bytes
-            // In real implementation, this would follow KNX DPT 19.001 format
+            // KNX DPT 19.001 datetime conversion from 8 bytes
+            // According to KNX specification for date and time transmission
             if (bytes.Length < 8)
                 throw new ArgumentException("Invalid KNX datetime format - expected 8 bytes");
 
-            var year = (bytes[0] << 8) | bytes[1];
-            var month = bytes[2];
-            var day = bytes[3];
-            var hour = bytes[4];
-            var minute = bytes[5];
-            var second = bytes[6];
-            // bytes[7] is day of week
+            // Byte 0: Year (full year - 1900, so 125 = 2025)
+            // Based on analysis: magistrala uses 0x7D=125 for year 2025
+            var year = 1900 + bytes[0];
+            
+            // Byte 1: Month (1-12)
+            var month = bytes[1];
+            
+            // Byte 2: Day of month (1-31)
+            var day = bytes[2];
+            
+            // Byte 3: Day of week (bits 7-5) + Hour (bits 4-0)
+            var hour = bytes[3] & 0x1F; // Extract bits 4-0 for hour
+            // Day of week is in bits 7-5, but we'll use the calculated day of week from the date
+            
+            // Byte 4: Minutes (0-59)
+            var minute = bytes[4];
+            
+            // Byte 5: Seconds (0-59)
+            var second = bytes[5];
+            
+            // Bytes 6-7: Quality flags - ignored for basic implementation
+
+            // Validate ranges
+            if (month < 1 || month > 12)
+                throw new ArgumentException($"Invalid month: {month}");
+            if (day < 1 || day > 31)
+                throw new ArgumentException($"Invalid day: {day}");
+            if (hour > 23)
+                throw new ArgumentException($"Invalid hour: {hour}");
+            if (minute > 59)
+                throw new ArgumentException($"Invalid minute: {minute}");
+            if (second > 59)
+                throw new ArgumentException($"Invalid second: {second}");
 
             return new DateTime(year, month, day, hour, minute, second);
         }
