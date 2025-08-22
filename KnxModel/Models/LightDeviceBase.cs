@@ -169,7 +169,7 @@ namespace KnxModel
         /// <summary>
         /// Internal method for setting only switch state in unit tests
         /// </summary>
-        internal void SetSwitchStateForTest(Switch switchState)
+        void ISwitchable.SetSwitchForTest(Switch switchState)
         {
             _currentSwitchState = switchState;
             _lastUpdated = DateTime.Now;

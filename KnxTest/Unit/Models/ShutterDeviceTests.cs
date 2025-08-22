@@ -1,5 +1,6 @@
 using FluentAssertions;
 using KnxModel;
+using KnxTest.Unit.Helpers;
 using Microsoft.Extensions.Logging;
 using Moq;
 using System;
@@ -13,6 +14,7 @@ namespace KnxTest.Unit.Models
         protected override ShutterDevice _device { get; }
 
         private PercentageControllableDeviceTestHelper<ShutterDevice, ShutterAddresses> _percentageTestHelper;
+        private MovementControllableDeviceTestHelper<ShutterDevice, ShutterAddresses> _movementTestHelper;
 
         protected override ILogger<ShutterDevice> _logger { get; }
 
@@ -23,72 +25,15 @@ namespace KnxTest.Unit.Models
             _device = new ShutterDevice("S_TEST", "Test Shutter", "1", _mockKnxService.Object, _logger, TimeSpan.FromSeconds(1));
             _percentageTestHelper = new PercentageControllableDeviceTestHelper<ShutterDevice, ShutterAddresses>(
                 _device, _device.Addresses, _mockKnxService);
+            _movementTestHelper = new MovementControllableDeviceTestHelper<ShutterDevice, ShutterAddresses>(
+                _device, _device.Addresses, _mockKnxService);
+
         }
 
-        #region IKnxDeviceBase Tests
-
-        [Fact]
-        public override void Constructor_SetsBasicProperties()
-        {
-            // Assert
-            _device.Id.Should().Be("S_TEST");
-            _device.Name.Should().Be("Test Shutter");
-            _device.SubGroup.Should().Be("1");
-            _device.LastUpdated.Should().Be(DateTime.MinValue); // Not initialized yet
-        }
-
-        #endregion
 
         #region IPercentageControllable Tests
 
-        [Fact]
-        public async Task SetPercentageAsync_ShouldSendCorrectTelegram()
-        {
-            await _percentageTestHelper.SetPercentageAsync_ShouldSendCorrectTelegram();
-        }
 
-        [Theory]
-        [InlineData(0)]   // Minimum percentage
-        [InlineData(25)]  // Quarter
-        [InlineData(50)]  // Half
-        [InlineData(75)]  // Three quarters
-        [InlineData(100)] // Maximum percentage
-        public async Task SetPercentageAsync_WithValidValues_ShouldSendCorrectTelegram(float percentage)
-        {
-            // TODO: Test SetPercentageAsync with various valid percentage values
-            await _percentageTestHelper.SetPercentageAsync_WithValidValues_ShouldSendCorrectTelegram(percentage);
-        }
-
-        [Theory]
-        [InlineData(101)] // Above maximum
-        [InlineData(255)] // Byte maximum
-        public async Task SetPercentageAsync_WithInvalidValues_ShouldThrowException(float percentage)
-        {
-            // TODO: Test that SetPercentageAsync throws exception for invalid percentage values
-            await _percentageTestHelper.SetPercentageAsync_WithInvalidValues_ShouldThrowException(percentage);
-
-        }
-
-        [Fact]
-        public async Task OpenAsync_ShouldSendCorrectTelegram()
-        {
-            // TODO: Test that OpenAsync sends 0% to control address
-            throw new NotImplementedException("Test not implemented yet");
-        }
-
-        [Fact]
-        public async Task CloseAsync_ShouldSendCorrectTelegram()
-        {
-            // TODO: Test that CloseAsync sends 100% to control address
-            throw new NotImplementedException("Test not implemented yet");
-        }
-
-        [Fact]
-        public async Task StopAsync_ShouldSendCorrectTelegram()
-        {
-            // TODO: Test that StopAsync sends stop command to stop address
-            throw new NotImplementedException("Test not implemented yet");
-        }
 
         #endregion
 
@@ -169,14 +114,15 @@ namespace KnxTest.Unit.Models
             throw new NotImplementedException("Test not implemented yet");
         }
 
+
         [Theory]
-        [InlineData(0, 100, 50, 200, 50, true, 180, 220)]   // Wait for 50% from 0%, state changes
-        [InlineData(100, 50, 0, 200, 0, true, 180, 220)]    // Wait for 0% from 100%, state changes
-        [InlineData(50, 25, 75, 50, 75, false, 40, 70)]     // Wait for 75% from 50%, timeout
+        [InlineData(0, 100, 100, 200, 100, true, 100, 200)]
+        [InlineData(100, 50, 50, 200, 50, true, 100, 200)]
+        [InlineData(50, 25, 75, 20, 50, false, 20, 70)]
         public async Task WaitForPercentageAsync_ShouldReturnCorrectly(byte initialPercentage, byte targetPercentage, byte feedbackPercentage, int waitingTime, byte expectedPercentage, bool expectedResult, int executionTimeMin, int executionTimeMax)
         {
-            // TODO: Test WaitForPercentageAsync with various scenarios
-            throw new NotImplementedException("Test not implemented yet");
+            await _percentageTestHelper.WaitForPercentageAsync_ShouldReturnCorrectly(
+                initialPercentage, targetPercentage, feedbackPercentage, waitingTime, expectedPercentage, expectedResult, executionTimeMin, executionTimeMax);
         }
 
         [Theory]

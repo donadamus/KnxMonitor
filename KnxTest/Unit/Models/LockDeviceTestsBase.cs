@@ -1,5 +1,6 @@
 using FluentAssertions;
 using KnxModel;
+using KnxTest.Unit.Base;
 using Microsoft.Extensions.Logging;
 using Moq;
 

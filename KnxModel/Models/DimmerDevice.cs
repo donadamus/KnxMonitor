@@ -143,7 +143,8 @@ namespace KnxModel
             await _percentageControllableHelper.AdjustPercentageAsync(increment, timeout);
         }
 
-        internal void SetPercentageForTest(float currentPercentage)
+
+        void IPercentageControllable.SetPercentageForTest(float currentPercentage)
         {
             _currentPercentage = currentPercentage;
             _lastUpdated = DateTime.Now;

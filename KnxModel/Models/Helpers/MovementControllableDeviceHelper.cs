@@ -6,11 +6,11 @@ namespace KnxModel.Models.Helpers
     /// Helper class for shutter-specific operations (Open, Close, Stop)
     /// Handles movement control commands and activity state management
     /// </summary>
-    public class ShutterDeviceHelper<T, TAddress> : DeviceHelperBase<T, TAddress>
+    public class MovementControllableDeviceHelper<T, TAddress> : DeviceHelperBase<T, TAddress>
         where T : IActivityStatusReadable, ILockableDevice, IKnxDeviceBase
         where TAddress : IMovementControllableAddress
     {
-        public ShutterDeviceHelper(T owner, TAddress addresses, IKnxService knxService, string deviceId, string deviceType,
+        public MovementControllableDeviceHelper(T owner, TAddress addresses, IKnxService knxService, string deviceId, string deviceType,
             ILogger<T> logger, TimeSpan defaultTimeout) 
             : base(owner, addresses, knxService, deviceId, deviceType, logger, defaultTimeout)
         {
@@ -24,12 +24,6 @@ namespace KnxModel.Models.Helpers
         /// </summary>
         internal async Task OpenAsync(TimeSpan? timeout = null)
         {
-            // Unlock before opening if necessary
-            if (owner.CurrentLockState == Lock.On)
-            {
-                await owner.UnlockAsync(timeout);
-            }
-            
             // Send UP command (1) to MovementControl
             // Device will echo on MovementFeedback and send status on MovementStatusFeedback
             _logger.LogInformation("{DeviceType} {DeviceId} sending UP command (1)", _deviceType, _deviceId);
@@ -49,12 +43,6 @@ namespace KnxModel.Models.Helpers
         /// </summary>
         internal async Task CloseAsync(TimeSpan? timeout = null)
         {
-            // Unlock before closing if necessary
-            if (owner.CurrentLockState == Lock.On)
-            {
-                await owner.UnlockAsync(timeout);
-            }
-            
             // Send DOWN command (0) to MovementControl
             // Device will echo on MovementFeedback and send status on MovementStatusFeedback
             _logger.LogInformation("{DeviceType} {DeviceId} sending DOWN command (0)", _deviceType, _deviceId);

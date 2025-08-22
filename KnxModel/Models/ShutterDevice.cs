@@ -14,7 +14,7 @@ namespace KnxModel
     public class ShutterDevice : LockableDeviceBase<ShutterDevice, ShutterAddresses>, IShutterDevice, IPercentageLockableDevice, ISunProtectionThresholdCapableDevice
     {
         private readonly PercentageControllableDeviceHelper<ShutterDevice, ShutterAddresses> _shutterHelper;
-        private readonly ShutterDeviceHelper<ShutterDevice, ShutterAddresses> _shutterMovementHelper;
+        private readonly MovementControllableDeviceHelper<ShutterDevice, ShutterAddresses> _shutterMovementHelper;
         private readonly SunProtectionDeviceHelper<ShutterDevice, ShutterAddresses> _sunProtectionHelper;
         private readonly ILogger<ShutterDevice> logger;
         internal float _currentPercentage = 0.0f; // Start fully open
@@ -41,7 +41,7 @@ namespace KnxModel
                             logger, defaulTimeout
                             );
 
-            _shutterMovementHelper = new ShutterDeviceHelper<ShutterDevice, ShutterAddresses>(this, this.Addresses,
+            _shutterMovementHelper = new MovementControllableDeviceHelper<ShutterDevice, ShutterAddresses>(this, this.Addresses,
                             _knxService, Id, "ShutterDevice",
                             logger, defaulTimeout
                             );
@@ -397,6 +397,11 @@ namespace KnxModel
             return await _sunProtectionHelper.WaitForOutdoorTemperatureThresholdStateAsync(targetState, timeout);
         }
 
+        void IPercentageControllable.SetPercentageForTest(float currentPercentage)
+        {
+            _currentPercentage = currentPercentage;
+            _lastUpdated = DateTime.Now;
+        }
         #endregion
     }
 }

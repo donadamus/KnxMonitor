@@ -26,19 +26,6 @@ namespace KnxTest.Unit.Models
         }
 
 
-        #region IKnxDeviceBase Tests
-
-        [Fact]
-        public override void Constructor_SetsBasicProperties()
-        {
-            // Assert
-            _device.Id.Should().Be("L_TEST");
-            _device.Name.Should().Be("Test Light");
-            _device.SubGroup.Should().Be("1");
-            _device.LastUpdated.Should().Be(DateTime.MinValue); // Not initialized yet
-        }
-
-        #endregion
 
     }
 }

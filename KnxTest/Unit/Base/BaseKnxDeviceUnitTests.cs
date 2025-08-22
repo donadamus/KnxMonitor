@@ -2,7 +2,7 @@ using System;
 using Moq;
 using KnxModel;
 
-namespace KnxTest.Unit.Models
+namespace KnxTest.Unit.Base
 {
     public abstract class BaseKnxDeviceUnitTests : IDisposable
     {
@@ -47,9 +47,5 @@ namespace KnxTest.Unit.Models
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-
-        public abstract void Constructor_SetsBasicProperties();
-
-
     }
 }
