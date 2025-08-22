@@ -161,6 +161,16 @@ namespace KnxTest.Unit.Base
            
         }
 
+        [Theory]
+        [InlineData(Switch.Off)]   // Off
+        [InlineData(Switch.On)]    // On
+        [InlineData(Switch.Unknown)] // Unknown state
+        public void OnPercentageFeedback_ShouldNotAffectSwitchState(Switch switchState)
+        {
+            _percentageTestHelper.OnPercentageFeedback_ShouldNotAffectSwitchState(switchState);
+            
+        }
+
 
     }
 }

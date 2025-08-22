@@ -1,6 +1,7 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using KnxModel;
 using Moq;
+using Xunit;
 
 namespace KnxTest.Unit.Helpers
 {
@@ -96,6 +97,19 @@ namespace KnxTest.Unit.Helpers
         internal void InvalidPercentageFeedback_ShouldBeHandledGracefully(float invalidPercentage)
         {
             _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, new KnxGroupEventArgs(_addresses.PercentageFeedback, new KnxValue(invalidPercentage)));
+        }
+
+        internal void OnPercentageFeedback_ShouldNotAffectSwitchState(Switch switchState)
+        {
+            Skip.If(_device is not ISwitchable, "Device does not implement ISwitchable");
+            
+            var switchableDevice = _device as ISwitchable;
+
+            switchableDevice!.SetSwitchForTest(switchState);
+            ((IPercentageControllable)_device).SetPercentageForTest(20); // Set initial percentage
+            _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, new KnxGroupEventArgs(_addresses.PercentageFeedback, new KnxValue(50)));
+            _device.CurrentPercentage.Should().Be(50);
+            switchableDevice.CurrentSwitchState.Should().Be(switchState);
         }
 
         internal void OnPercentageFeedback_ShouldUpdateState(float expectedPercentage)
