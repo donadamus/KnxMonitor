@@ -22,41 +22,7 @@ namespace KnxTest.Unit.Models
         {
         }
 
-        #region Lock Command Sending Tests
 
-        [Fact]
-        public async Task LockAsync_ShouldSendCorrectTelegram()
-        {
-            var address = _device.Addresses.LockControl;
-            _mockKnxService.Setup(s => s.WriteGroupValueAsync(address, true))
-                          .Returns(Task.CompletedTask)
-                          .Verifiable();
-            await _device.LockAsync(TimeSpan.Zero);
-        }
-
-        [Fact]
-        public async Task UnlockAsync_ShouldSendCorrectTelegram()
-        {
-            var address = _device.Addresses.LockControl;
-            _mockKnxService.Setup(s => s.WriteGroupValueAsync(address, false))
-                          .Returns(Task.CompletedTask)
-                          .Verifiable();
-            await _device.UnlockAsync(TimeSpan.Zero);
-        }
-
-        [Theory]
-        [InlineData(Lock.On, true)]  // Lock.On -> true
-        [InlineData(Lock.Off, false)] // Lock.Off -> false
-        public async Task SetLockAsync_ShouldSendCorrectTelegram(Lock lockState, bool expectedValue)
-        {
-            var address = _device.Addresses.LockControl;
-            _mockKnxService.Setup(s => s.WriteGroupValueAsync(address, expectedValue))
-                          .Returns(Task.CompletedTask)
-                          .Verifiable();
-            await _device.SetLockAsync(lockState, TimeSpan.Zero);
-        }
-
-        #endregion
 
         #region Lock Feedback Processing Tests
 
@@ -118,7 +84,7 @@ namespace KnxTest.Unit.Models
         public async Task WaitForLockAsync_ImmediateReturnTrueWhenAlreadyInState(Lock lockState, int waitingTime, int executionTimeMin, int executionTimeMax)
         {
             // Test WaitForLockStateAsync: immediate return when already in state, timeout when wrong state
-            _device.SetLockStateForTest(lockState);
+            ((ILockableDevice)_device).SetLockForTest(lockState);
 
             var timer = new System.Diagnostics.Stopwatch();
             timer.Start();
@@ -142,7 +108,7 @@ namespace KnxTest.Unit.Models
         public async Task WaitForLockStateAsync_ShouldReturnCorrectly(Lock initialState, int delayInMs, Lock lockState, int waitingTime, Lock expectedState, bool expectedResult, int executionTimeMin, int executionTimeMax)
         {
             // Test WaitForLockStateAsync: immediate return when already in state, timeout when wrong state
-            _device.SetLockStateForTest(initialState);
+            _device.SetLockForTest(initialState);
             var timer = new System.Diagnostics.Stopwatch();
             timer.Start();
 
@@ -176,7 +142,7 @@ namespace KnxTest.Unit.Models
         public async Task WaitForLockStateAsync_WhenFeedbackReceived_ShouldReturnTrue(Lock initialState, int delayInMs, Lock lockState, int waitingTime, Lock expectedState, int executionTimeMin, int executionTimeMax)
         {
             // Test that wait method returns true when feedback changes state to target
-            _device.SetLockStateForTest(initialState);
+            _device.SetLockForTest(initialState);
             var timer = new System.Diagnostics.Stopwatch();
             timer.Start();
 

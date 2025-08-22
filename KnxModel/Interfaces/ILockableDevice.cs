@@ -8,6 +8,8 @@ namespace KnxModel
     /// </summary>
     public interface ILockableDevice :IIdentifable
     {
+
+        internal void SetLockForTest(Lock lockState);
         /// <summary>
         /// Current lock state
         /// </summary>

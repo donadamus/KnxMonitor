@@ -35,7 +35,7 @@ namespace KnxTest.Unit.Models
         public void OnPercentageFeedback_WhenLocked_ShouldStillUpdateState()
         {
             // TODO: Test that percentage feedback updates state even when device is locked
-            _device.SetLockStateForTest(Lock.On);
+            ((ILockableDevice)_device).SetLockForTest(Lock.On);
             _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, new KnxGroupEventArgs(_device.Addresses.PercentageFeedback, new KnxValue(50)));
             _device.CurrentPercentage.Should().Be(50);
         }
@@ -69,11 +69,6 @@ namespace KnxTest.Unit.Models
 
         #endregion
 
-
-        #region Dimmer-Specific Edge Cases Tests
-
-
-        #endregion
 
         #region Interface Composition Tests
 
