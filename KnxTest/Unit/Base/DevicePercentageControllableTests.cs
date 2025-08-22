@@ -1,6 +1,8 @@
+using FluentAssertions;
 using KnxModel;
 using KnxTest.Unit.Helpers;
 using Microsoft.Extensions.Logging;
+using Moq;
 
 namespace KnxTest.Unit.Base
 {
@@ -56,6 +58,109 @@ namespace KnxTest.Unit.Base
             _percentageTestHelper.OnPercentageFeedback_ShouldUpdateState(expectedPercentage);
             
         }
+
+        [Theory]
+        [InlineData(5)]   // Small increment
+        [InlineData(10)]  // Standard increment
+        [InlineData(25)]  // Large increment
+        public async Task IncreasePercentageAsync_ShouldSendCorrectTelegram(float increment)
+        {
+            await _percentageTestHelper.IncreasePercentageAsync_ShouldSendCorrectTelegram(increment);
+        }
+
+        [Theory]
+        [InlineData(-5)]   // Small decrement
+        [InlineData(-10)]  // Standard decrement
+        [InlineData(-25)]  // Large decrement
+        public async Task DecreasePercentageAsync_ShouldSendCorrectTelegram(float decrement)
+        {
+            await _percentageTestHelper.DecreasePercentageAsync_ShouldSendCorrectTelegram(decrement);
+            
+        }
+
+        [Fact]
+        public async Task ReadPercentageAsync_ShouldRequestCorrectAddress()
+        {
+            await _percentageTestHelper.ReadPercentageAsync_ShouldRequestCorrectAddress();
+            
+        }
+
+        [Theory]
+        [InlineData(0)]   // Off
+        [InlineData(50)]  // Half brightness
+        [InlineData(100)] // Full brightness
+        public async Task ReadPercentageAsync_ShouldReturnCorrectValue(byte expectedPercentage)
+        {
+            await _percentageTestHelper.ReadPercentageAsync_ShouldReturnCorrectValue(expectedPercentage);
+            
+        }
+
+
+        [Fact]
+        public async Task ReadPercentageAsync_WhenKnxServiceThrows_ShouldPropagateException()
+        {
+            await _percentageTestHelper.ReadPercentageAsync_WhenKnxServiceThrows_ShouldPropagateException();
+        }
+
+        [Theory]
+        [InlineData(0, 100, 0, 50)]   // Wait for 0% (off)
+        [InlineData(50, 200, 0, 50)]  // Wait for 50% with timeout
+        [InlineData(100, 0, 0, 50)]   // Wait for 100% (full brightness)
+        public async Task WaitForPercentageAsync_ImmediateReturnTrueWhenAlreadyInState(float percentage, int waitingTime, int executionTimeMin, int executionTimeMax)
+        {
+            await _percentageTestHelper.WaitForPercentageAsync_ImmediateReturnTrueWhenAlreadyInState(percentage, waitingTime, executionTimeMin, executionTimeMax);
+           
+        }
+
+        [Theory]
+        [InlineData(0, 100, 100, 200, 100, true, 100, 200)]
+        [InlineData(100, 50, 50, 200, 50, true, 100, 200)]
+        [InlineData(50, 25, 75, 20, 50, false, 20, 70)]
+        public async Task WaitForPercentageAsync_ShouldReturnCorrectly(byte initialPercentage, byte targetPercentage, byte feedbackPercentage, int waitingTime, byte expectedPercentage, bool expectedResult, int executionTimeMin, int executionTimeMax)
+        {
+            await _percentageTestHelper.WaitForPercentageAsync_ShouldReturnCorrectly(
+                initialPercentage, targetPercentage, feedbackPercentage, waitingTime, expectedPercentage, expectedResult, executionTimeMin, executionTimeMax);
+        }
+
+        [Theory]
+        [InlineData(0, 50, 50, 200, 50, 100, 200)]     // Wait for 50% from 0%
+        [InlineData(100, 0, 75, 200, 0, 100, 225)]     // Wait for 0% from 100%
+        [InlineData(50, 25, 100, 200, 25, 100, 250)]   // Wait for 25% from 50%
+        public async Task WaitForPercentageAsync_WhenFeedbackReceived_ShouldReturnTrue(byte initialPercentage, byte targetPercentage, int delayInMs, int waitingTime, byte expectedPercentage, int executionTimeMin, int executionTimeMax)
+        {
+            await _percentageTestHelper.WaitForPercentageAsync_WhenFeedbackReceived_ShouldReturnTrue(
+                initialPercentage, targetPercentage, delayInMs, waitingTime, expectedPercentage, executionTimeMin, executionTimeMax);
+            
+        }
+
+        [Theory]
+        [InlineData(95, 5, 100)] // Increase to max
+        [InlineData(5, 10, 15)]  // Normal increase
+        [InlineData(90, 20, 100)] // Increase with clamping to max
+        public async Task IncreasePercentageAsync_ShouldNotExceedMaximum(float currentPercentage, float increment, float expectedResult)
+        {
+            await _percentageTestHelper.IncreasePercentageAsync_ShouldNotExceedMaximum(currentPercentage, increment, expectedResult);
+        }
+
+        [Theory]
+        [InlineData(5, -5, 0)]   // Decrease to min
+        [InlineData(15, -10, 5)] // Normal decrease
+        [InlineData(10, -20, 0)] // Decrease with clamping to min
+        public async Task DecreasePercentageAsync_ShouldNotGoBelowMinimum(float currentPercentage, float decrement, float expectedResult)
+        {
+            await _percentageTestHelper.DecreasePercentageAsync_ShouldNotGoBelowMinimum(currentPercentage, decrement, expectedResult);
+            
+        }
+
+        [Theory]
+        [InlineData(150)] // Above 100%
+        [InlineData(200)] // Way above 100%
+        public void InvalidPercentageFeedback_ShouldBeHandledGracefully(float invalidPercentage)
+        {
+            _percentageTestHelper.InvalidPercentageFeedback_ShouldBeHandledGracefully(invalidPercentage);
+           
+        }
+
 
     }
 }

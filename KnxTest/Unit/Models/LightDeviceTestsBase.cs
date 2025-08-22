@@ -72,19 +72,6 @@ namespace KnxTest.Unit.Models
 
         #region Feedback Processing Tests
 
-        [Theory]
-        [InlineData(Switch.On, true)]  // Switch.On -> true
-        [InlineData(Switch.Off, false)] // Switch.Off -> false
-        public void OnSwitchFeedback_ShouldUpdateState(Switch expectedSwitchState, bool feedback)
-        {
-            var feedbackAddress = _device.Addresses.Feedback;
-            var feedbackArgs = new KnxGroupEventArgs(feedbackAddress, new KnxValue(feedback));
-            // Act
-            _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, feedbackArgs);
-
-            // Assert
-            _device.CurrentSwitchState.Should().Be(expectedSwitchState);
-        }
 
         [Fact]
         public void OnSwitchFeedback_WhenLocked_ShouldStillUpdateState()

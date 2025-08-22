@@ -37,82 +37,8 @@ namespace KnxTest.Unit.Models
 
         #endregion
 
-        #region Feedback Processing Tests
-
-        [Theory]
-        [InlineData(0)]   // Fully open
-        [InlineData(25)]  // Quarter closed
-        [InlineData(50)]  // Half closed
-        [InlineData(75)]  // Three quarters closed
-        [InlineData(100)] // Fully closed
-        public void OnPercentageFeedback_ShouldUpdateState(byte expectedPercentage)
-        {
-            // TODO: Test that percentage feedback updates CurrentPercentage property
-            throw new NotImplementedException("Test not implemented yet");
-        }
-
-        [Fact]
-        public void OnPercentageFeedback_WhenLocked_ShouldStillUpdateState()
-        {
-            // TODO: Test that percentage feedback updates state even when device is locked
-            throw new NotImplementedException("Test not implemented yet");
-        }
-
-        #endregion
-
-        #region State Reading Tests
-
-        [Fact]
-        public async Task ReadPercentageAsync_ShouldRequestCorrectAddress()
-        {
-            // TODO: Test that ReadPercentageAsync calls RequestGroupValue with percentage feedback address
-            throw new NotImplementedException("Test not implemented yet");
-        }
-
-        [Theory]
-        [InlineData(0)]   // Fully open
-        [InlineData(50)]  // Half position
-        [InlineData(100)] // Fully closed
-        public async Task ReadPercentageAsync_ShouldReturnCorrectValue(byte expectedPercentage)
-        {
-            // TODO: Test ReadPercentageAsync returns correct percentage value
-            throw new NotImplementedException("Test not implemented yet");
-        }
-
-        [Fact]
-        public async Task ReadPercentageAsync_ShouldUpdateCurrentPercentage()
-        {
-            // TODO: Test that ReadPercentageAsync updates CurrentPercentage property
-            throw new NotImplementedException("Test not implemented yet");
-        }
-
-        [Fact]
-        public async Task ReadPercentageAsync_ShouldUpdateLastUpdated()
-        {
-            // TODO: Test that ReadPercentageAsync updates LastUpdated timestamp
-            throw new NotImplementedException("Test not implemented yet");
-        }
-
-        [Fact]
-        public async Task ReadPercentageAsync_WhenKnxServiceThrows_ShouldPropagateException()
-        {
-            // TODO: Test that ReadPercentageAsync propagates KNX service exceptions
-            throw new NotImplementedException("Test not implemented yet");
-        }
-
-        #endregion
 
         #region Wait Methods Tests
-
-        [Theory]
-        [InlineData(0, 100, 0, 50)]   // Wait for 0% (open)
-        [InlineData(50, 200, 0, 50)]  // Wait for 50% with timeout
-        [InlineData(100, 0, 0, 50)]   // Wait for 100% (closed)
-        public async Task WaitForPercentageAsync_ImmediateReturnTrueWhenAlreadyInState(byte percentage, int waitingTime, int executionTimeMin, int executionTimeMax)
-        {
-            // TODO: Test WaitForPercentageAsync: immediate return when already at target percentage
-            throw new NotImplementedException("Test not implemented yet");
-        }
 
 
         [Theory]

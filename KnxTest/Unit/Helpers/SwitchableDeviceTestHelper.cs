@@ -22,6 +22,17 @@ namespace KnxTest.Unit.Helpers
             _mockKnxService = mockKnxService;
         }
 
+        internal void OnSwitchFeedback_ShouldUpdateState(Switch expectedSwitchState, bool feedback)
+        {
+            var feedbackAddress = _addresses.Feedback;
+            var feedbackArgs = new KnxGroupEventArgs(feedbackAddress, new KnxValue(feedback));
+            // Act
+            _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, feedbackArgs);
+
+            // Assert
+            _device.CurrentSwitchState.Should().Be(expectedSwitchState);
+        }
+
         internal async Task ReadSwitchStateAsync_ShouldRequestCorrectAddress()
         {
             var address = _addresses.Feedback;

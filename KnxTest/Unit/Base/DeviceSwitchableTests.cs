@@ -99,5 +99,15 @@ namespace KnxTest.Unit.Base
         }
 
         #endregion
+
+        [Theory]
+        [InlineData(Switch.On, true)]  // Switch.On -> true
+        [InlineData(Switch.Off, false)] // Switch.Off -> false
+        public void OnSwitchFeedback_ShouldUpdateState(Switch expectedSwitchState, bool feedback)
+        {
+            _switchableTestHelper.OnSwitchFeedback_ShouldUpdateState(expectedSwitchState, feedback);
+            
+        }
+
     }
 }
