@@ -33,6 +33,21 @@ namespace KnxTest.Unit.Base
             await _movementTestHelper.StopAsync_ShouldSendCorrectTelegram();
         }
 
+        [Fact]
+        public void Device_ImplementsAllRequiredInterfaces()
+        {
+            _movementTestHelper.Device_ImplementsAllRequiredInterfaces();
+           
+        }
+
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task InitializeAsync_UpdatesLastUpdatedAndStates(bool movementActive)
+        {
+            await _movementTestHelper.InitializeAsync_UpdatesLastUpdatedAndStates(movementActive);
+        }
 
     }
 }

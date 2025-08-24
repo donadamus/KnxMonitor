@@ -19,6 +19,9 @@ namespace KnxModel
     {
 
         internal void SetSwitchForTest(Switch currentSwitchState);
+        internal void SetSavedSwitchForTest(Switch currentSwitchState);
+        internal Switch? SavedSwitchState { get; }
+
         /// <summary>
         /// Current switch state
         /// </summary>

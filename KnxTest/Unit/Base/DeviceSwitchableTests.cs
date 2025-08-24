@@ -109,5 +109,53 @@ namespace KnxTest.Unit.Base
             
         }
 
+        [Theory]
+        [InlineData(Switch.On)] // Switch.On, Lock.Unknown
+        [InlineData(Switch.Off)] // Switch.Off, Lock.Unknown
+        [InlineData(Switch.Unknown)] // Unknown states
+        public void OnAnyFeedbackToUnknownAddress_ShouldProcessCorrectlyAndDoesNotChangeState(Switch currentSwitchState)
+        {
+            _switchableTestHelper.OnAnyFeedbackToUnknownAddress_ShouldProcessCorrectlyAndDoesNotChangeState(currentSwitchState);
+        }
+
+        [Theory]
+        [InlineData(Switch.On)]
+        [InlineData(Switch.Off)]
+        [InlineData(Switch.Unknown)]
+
+        public void SaveCurrentState_ShouldStoreCurrentValues(Switch switchState)
+        {
+            _switchableTestHelper.SaveCurrentState_ShouldStoreCurrentValues(switchState);
+        }
+
+        [Fact]
+        public void Device_ImplementsAllRequiredInterfaces()
+        {
+            _switchableTestHelper.Device_ImplementsAllRequiredInterfaces();
+        }
+
+        [Theory]
+        [InlineData(Switch.On, Switch.Off)]
+        [InlineData(Switch.Off, Switch.On)]
+        [InlineData(Switch.On, Switch.On)]
+        [InlineData(Switch.Off, Switch.Off)]
+        [InlineData(Switch.Unknown, Switch.On)]
+        [InlineData(Switch.Unknown, Switch.Off)]
+        public async Task RestoreSavedStateAsync_ShouldSendCorrectTelegrams(Switch initialSwitchState, Switch switchState)
+        {
+            await _switchableTestHelper.RestoreSavedStateAsync_ShouldSendCorrectTelegrams(initialSwitchState, switchState);
+        }
+
+
+        [Theory]
+        [InlineData(Switch.On)]
+        [InlineData(Switch.Off)]
+        public async Task InitializeAsync_UpdatesLastUpdatedAndStates(Switch switchState)
+        {
+            await _switchableTestHelper.InitializeAsync_UpdatesLastUpdatedAndStates(switchState);
+            
+        }
+
+
     }
 }

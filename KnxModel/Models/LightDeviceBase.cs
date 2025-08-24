@@ -156,15 +156,11 @@ namespace KnxModel
             _lastUpdated = DateTime.Now;
         }
 
-        /// <summary>
-        /// Internal method for setting device state in unit tests
-        /// Bypasses KNX communication for testing scenarios
-        /// </summary>
-        internal void SetSavedStateForTest(Switch switchState, Lock lockState)
+        void ISwitchable.SetSavedSwitchForTest(Switch switchState)
         {
             _savedSwitchState = switchState;
-            _savedLockState = lockState;
         }
+
 
         /// <summary>
         /// Internal method for setting only switch state in unit tests
@@ -178,7 +174,7 @@ namespace KnxModel
         /// <summary>
         /// Internal property for accessing saved switch state in unit tests
         /// </summary>
-        internal Switch? SavedSwitchState => _savedSwitchState;
+        Switch? ISwitchable.SavedSwitchState => _savedSwitchState;
 
         /// <summary>
         /// Internal property for accessing saved lock state in unit tests

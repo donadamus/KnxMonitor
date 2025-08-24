@@ -171,6 +171,56 @@ namespace KnxTest.Unit.Base
             
         }
 
+        [Theory]
+        [InlineData(0)]
+        [InlineData(20)]
+        public void OnAnyFeedbackToUnknownAddress_ShouldProcessCorrectlyAndDoesNotChangeState(float percentage)
+        {
+            _percentageTestHelper.OnAnyFeedbackToUnknownAddress_ShouldProcessCorrectlyAndDoesNotChangeState(percentage);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(20)]
+        public void SaveCurrentState_ShouldStoreCurrentValues(float percentage)
+        {
+            _percentageTestHelper.SaveCurrentState_ShouldStoreCurrentValues(percentage);
+        }
+
+        [Fact]
+        public void Device_ImplementsAllRequiredInterfaces()
+        {
+            _percentageTestHelper.Device_ImplementsAllRequiredInterfaces();
+
+        }
+
+        [Theory]
+        [InlineData(30, 60)]
+        [InlineData(70, 40)]
+        [InlineData(100,100)]
+        [InlineData(0,0)]
+        [InlineData(0, 100)]
+        [InlineData(100, 0)]
+        public async Task RestoreSavedStateAsync_ShouldSendCorrectTelegrams(float initialPercentage, float percentage)
+        {
+
+            await _percentageTestHelper.RestoreSavedStateAsync_ShouldSendCorrectTelegrams(initialPercentage, percentage);
+            
+        }
+
+
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(20)]
+        [InlineData(60)]
+        [InlineData(100)]
+
+        public async Task InitializeAsync_UpdatesLastUpdatedAndStates(float percentage)
+        {
+           await _percentageTestHelper.InitializeAsync_UpdatesLastUpdatedAndStates(percentage);
+        }
+
 
     }
 }

@@ -29,6 +29,7 @@ namespace KnxModel
         // Saved state for testing
         private float? _savedPercentage;
         private bool? _savedSunProtectionBlocked;
+        float? IPercentageControllable.SavedPercentage => _savedPercentage;
 
         /// <summary>
         /// Convenience constructor that automatically creates addresses based on subGroup
@@ -401,6 +402,10 @@ namespace KnxModel
         {
             _currentPercentage = currentPercentage;
             _lastUpdated = DateTime.Now;
+        }
+        void IPercentageControllable.SetSavedPercentageForTest(float currentPercentage)
+        {
+            _savedPercentage = currentPercentage;
         }
         #endregion
     }

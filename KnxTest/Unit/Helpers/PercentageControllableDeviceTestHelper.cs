@@ -65,6 +65,13 @@ namespace KnxTest.Unit.Helpers
             await _device.AdjustPercentageAsync(decrement, TimeSpan.Zero);
         }
 
+        internal void Device_ImplementsAllRequiredInterfaces()
+        {
+            // Assert
+            _device.Should().BeAssignableTo<IKnxDeviceBase>();
+            _device.Should().BeAssignableTo<IPercentageControllable>();
+        }
+
         internal async Task IncreasePercentageAsync_ShouldNotExceedMaximum(float currentPercentage, float increment, float expectedResult)
         {
             _mockKnxService.Setup(s => s.WriteGroupValueAsync(_addresses.PercentageControl, expectedResult))
@@ -94,9 +101,41 @@ namespace KnxTest.Unit.Helpers
 
         }
 
+        internal async Task InitializeAsync_UpdatesLastUpdatedAndStates(float percentage)
+        {
+            // Arrange
+            _mockKnxService.Setup(s => s.RequestGroupValue<float>(_addresses.PercentageFeedback))
+                          .ReturnsAsync(percentage)
+                          .Verifiable();
+            
+            // Act
+            await _device.InitializeAsync();
+
+            // Assert
+            _device.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(1));
+            _device.CurrentPercentage.Should().Be(percentage);
+        }
+
         internal void InvalidPercentageFeedback_ShouldBeHandledGracefully(float invalidPercentage)
         {
             _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, new KnxGroupEventArgs(_addresses.PercentageFeedback, new KnxValue(invalidPercentage)));
+        }
+
+        internal void OnAnyFeedbackToUnknownAddress_ShouldProcessCorrectlyAndDoesNotChangeState(float percentage)
+        {
+            _device.SetPercentageForTest(percentage);
+            var currentDate = _device.LastUpdated;
+            var unknownAddress = "9/9/9";
+            var feedbackArgsTrue = new KnxGroupEventArgs(unknownAddress, new KnxValue(true));
+            var feedbackArgsFalse = new KnxGroupEventArgs(unknownAddress, new KnxValue(false));
+            // Act
+            _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, feedbackArgsTrue);
+            _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, feedbackArgsFalse);
+            // Assert
+            // Ensure no state change for unknown address
+            _device.CurrentPercentage.Should().Be(percentage);
+            _device.LastUpdated.Should().Be(currentDate, "LastUpdated should not change on unknown feedback");
+
         }
 
         internal void OnPercentageFeedback_ShouldNotAffectSwitchState(Switch switchState)
@@ -160,6 +199,35 @@ namespace KnxTest.Unit.Helpers
             await _device.Invoking(d => d.ReadPercentageAsync())
                         .Should().ThrowAsync<InvalidOperationException>()
                         .WithMessage("KNX service error");
+
+        }
+
+        internal async Task RestoreSavedStateAsync_ShouldSendCorrectTelegrams(float initialPercentage, float percentage)
+        {
+            // Arrange
+            _device.SetSavedPercentageForTest(initialPercentage);
+            _device.SetPercentageForTest(percentage);
+
+            if (initialPercentage != percentage)
+            {
+                _mockKnxService.Setup(s => s.WriteGroupValueAsync(_addresses.PercentageControl, initialPercentage)).Returns(Task.CompletedTask).Verifiable();
+            }
+
+            // Act
+            await _device.RestoreSavedStateAsync(TimeSpan.Zero);
+        }
+
+        internal void SaveCurrentState_ShouldStoreCurrentValues(float percentage)
+        {
+            // Arrange
+            _device.SetPercentageForTest(percentage);
+
+            // Act
+            _device.SaveCurrentState();
+
+            // Assert
+            _device.SavedPercentage.Should().Be(percentage, "Saved percentage should match current state");
+            _device.CurrentPercentage.Should().Be(percentage, "Current percentage should remain unchanged");
 
         }
 

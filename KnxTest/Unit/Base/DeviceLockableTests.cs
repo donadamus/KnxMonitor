@@ -114,7 +114,54 @@ namespace KnxTest.Unit.Base
             
         }
 
+
         #endregion
+
+        [Theory]
+        [InlineData(Lock.Off)]
+        [InlineData(Lock.On)]
+        [InlineData(Lock.Unknown)]
+        public void OnAnyFeedbackToUnknownAddress_ShouldProcessCorrectlyAndDoesNotChangeState(Lock lockState)
+        {
+            _lockableTestHelper.OnAnyFeedbackToUnknownAddress_ShouldProcessCorrectlyAndDoesNotChangeState(lockState);
+        }
+
+        [Theory]
+        [InlineData(Lock.Off)]
+        [InlineData(Lock.On)]
+        [InlineData(Lock.Unknown)]
+
+        public void SaveCurrentState_ShouldStoreCurrentValues(Lock lockState)
+        {
+            _lockableTestHelper.SaveCurrentState_ShouldStoreCurrentValues(lockState);
+        }
+
+        [Fact]
+        public void Device_ImplementsAllRequiredInterfaces()
+        {
+            _lockableTestHelper.Device_ImplementsAllRequiredInterfaces();
+        }
+
+        [Theory]
+        [InlineData(Lock.On, Lock.Off)]
+        [InlineData(Lock.Off, Lock.On)]
+        [InlineData(Lock.On, Lock.On)]
+        [InlineData(Lock.Off, Lock.Off)]
+        [InlineData(Lock.Unknown, Lock.On)]
+        [InlineData(Lock.Unknown, Lock.Off)]
+        public async Task RestoreSavedStateAsync_ShouldSendCorrectTelegrams(Lock initialLockState, Lock lockState)
+        {
+            await _lockableTestHelper.RestoreSavedStateAsync_ShouldSendCorrectTelegrams(initialLockState, lockState);
+        }
+
+
+        [Theory]
+        [InlineData(Lock.On)]
+        [InlineData(Lock.Off)]
+        public async Task InitializeAsync_UpdatesLastUpdatedAndStates(Lock lockState)
+        {
+            await _lockableTestHelper.InitializeAsync_UpdatesLastUpdatedAndStates(lockState);
+        }
 
     }
 }

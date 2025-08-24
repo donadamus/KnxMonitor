@@ -24,6 +24,7 @@ namespace KnxModel
         internal TimeSpan _defaulTimeout;
         public TAddressess Addresses { get; }
 
+        Lock? ILockableDevice.SavedLockState => _savedLockState;
 
         private LockableDeviceHelper<TDevice, TAddressess>? _lockableHelper;
 
@@ -140,6 +141,10 @@ namespace KnxModel
         {
             _currentLockState = lockState;
             _lastUpdated = DateTime.Now;
+        }
+        void ILockableDevice.SetSavedLockForTest(Lock lockState)
+        {
+            _savedLockState = lockState;
         }
 
         #endregion

@@ -22,6 +22,44 @@ namespace KnxTest.Unit.Helpers
             _mockKnxService = mockKnxService;
         }
 
+        internal void Device_ImplementsAllRequiredInterfaces()
+        {
+            _device.Should().BeAssignableTo<IKnxDeviceBase>();
+            _device.Should().BeAssignableTo<ISwitchable>();
+        }
+
+        internal async Task InitializeAsync_UpdatesLastUpdatedAndStates(Switch switchState)
+        {
+            // Arrange
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_addresses.Feedback))
+                          .ReturnsAsync(switchState == Switch.On)
+                          .Verifiable();
+            // Act
+            await _device.InitializeAsync();
+
+            // Assert
+            _device.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(1));
+            _device.CurrentSwitchState.Should().Be(switchState);
+        }
+
+        internal void OnAnyFeedbackToUnknownAddress_ShouldProcessCorrectlyAndDoesNotChangeState(Switch currentSwitchState)
+        {
+            // Arrange
+            _device.SetSwitchForTest(currentSwitchState);
+            var currentDate = _device.LastUpdated;
+            var unknownAddress = "9/9/9";
+            var feedbackArgsTrue = new KnxGroupEventArgs(unknownAddress, new KnxValue(true));
+            var feedbackArgsFalse = new KnxGroupEventArgs(unknownAddress, new KnxValue(false));
+            // Act
+            _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, feedbackArgsTrue);
+            _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, feedbackArgsFalse);
+            // Assert
+            // Ensure no state change for unknown address
+            _device.CurrentSwitchState.Should().Be(currentSwitchState);
+            _device.LastUpdated.Should().Be(currentDate, "LastUpdated should not change on unknown feedback");
+
+        }
+
         internal void OnSwitchFeedback_ShouldUpdateState(Switch expectedSwitchState, bool feedback)
         {
             var feedbackAddress = _addresses.Feedback;
@@ -51,6 +89,36 @@ namespace KnxTest.Unit.Helpers
                           .Verifiable(); // Simulate switch feedback
             var result = await _device.ReadSwitchStateAsync();
             result.Should().Be(switchState, $"ReadSwitchStateAsync should return {switchState} for {value} feedback");
+
+        }
+
+        internal async Task RestoreSavedStateAsync_ShouldSendCorrectTelegrams(Switch initialSwitchState, Switch switchState)
+        {
+            _device.SetSavedSwitchForTest(initialSwitchState);
+            _device.SetSwitchForTest(switchState);
+
+            if (initialSwitchState != switchState && initialSwitchState != Switch.Unknown)
+            {
+                _mockKnxService.Setup(s => s.WriteGroupValueAsync(_addresses.Control, initialSwitchState == Switch.On)).Returns(Task.CompletedTask).Verifiable();
+            }
+
+            // Act
+            await _device.RestoreSavedStateAsync(TimeSpan.Zero);
+
+
+        }
+
+        internal void SaveCurrentState_ShouldStoreCurrentValues(Switch switchState)
+        {
+            // Arrange
+            _device.SetSwitchForTest(switchState);
+
+            // Act
+            _device.SaveCurrentState();
+
+            // Assert
+            _device.SavedSwitchState.Should().Be(switchState, "Saved switch state should match current state");
+            _device.CurrentSwitchState.Should().Be(switchState, "Current switch state should remain unchanged");
 
         }
 

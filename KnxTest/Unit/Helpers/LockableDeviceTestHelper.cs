@@ -22,6 +22,28 @@ namespace KnxTest.Unit.Helpers
             _mockKnxService = mockKnxService;
         }
 
+        internal void Device_ImplementsAllRequiredInterfaces()
+        {
+            _device.Should().BeAssignableTo<IKnxDeviceBase>();
+            _device.Should().BeAssignableTo<ILockableDevice>();
+        }
+
+        internal async Task InitializeAsync_UpdatesLastUpdatedAndStates(Lock lockState)
+        {
+            // Arrange
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_addresses.LockFeedback))
+                          .ReturnsAsync(lockState == Lock.On)
+                          .Verifiable();
+
+            // Act
+            await _device.InitializeAsync();
+
+            // Assert
+            _device.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(1));
+            _device.CurrentLockState.Should().Be(lockState);
+
+        }
+
         internal async Task LockAsync_ShouldSendCorrectTelegram()
         {
             var address = _addresses.LockControl;
@@ -29,6 +51,24 @@ namespace KnxTest.Unit.Helpers
                           .Returns(Task.CompletedTask)
                           .Verifiable();
             await _device.LockAsync(TimeSpan.Zero);
+
+        }
+
+        internal void OnAnyFeedbackToUnknownAddress_ShouldProcessCorrectlyAndDoesNotChangeState(Lock lockState)
+        {
+            // Arrange
+            _device.SetLockForTest(lockState);
+            var currentDate = _device.LastUpdated;
+            var unknownAddress = "9/9/9";
+            var feedbackArgsTrue = new KnxGroupEventArgs(unknownAddress, new KnxValue(true));
+            var feedbackArgsFalse = new KnxGroupEventArgs(unknownAddress, new KnxValue(false));
+            // Act
+            _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, feedbackArgsTrue);
+            _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, feedbackArgsFalse);
+            // Assert
+            // Ensure no state change for unknown address
+            _device.CurrentLockState.Should().Be(lockState);
+            _device.LastUpdated.Should().Be(currentDate, "LastUpdated should not change on unknown feedback");
 
         }
 
@@ -62,6 +102,36 @@ namespace KnxTest.Unit.Helpers
                           .Verifiable(); // Simulate lock feedback
             var result = await _device.ReadLockStateAsync();
             result.Should().Be(lockState, $"ReadLockStateAsync should return {lockState} for {value} feedback");
+        }
+
+        internal async Task RestoreSavedStateAsync_ShouldSendCorrectTelegrams(Lock initialLockState, Lock lockState)
+        {
+            _device.SetSavedLockForTest(initialLockState);
+            _device.SetLockForTest(lockState);
+            
+            if (initialLockState != lockState && initialLockState != Lock.Unknown)
+            {
+                _mockKnxService.Setup(s => s.WriteGroupValueAsync(_addresses.LockControl, initialLockState == Lock.On)).Returns(Task.CompletedTask).Verifiable();
+            }
+
+            // Act
+            await _device.RestoreSavedStateAsync(TimeSpan.Zero);
+
+        }
+
+        internal void SaveCurrentState_ShouldStoreCurrentValues(Lock lockState)
+        {
+            // Arrange
+            _device.SetLockForTest(lockState);
+
+            // Act
+            _device.SaveCurrentState();
+
+            // Assert
+            _device.SavedLockState.Should().Be(lockState, "Saved lock state should match current state");
+            _device.CurrentLockState.Should().Be(lockState, "Current lock state should remain unchanged");
+
+
         }
 
         internal async Task SetLockAsync_ShouldSendCorrectTelegram(Lock lockState, bool expectedValue)

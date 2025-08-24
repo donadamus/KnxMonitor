@@ -35,6 +35,8 @@ namespace KnxModel
     {
 
         internal void SetPercentageForTest(float currentPercentage);
+        internal void SetSavedPercentageForTest(float currentPercentage);
+        internal float? SavedPercentage { get; }
         /// <summary>
         /// Current percentage value (0.0-100.0)
         /// </summary>

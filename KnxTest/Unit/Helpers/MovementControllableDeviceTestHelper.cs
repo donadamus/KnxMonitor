@@ -1,3 +1,4 @@
+using FluentAssertions;
 using KnxModel;
 using Moq;
 
@@ -30,6 +31,29 @@ namespace KnxTest.Unit.Helpers
                           .Verifiable();
             // Act
             await _device.CloseAsync(TimeSpan.Zero);
+        }
+
+        internal void Device_ImplementsAllRequiredInterfaces()
+        {
+            // Assert
+            _device.Should().BeAssignableTo<IKnxDeviceBase>();
+            _device.Should().BeAssignableTo<IMovementControllable>();
+        }
+
+        internal async Task InitializeAsync_UpdatesLastUpdatedAndStates(bool movementActive)
+        {
+            //// Arrange
+            //_mockKnxService.Setup(s => s.RequestGroupValue<bool>(_addresses.MovementStatusFeedback))
+            //              .ReturnsAsync(movementActive)
+            //              .Verifiable();
+            //// Act
+            //await _device.InitializeAsync();
+
+            //// Assert
+            //_device.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(1));
+            //_device..Should().Be(lockState);
+            throw new NotImplementedException("Implement InitializeAsync_UpdatesLastUpdatedAndStates");
+
         }
 
         internal async Task OpenAsync_ShouldSendCorrectTelegram()

@@ -28,11 +28,6 @@ namespace KnxModel.Models.Helpers
             // Device will echo on MovementFeedback and send status on MovementStatusFeedback
             _logger.LogInformation("{DeviceType} {DeviceId} sending UP command (1)", _deviceType, _deviceId);
             await _knxService.WriteGroupValueAsync(addresses.MovementControl, true);
-            
-            // Update last updated through dynamic access
-            var deviceBase = owner as dynamic;
-            deviceBase._lastUpdated = DateTime.Now;
-            
             _logger.LogInformation("{DeviceType} {DeviceId} UP command sent", _deviceType, _deviceId);
         }
 
@@ -48,10 +43,6 @@ namespace KnxModel.Models.Helpers
             _logger.LogInformation("{DeviceType} {DeviceId} sending DOWN command (0)", _deviceType, _deviceId);
             await _knxService.WriteGroupValueAsync(addresses.MovementControl, false);
             
-            // Update last updated through dynamic access
-            var deviceBase = owner as dynamic;
-            deviceBase._lastUpdated = DateTime.Now;
-            
             _logger.LogInformation("{DeviceType} {DeviceId} DOWN command sent", _deviceType, _deviceId);
         }
 
@@ -65,10 +56,6 @@ namespace KnxModel.Models.Helpers
             // Device will respond with movement status on MovementStatusFeedback
             _logger.LogInformation("{DeviceType} {DeviceId} sending STOP trigger", _deviceType, _deviceId);
             await _knxService.WriteGroupValueAsync(addresses.StopControl, true);
-            
-            // Update last updated through dynamic access
-            var deviceBase = owner as dynamic;
-            deviceBase._lastUpdated = DateTime.Now;
             
             _logger.LogInformation("{DeviceType} {DeviceId} STOP trigger sent", _deviceType, _deviceId);
         }

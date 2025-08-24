@@ -13,6 +13,9 @@ namespace KnxModel
         private readonly ILogger<DimmerDevice> _logger;
         internal float _currentPercentage = -1.0f; // 0% brightness
         private float? _savedPercentage;
+
+        float? IPercentageControllable.SavedPercentage => _savedPercentage;
+
         private readonly PercentageControllableDeviceHelper<DimmerDevice, DimmerAddresses> _percentageControllableHelper;
 
         public DimmerDevice(string id, string name, string subGroup, IKnxService knxService, ILogger<DimmerDevice> logger, TimeSpan defaulTimeout)
@@ -106,40 +109,8 @@ namespace KnxModel
         {
             return await _percentageControllableHelper.WaitForPercentageAsync(targetPercentage, tolerance, timeout);
         }
-
-        public async Task FadeToAsync(float targetBrightness, TimeSpan duration)
-        {
-            if (targetBrightness < 0 || targetBrightness > 100)
-            {
-                throw new ArgumentOutOfRangeException(nameof(targetBrightness), "Target brightness must be between 0 and 100");
-            }
-
-            Console.WriteLine($"Fading dimmer {Id} to {targetBrightness}% over {duration.TotalSeconds:F1} seconds");
-
-            var startBrightness = _currentPercentage;
-            var stepCount = Math.Max(1, (int)(duration.TotalMilliseconds / 100)); // Step every 100ms
-            var stepSize = (targetBrightness - startBrightness) / (float)stepCount;
-            var stepDelay = duration.TotalMilliseconds / stepCount;
-
-            for (int i = 1; i <= stepCount; i++)
-            {
-                var currentTarget = startBrightness + (int)(stepSize * i);
-                await SetPercentageAsync(currentTarget, TimeSpan.FromMilliseconds(stepDelay));
-
-                if (i < stepCount) // Don't delay after the last step
-                {
-                    await Task.Delay((int)stepDelay);
-                }
-            }
-
-            Console.WriteLine($"Fade completed for dimmer {Id}");
-        }
-
-
         public async Task AdjustPercentageAsync(float increment, TimeSpan? timeout = null)
         {
-
-
             await _percentageControllableHelper.AdjustPercentageAsync(increment, timeout);
         }
 
@@ -148,6 +119,10 @@ namespace KnxModel
         {
             _currentPercentage = currentPercentage;
             _lastUpdated = DateTime.Now;
+        }
+        void IPercentageControllable.SetSavedPercentageForTest(float currentPercentage)
+        {
+            _savedPercentage = currentPercentage;
         }
 
         #endregion
