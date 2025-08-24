@@ -7,16 +7,14 @@ using Moq;
 using System;
 using Xunit;
 
-namespace KnxTest.Unit.Models
+namespace KnxTest.Unit.Models.Shutter
 {
     public class ShutterDeviceSunProtectionTests : DeviceSunProtectionTests<ShutterDevice, ShutterAddresses>
     {
         private readonly ShutterDevice _device;
         private readonly ShutterAddresses _addresses;
         private readonly Mock<ILogger<ShutterDevice>> _mockLogger;
-        private readonly SunProtectionDeviceTestHelper<ShutterDevice, ShutterAddresses> _sunProtectionHelper;
-
-        protected override SunProtectionDeviceTestHelper<ShutterDevice, ShutterAddresses> _sunProtectionTestHelper => _sunProtectionHelper;
+        protected override SunProtectionDeviceTestHelper<ShutterDevice, ShutterAddresses> _sunProtectionTestHelper { get; }
 
         public ShutterDeviceSunProtectionTests() : base()
         {
@@ -27,13 +25,10 @@ namespace KnxTest.Unit.Models
             _addresses = _device.Addresses;
 
             // Create helper with lambda functions to get addresses from ShutterAddresses
-            _sunProtectionHelper = new SunProtectionDeviceTestHelper<ShutterDevice, ShutterAddresses>(
+            _sunProtectionTestHelper = new SunProtectionDeviceTestHelper<ShutterDevice, ShutterAddresses>(
                 _device,
                 _addresses,
-                _mockKnxService,
-                addresses => addresses.BrightnessThreshold1,
-                addresses => addresses.BrightnessThreshold2,
-                addresses => addresses.OutdoorTemperatureThreshold
+                _mockKnxService
             );
         }
     }

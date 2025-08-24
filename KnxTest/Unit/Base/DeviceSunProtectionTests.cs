@@ -1,5 +1,6 @@
 using FluentAssertions;
 using KnxModel;
+using KnxModel.Types;
 using KnxTest.Unit.Helpers;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -11,7 +12,7 @@ namespace KnxTest.Unit.Base
 {
     public abstract class DeviceSunProtectionTests<TDevice, TAddresses> : BaseKnxDeviceUnitTests 
         where TDevice : class, ISunProtectionThresholdCapableDevice, IKnxDeviceBase
-        where TAddresses : class
+        where TAddresses : ISunProtectionThresholdAddresses
     {
         protected abstract SunProtectionDeviceTestHelper<TDevice, TAddresses> _sunProtectionTestHelper { get; }
 
