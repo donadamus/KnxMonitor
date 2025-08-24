@@ -215,7 +215,6 @@ namespace KnxTest.Unit.Base
         [InlineData(20)]
         [InlineData(60)]
         [InlineData(100)]
-
         public async Task InitializeAsync_UpdatesLastUpdatedAndStates(float percentage)
         {
            await _percentageTestHelper.InitializeAsync_UpdatesLastUpdatedAndStates(percentage);

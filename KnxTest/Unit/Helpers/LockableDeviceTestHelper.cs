@@ -1,5 +1,6 @@
 using FluentAssertions;
 using KnxModel;
+using KnxModel.Interfaces;
 using Moq;
 
 namespace KnxTest.Unit.Helpers

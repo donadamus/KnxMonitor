@@ -204,7 +204,8 @@ namespace KnxModel
             
             _logger.LogInformation("ClockDevice {DeviceId} time sent: {Time}", Id, _currentDateTime);
             Console.WriteLine($"ClockDevice {Id} time sent: {_currentDateTime:yyyy-MM-dd HH:mm:ss}");
-        }        public async Task SynchronizeWithSystemTimeAsync()
+        }        
+        public async Task SynchronizeWithSystemTimeAsync()
         {
             _currentDateTime = DateTime.Now;
             _hasValidTime = true;
