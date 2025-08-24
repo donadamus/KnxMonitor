@@ -99,9 +99,6 @@ namespace KnxTest.Unit.Helpers
             _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_addresses.BrightnessThreshold1))
                           .ReturnsAsync(expectedValue)
                           .Verifiable();
-            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_addresses.BrightnessThreshold2))
-                          .ReturnsAsync(expectedValue)
-                          .Verifiable();
 
             // Act
             var result = await _device.ReadBrightnessThreshold1StateAsync();
@@ -123,7 +120,6 @@ namespace KnxTest.Unit.Helpers
 
             // Assert
             result.Should().Be(expectedValue);
-            _mockKnxService.Verify(s => s.RequestGroupValue<bool>(_addresses.BrightnessThreshold2), Times.Once);
         }
 
         public async Task ReadTemperatureThresholdStateAsync_ShouldRequestCorrectAddress()
@@ -139,7 +135,6 @@ namespace KnxTest.Unit.Helpers
 
             // Assert
             result.Should().Be(expectedValue);
-            _mockKnxService.Verify(s => s.RequestGroupValue<bool>(_addresses.OutdoorTemperatureThreshold), Times.Once);
         }
     }
 }

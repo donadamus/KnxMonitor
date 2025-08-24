@@ -13,7 +13,7 @@ namespace KnxTest.Unit.Models.Shutter
         {
             // Initialize DimmerDevice with mock KNX service
             var logger = new Mock<ILogger<ShutterDevice>>().Object;
-            var device = new ShutterDevice("D_TEST", "Test Dimmer", "1", _mockKnxService.Object, logger, TimeSpan.FromSeconds(1));
+            var device = new ShutterDevice("D_TEST", "Test Dimmer", "1", _mockKnxService.Object, logger, TimeSpan.FromSeconds(1), TimeSpan.Zero);
             _percentageTestHelper = new PercentageControllableDeviceTestHelper<ShutterDevice, ShutterAddresses>(
                 device, device.Addresses, _mockKnxService);
         }

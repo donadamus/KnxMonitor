@@ -21,7 +21,7 @@ namespace KnxTest.Unit.Models.Shutter
             _mockLogger = new Mock<ILogger<ShutterDevice>>();
             
             // Create device using the convenience constructor
-            _device = new ShutterDevice("test-shutter-001", "Test Shutter", "1", _mockKnxService.Object, _mockLogger.Object, TimeSpan.FromSeconds(10));
+            _device = new ShutterDevice("test-shutter-001", "Test Shutter", "1", _mockKnxService.Object, _mockLogger.Object, TimeSpan.FromSeconds(1), TimeSpan.Zero);
             _addresses = _device.Addresses;
 
             // Create helper with lambda functions to get addresses from ShutterAddresses

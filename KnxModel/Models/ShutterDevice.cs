@@ -11,13 +11,14 @@ namespace KnxModel
     /// Position: 0% = fully open, 100% = fully closed
     /// IsActive: true = moving, false = stopped
     /// </summary>
-    public class ShutterDevice : LockableDeviceBase<ShutterDevice, ShutterAddresses>, IShutterDevice, IPercentageLockableDevice, ISunProtectionThresholdCapableDevice
+    public class ShutterDevice : LockableDeviceBase<ShutterDevice, ShutterAddresses>, IShutterDevice
     {
         private readonly PercentageControllableDeviceHelper<ShutterDevice, ShutterAddresses> _shutterHelper;
         private readonly MovementControllableDeviceHelper<ShutterDevice, ShutterAddresses> _shutterMovementHelper;
         private readonly SunProtectionDeviceHelper<ShutterDevice, ShutterAddresses> _sunProtectionHelper;
         private readonly ILogger<ShutterDevice> logger;
         internal float _currentPercentage = 0.0f; // Start fully open
+        private TimeSpan _cooldown = TimeSpan.FromSeconds(2);
         private bool _isActive = false; // Movement status: true = moving, false = stopped
         private bool _isSunProtectionBlocked = false; // Sun protection block status
         
@@ -34,7 +35,7 @@ namespace KnxModel
         /// <summary>
         /// Convenience constructor that automatically creates addresses based on subGroup
         /// </summary>
-        public ShutterDevice(string id, string name, string subGroup, IKnxService knxService, ILogger<ShutterDevice> logger, TimeSpan defaulTimeout)
+        public ShutterDevice(string id, string name, string subGroup, IKnxService knxService, ILogger<ShutterDevice> logger, TimeSpan defaulTimeout, TimeSpan? cooldown = null)
             : base(id, name, subGroup, KnxAddressConfiguration.CreateShutterAddresses(subGroup), knxService, logger, defaulTimeout)
         {
             _shutterHelper = new PercentageControllableDeviceHelper<ShutterDevice, ShutterAddresses>(this, this.Addresses,
@@ -54,6 +55,7 @@ namespace KnxModel
 
             _eventManager.MessageReceived += OnKnxMessageReceived;
             this.logger = logger;
+            _cooldown = cooldown ?? _cooldown;
 
             Initialize(this);
         }
@@ -147,9 +149,9 @@ namespace KnxModel
         {
             var elapsed = DateTime.Now - LastUpdated;
 
-            if (elapsed < TimeSpan.FromSeconds(2) && elapsed > TimeSpan.Zero)
+            if (elapsed < _cooldown && elapsed > TimeSpan.Zero)
             {
-                await Task.Delay(TimeSpan.FromSeconds(2) - elapsed);
+                await Task.Delay(_cooldown - elapsed);
             }
         }
 
@@ -193,7 +195,7 @@ namespace KnxModel
                 // Unlock before changing switch state if necessary
                 if (_currentLockState == Lock.On)
                 {
-                    await UnlockAsync(timeout);
+                    await UnlockAsync(timeout ?? _defaulTimeout);
                 }
 
                 await SetPercentageAsync(_savedPercentage.Value, timeout ?? _defaulTimeout);

@@ -43,13 +43,6 @@ namespace KnxModel
                 _defaulTimeout);
         }
 
-
-        #region IKnxDeviceBase Implementation
-
-
-
-        #endregion
-
         #region Event Handling
 
         private void OnKnxMessageReceived(object? sender, KnxGroupEventArgs e)
@@ -71,39 +64,28 @@ namespace KnxModel
             base.SaveCurrentState(); // Save lock state as well
         }
 
-        public virtual async Task RestoreSavedStateAsync(TimeSpan? timeout = null)
+        public override async Task RestoreSavedStateAsync(TimeSpan? timeout = null)
         {
             if (_savedSwitchState.HasValue && _savedSwitchState.Value != CurrentSwitchState && _savedLockState != Lock.Unknown)
             {
                 // Unlock before changing switch state if necessary
                 if (_currentLockState == Lock.On)
                 {
-                    await UnlockAsync(timeout);
+                    await UnlockAsync(timeout ?? _defaulTimeout);
                 }
 
                 switch (_savedSwitchState.Value)
                 {
                     case Switch.On:
-                        await TurnOnAsync(timeout);
+                        await TurnOnAsync(timeout ?? _defaulTimeout);
                         break;
                     case Switch.Off:
-                        await TurnOffAsync(timeout);
+                        await TurnOffAsync(timeout ?? _defaulTimeout);
                         break;
                 }
             }
 
-            if (_savedLockState.HasValue && _savedLockState.Value != CurrentLockState)
-            {
-                switch (_savedLockState.Value)
-                {
-                    case Lock.On:
-                        await LockAsync(timeout);
-                        break;
-                    case Lock.Off:
-                        await UnlockAsync(timeout);
-                        break;
-                }
-            }
+            await base.RestoreSavedStateAsync(timeout ?? _defaulTimeout); // Restore lock state as well
 
             Console.WriteLine($"LightDevice {Id} state restored");
         }

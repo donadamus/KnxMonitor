@@ -75,13 +75,13 @@ namespace KnxModel
                 // Unlock before changing switch state if necessary
                 if (_currentLockState == Lock.On)
                 {
-                    await UnlockAsync(timeout);
+                    await UnlockAsync(timeout ?? _defaulTimeout);
                 }
 
-                await SetPercentageAsync(_savedPercentage.Value, timeout);
+                await SetPercentageAsync(_savedPercentage.Value, timeout ?? _defaulTimeout);
             }
 
-            await base.RestoreSavedStateAsync(timeout);
+            await base.RestoreSavedStateAsync(timeout ?? _defaulTimeout);
            Console.WriteLine($"DimmerDevice {Id} state restored - Brightness: {_currentPercentage}%");
         }
 
