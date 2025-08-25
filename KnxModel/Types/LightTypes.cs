@@ -121,4 +121,7 @@ public record LockableAddresses(
         On,     // true in KNX
         Unknown // state not known
     }
+
+   
+
 }

@@ -1,3 +1,4 @@
+using KnxModel.Types;
 using Microsoft.Extensions.Logging;
 
 namespace KnxModel.Models.Helpers
@@ -8,6 +9,7 @@ namespace KnxModel.Models.Helpers
     /// </summary>
     public class SunProtectionDeviceHelper<T, TAddress> : DeviceHelperBase<T, TAddress>
         where T : ISunProtectionBlockableDevice, ISunProtectionThresholdCapableDevice, IKnxDeviceBase
+        where TAddress : ISunProtectionThresholdAddresses
     {
         public SunProtectionDeviceHelper(T owner, TAddress addresses, IKnxService knxService, string deviceId, string deviceType,
             ILogger<T> logger, TimeSpan defaultTimeout) 
@@ -61,6 +63,22 @@ namespace KnxModel.Models.Helpers
                 timeout ?? _defaultTimeout,
                 $"outdoor temperature threshold state {targetState}"
             );
+        }
+
+        internal async Task<bool> ReadSunProtectionStateAsync()
+        {
+            var thresholdState = await _knxService.RequestGroupValue<bool>(addresses.SunProtectionStatus);
+
+            return thresholdState;
+        }
+
+        internal async Task<bool> WaitForSunProtectionStateAsync(bool targetState, TimeSpan? timeout)
+        {
+            return await WaitForConditionAsync(
+               () => owner.SunProtectionActive == targetState,
+               timeout ?? _defaultTimeout,
+               $"sun pritection 1 state {targetState}"
+           );
         }
     }
 }

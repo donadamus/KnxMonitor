@@ -349,6 +349,8 @@ namespace KnxModel
         public bool BrightnessThreshold2Active => _brightnessThreshold2Active;
         public bool OutdoorTemperatureThresholdActive => _outdoorTemperatureThresholdActive;
 
+        public bool SunProtectionActive => throw new NotImplementedException();
+
         public async Task<bool> ReadBrightnessThreshold1StateAsync()
         {
             logger.LogDebug("ShutterDevice {DeviceId} reading brightness threshold 1 state", Id);
@@ -402,6 +404,16 @@ namespace KnxModel
         void IPercentageControllable.SetSavedPercentageForTest(float currentPercentage)
         {
             _savedPercentage = currentPercentage;
+        }
+
+        public async Task<bool> ReadSunProtectionStateAsync()
+        {
+            return await _sunProtectionHelper.ReadSunProtectionStateAsync();
+        }
+
+        public async Task<bool> WaitForSunProtectionStateAsync(bool targetState, TimeSpan? timeout = null)
+        {
+            return await _sunProtectionHelper.WaitForSunProtectionStateAsync(targetState, timeout);
         }
         #endregion
     }

@@ -20,6 +20,13 @@ namespace KnxModel
         /// </summary>
         bool OutdoorTemperatureThresholdActive { get; }
 
+
+        bool SunProtectionActive { get; }
+
+        Task<bool> ReadSunProtectionStateAsync();
+
+        Task<bool> WaitForSunProtectionStateAsync(bool targetState, TimeSpan? timeout = null);
+
         /// <summary>
         /// Reads the current state of brightness threshold 1 from KNX bus
         /// </summary>
