@@ -1,4 +1,5 @@
 using KnxModel;
+using KnxTest.Integration.Helpers;
 
 namespace KnxTest.Integration.Base
 {

@@ -14,14 +14,14 @@ namespace KnxTest.Integration
     public class ShutterSunProtectionScenariosTests : IntegrationTestBase<ShutterDevice>
     {
         internal readonly XUnitLogger<ShutterDevice> _logger;
-        internal readonly SunProtectionTestHelper _sunProtectionHelper;
+        internal readonly SunProtectionTestHelperOld _sunProtectionHelper;
         private readonly TimeSpan _defaultTimeout = TimeSpan.FromSeconds(10);
         private readonly TimeSpan _scenarioTransitionTime = TimeSpan.FromSeconds(5);
 
         public ShutterSunProtectionScenariosTests(KnxServiceFixture fixture, ITestOutputHelper output) : base(fixture)
         {
             _logger = new XUnitLogger<ShutterDevice>(output);
-            _sunProtectionHelper = new SunProtectionTestHelper(_logger);
+            _sunProtectionHelper = new SunProtectionTestHelperOld(_logger);
         }
 
         // Data source for scenario tests
@@ -30,15 +30,48 @@ namespace KnxTest.Integration
             get
             {
                 var config = ShutterFactory.ShutterConfigurations;
-                return config.Where(x => x.Value.Name.ToLower().Contains("office") || 
-                                       x.Value.Name.ToLower().Contains("living") ||
-                                       x.Value.Name.ToLower().Contains("bedroom"))
+                return config.Where(x => x.Value.Name.ToLower().Contains("office") 
+                //|| 
+                //                       x.Value.Name.ToLower().Contains("living") ||
+                //                       x.Value.Name.ToLower().Contains("bedroom")
+                                       
+                                       )
                             .Take(2) // Limit to 2 devices for extensive scenario testing
                             .Select(k => new object[] { k.Key });
             }
         }
 
         #region Weather Condition Simulation Tests
+
+
+        [Theory]
+        [MemberData(nameof(SunProtectionShutterIdsFromConfig))]
+        public async Task TestProtectionLevel1(string deviceId)
+        {
+            // Arrange
+            await InitializeDevice(deviceId);
+            await _sunProtectionHelper.GenerateThresholdReport(Device!);
+
+            Console.WriteLine($"🌅 Simulating morning sunrise scenario for {deviceId}");
+
+            // Act & Assert - Simulate gradual threshold activation
+            // Note: In real system, thresholds would change automatically based on sensors
+
+            // Early morning - no thresholds (simulated)
+            if (!Device!.BrightnessThreshold1Active && !Device.BrightnessThreshold2Active)
+            {
+                Device.CurrentPercentage.Should().BeLessThan(20,
+                    "Shutter should be mostly open in early morning");
+                Console.WriteLine($"✅ Early morning state: {Device.CurrentPercentage}% (as expected)");
+            }
+
+            // Test threshold persistence
+            await _sunProtectionHelper.TestThresholdPersistence(Device);
+
+            Console.WriteLine($"🌅 Morning scenario completed for {deviceId}");
+        }
+
+
 
         [Theory]
         [MemberData(nameof(SunProtectionShutterIdsFromConfig))]

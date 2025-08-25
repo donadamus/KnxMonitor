@@ -5,7 +5,7 @@ using System;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace KnxTest.Integration.Base
+namespace KnxTest.Integration.Helpers
 {
     /// <summary>
     /// Helper class providing lock-specific test methods

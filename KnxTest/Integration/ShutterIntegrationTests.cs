@@ -1,7 +1,10 @@
 using FluentAssertions;
 using KnxModel;
+using KnxModel.Factories;
 using KnxTest.Integration.Base;
+using KnxTest.Integration.Helpers;
 using KnxTest.Integration.Interfaces;
+using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
 
 namespace KnxTest.Integration
@@ -10,11 +13,17 @@ namespace KnxTest.Integration
     public class ShutterIntegrationTests :LockableIntegrationTestBase<ShutterDevice>, IPercentageControllableDeviceTests
     {
         internal readonly PercentageControllTestHelper _percentageTestHelper;
+        internal readonly SunProtectionTestHelper _sunProtectionTestHelper;
+
         internal readonly XUnitLogger<ShutterDevice> _logger;
+        private readonly ITestOutputHelper output;
+
         public ShutterIntegrationTests(KnxServiceFixture fixture, ITestOutputHelper output) : base(fixture)
         {
             _logger = new XUnitLogger<ShutterDevice>(output);
             _percentageTestHelper = new PercentageControllTestHelper(_logger);
+            _sunProtectionTestHelper = new SunProtectionTestHelper(_logger);
+            this.output=output;
         }
 
         // Data source for tests - only pure lights (not dimmers)
@@ -154,17 +163,39 @@ namespace KnxTest.Integration
             await _lockTestHelper.SwitchableDeviceTurnOffWhenLocked(Device!);
         }
 
+
+        [Theory]
+        [MemberData(nameof(ShutterIdsFromConfig))]
+        public async Task TestSunProtection(string deviceId)
+        {
+            await InitializeDeviceAndEnsureUnlocked(deviceId);
+            await _lockTestHelper.SwitchableDeviceTurnOffWhenLocked(Device!);
+
+            var clockLogger = new XUnitLogger<ClockDevice>(output);
+            var clockDevice = ClockFactory.CreateMasterClockDevice("1", "Clock", _knxService, clockLogger, TimeSpan.FromSeconds(1));
+            var fakeDate = new DateTime(2025, 08, 25, 15, 00, 00);
+
+            await clockDevice.SendTimeAsync(fakeDate);
+            await clockDevice.SwitchToMasterModeAsync();
+            Thread.Sleep(30000);
+
+            await clockDevice.SendTimeAsync(DateTime.Now);
+            clockLogger.LogInformation($"Sent {DateTime.Now}");
+            await clockDevice.SwitchToSlaveModeAsync();
+            
+        }
+
         internal override async Task InitializeDevice(string deviceId, bool saveCurrentState = true)
         {
             Thread.Sleep(3000); // Ensure service is ready
-            Console.WriteLine($"🆕 Creating new ShutterDevice {deviceId}");
+            _logger.LogInformation($"🆕 Creating new ShutterDevice {deviceId}");
             Device = ShutterFactory.CreateShutter(deviceId, _knxService, _logger);
             await Device.InitializeAsync();
             if (saveCurrentState)
             {
                 Device.SaveCurrentState();
             }
-            Console.WriteLine($"Shutter {deviceId} initialized - Percentage: {Device.CurrentPercentage}, Lock: {Device.CurrentLockState}");
+            _logger.LogInformation($"Shutter {deviceId} initialized - Percentage: {Device.CurrentPercentage}, Lock: {Device.CurrentLockState}");
         }
     }
 }

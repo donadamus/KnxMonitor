@@ -12,10 +12,6 @@ namespace KnxTest.Integration
     // - Light tests moved to LightIntegrationTests.cs
     // - Shutter tests moved to ShutterIntegrationTests.cs
     // - Dimmer tests should be added to DimmerIntegrationTests.cs when that class is refactored
-    public class SystemIntegrationTests
-    {
-        // This class is now empty - all tests have been distributed to specific device test classes
-    }
 
     public class KnxServiceFixture : IDisposable
     {
