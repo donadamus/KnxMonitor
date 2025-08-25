@@ -18,30 +18,30 @@ namespace KnxModel.Models.Helpers
 
 
         /// <summary>
-        /// Opens the shutter using UP command (MovementControl = 1)
+        /// Opens the shutter using UP command (MovementControl = 0)
         /// Device will echo confirmation on MovementFeedback (offset +100)
         /// and send actual movement status on MovementStatusFeedback
         /// </summary>
         internal async Task OpenAsync(TimeSpan? timeout = null)
         {
-            // Send UP command (1) to MovementControl
+            // Send UP command (0) to MovementControl
             // Device will echo on MovementFeedback and send status on MovementStatusFeedback
-            _logger.LogInformation("{DeviceType} {DeviceId} sending UP command (1)", _deviceType, _deviceId);
-            await _knxService.WriteGroupValueAsync(addresses.MovementControl, true);
+            _logger.LogInformation("{DeviceType} {DeviceId} sending UP command (0)", _deviceType, _deviceId);
+            await _knxService.WriteGroupValueAsync(addresses.MovementControl, false);
             _logger.LogInformation("{DeviceType} {DeviceId} UP command sent", _deviceType, _deviceId);
         }
 
         /// <summary>
-        /// Closes the shutter using DOWN command (MovementControl = 0)
+        /// Closes the shutter using DOWN command (MovementControl = 1)
         /// Device will echo confirmation on MovementFeedback (offset +100)
         /// and send actual movement status on MovementStatusFeedback
         /// </summary>
         internal async Task CloseAsync(TimeSpan? timeout = null)
         {
-            // Send DOWN command (0) to MovementControl
+            // Send DOWN command (1) to MovementControl
             // Device will echo on MovementFeedback and send status on MovementStatusFeedback
-            _logger.LogInformation("{DeviceType} {DeviceId} sending DOWN command (0)", _deviceType, _deviceId);
-            await _knxService.WriteGroupValueAsync(addresses.MovementControl, false);
+            _logger.LogInformation("{DeviceType} {DeviceId} sending DOWN command (1)", _deviceType, _deviceId);
+            await _knxService.WriteGroupValueAsync(addresses.MovementControl, true);
             
             _logger.LogInformation("{DeviceType} {DeviceId} DOWN command sent", _deviceType, _deviceId);
         }

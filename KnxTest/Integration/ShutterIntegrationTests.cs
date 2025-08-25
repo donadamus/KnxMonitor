@@ -169,8 +169,20 @@ namespace KnxTest.Integration
         [MemberData(nameof(ShutterIdsFromConfig))]
         public async Task TestSunProtection(string deviceId)
         {
+            var devices = new List<ShutterDevice>();
+            foreach (var id in ShutterIdsFromConfig.Select(x => x[0].ToString()).Distinct())
+            {
+                var device = ShutterFactory.CreateShutter(id!, _knxService, _logger);
+                await device.ReadSunProtectionBlockStateAsync();
+                device.SaveCurrentState();
+                devices.Add(device);
+                await device.BlockSunProtectionAsync();
+            }
+
             await InitializeDeviceAndEnsureUnlocked(deviceId);
-            await _lockTestHelper.SwitchableDeviceTurnOffWhenLocked(Device!);
+
+            await Device!.UnblockSunProtectionAsync();
+            await Device!.OpenAsync();
 
             var clockLogger = new XUnitLogger<ClockDevice>(output);
             var clockDevice = ClockFactory.CreateMasterClockDevice("1", "Clock", _knxService, clockLogger, TimeSpan.FromSeconds(1));
@@ -205,6 +217,11 @@ namespace KnxTest.Integration
             Thread.Sleep(1000);
             await threshold.SetBrightnessThreshold2StateAsync(false);
             await threshold.UnblockBrightnessThresholdMonitoringAsync();
+
+            foreach (var item in devices)
+            {
+                await item.RestoreSavedStateAsync();
+            }
         }
 
         internal override async Task InitializeDevice(string deviceId, bool saveCurrentState = true)

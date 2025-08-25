@@ -26,7 +26,7 @@ namespace KnxTest.Unit.Helpers
         internal async Task CloseAsync_ShouldSendCorrectTelegram()
         {
             var address = _addresses.MovementControl;
-            _mockKnxService.Setup(s => s.WriteGroupValueAsync(address, false))
+            _mockKnxService.Setup(s => s.WriteGroupValueAsync(address, true))
                           .Returns(Task.CompletedTask)
                           .Verifiable();
             // Act
@@ -58,7 +58,7 @@ namespace KnxTest.Unit.Helpers
         internal async Task OpenAsync_ShouldSendCorrectTelegram()
         {
             var address = _addresses.MovementControl;
-            _mockKnxService.Setup(s => s.WriteGroupValueAsync(address, true))
+            _mockKnxService.Setup(s => s.WriteGroupValueAsync(address, false))
                           .Returns(Task.CompletedTask)
                           .Verifiable();
             // Act
