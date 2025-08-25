@@ -171,7 +171,9 @@ namespace KnxModel
             _brightnessThreshold1Active = await ReadBrightnessThreshold1StateAsync();
             _brightnessThreshold2Active = await ReadBrightnessThreshold2StateAsync();
             _outdoorTemperatureThresholdActive = await ReadOutdoorTemperatureThresholdStateAsync();
-            
+
+            _isActive = await ReadActivityStatusAsync();
+
             _lastUpdated = DateTime.Now;
             
             logger.LogInformation("ShutterDevice {DeviceId} initialized - Position: {Position}%, Lock: {LockState}, SunProtectionBlocked: {SunProtectionBlocked}, Thresholds: B1={BrightThreshold1}, B2={BrightThreshold2}, Temp={TempThreshold}", 
@@ -260,15 +262,7 @@ namespace KnxModel
 
         public async Task<bool> ReadActivityStatusAsync()
         {
-            // TODO: Read from KNX bus - MovementStatusFeedback address
-            await Task.Delay(30); // Simulate KNX communication
-            
-            // For now, return current state (in real implementation, read from bus)
-            // var isMoving = await _knxService.RequestGroupValue<bool>(addresses.MovementStatusFeedback);
-            // _isActive = isMoving;
-            
-            _lastUpdated = DateTime.Now;
-            return _isActive;
+            return await _shutterMovementHelper.ReadActivityStatusAsync();
         }
 
         public async Task<bool> WaitForInactiveAsync(TimeSpan? timeout = null)

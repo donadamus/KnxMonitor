@@ -5,7 +5,7 @@ using Moq;
 namespace KnxTest.Unit.Helpers
 {
     public class MovementControllableDeviceTestHelper<TDevice, TAddresses>
-        where TDevice : IMovementControllable, IKnxDeviceBase
+        where TDevice : IMovementControllable, IKnxDeviceBase, IActivityStatusReadable
         where TAddresses : IMovementControllableAddress
 
     {
@@ -42,17 +42,16 @@ namespace KnxTest.Unit.Helpers
 
         internal async Task InitializeAsync_UpdatesLastUpdatedAndStates(bool movementActive)
         {
-            //// Arrange
-            //_mockKnxService.Setup(s => s.RequestGroupValue<bool>(_addresses.MovementStatusFeedback))
-            //              .ReturnsAsync(movementActive)
-            //              .Verifiable();
-            //// Act
-            //await _device.InitializeAsync();
+            // Arrange
+            _mockKnxService.Setup(s => s.RequestGroupValue<bool>(_addresses.MovementStatusFeedback))
+                          .ReturnsAsync(movementActive)
+                          .Verifiable();
+            // Act
+            await _device.InitializeAsync();
 
-            //// Assert
-            //_device.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(1));
-            //_device..Should().Be(lockState);
-            throw new NotImplementedException("Implement InitializeAsync_UpdatesLastUpdatedAndStates");
+            // Assert
+            _device.LastUpdated.Should().BeCloseTo(DateTime.Now, TimeSpan.FromSeconds(1));
+            _device.IsActive.Should().Be(movementActive);
 
         }
 

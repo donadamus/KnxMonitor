@@ -140,9 +140,13 @@ namespace KnxTest.Unit.Helpers
 
         internal void OnPercentageFeedback_ShouldNotAffectSwitchState(Switch switchState)
         {
-            Skip.If(_device is not ISwitchable, "Device does not implement ISwitchable");
             
             var switchableDevice = _device as ISwitchable;
+
+            if (switchableDevice == null)
+            {
+                return;
+            }
 
             switchableDevice!.SetSwitchForTest(switchState);
             ((IPercentageControllable)_device).SetPercentageForTest(20); // Set initial percentage

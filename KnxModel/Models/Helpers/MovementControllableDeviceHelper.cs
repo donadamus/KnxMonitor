@@ -127,5 +127,10 @@ namespace KnxModel.Models.Helpers
         {
             return owner.IsActive;
         }
+
+        internal async Task<bool> ReadActivityStatusAsync()
+        {
+            return await _knxService.RequestGroupValue<bool>(addresses.MovementStatusFeedback);
+        }
     }
 }

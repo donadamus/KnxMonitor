@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 namespace KnxTest.Unit.Base
 {
     public abstract class DeviceMovementControllableTests<TDevice, TAddresses> : BaseKnxDeviceUnitTests
-    where TDevice : IMovementControllable, IKnxDeviceBase
+    where TDevice : IMovementControllable, IKnxDeviceBase, IActivityStatusReadable
     where TAddresses : IMovementControllableAddress
 
     {
