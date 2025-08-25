@@ -53,7 +53,7 @@ namespace KnxModel.Factories
         {
             var configuration = new ClockConfiguration(
                 InitialMode: initialMode,
-                TimeStamp: TimeSpan.FromSeconds(30) // Default 30 seconds
+                TimeStamp: TimeSpan.FromSeconds(10) // Default 30 seconds
             );
 
             return CreateClockDevice(id, name, configuration, knxService, logger, defaultTimeout);

@@ -28,7 +28,7 @@ namespace KnxTest.Integration
             get
             {
                 var config = LightFactory.LightConfigurations;
-                return config//.Where(x => x.Value.Name.ToLower().Contains("off"))
+                return config.Where(x => x.Value.Name.ToLower().Contains("off"))
                             .Select(k => new object[] { k.Key });
             }
         }

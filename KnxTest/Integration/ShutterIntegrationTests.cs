@@ -173,16 +173,37 @@ namespace KnxTest.Integration
 
             var clockLogger = new XUnitLogger<ClockDevice>(output);
             var clockDevice = ClockFactory.CreateMasterClockDevice("1", "Clock", _knxService, clockLogger, TimeSpan.FromSeconds(1));
+            
+            var thresholdLogger = new XUnitLogger<ThresholdSimulatorDevice>(output);
+            var threshold = ThresholdSimulatorFactory.CreateThresholdSimulator("1","Threshold Simulator", _knxService, thresholdLogger, TimeSpan.FromSeconds(1));
+
+            await threshold.BlockBrightnessThresholdMonitoringAsync();
+
+
+
             var fakeDate = new DateTime(2025, 08, 25, 15, 00, 00);
 
             await clockDevice.SendTimeAsync(fakeDate);
             await clockDevice.SwitchToMasterModeAsync();
+            Thread.Sleep(10000);
+            await threshold.SetOutdoorTemperatureThresholdStateAsync(true);
             Thread.Sleep(30000);
+            await threshold.SetBrightnessThreshold1StateAsync(true);
+            Thread.Sleep(20000);
+            await threshold.SetBrightnessThreshold2StateAsync(true);
+
+            await clockDevice.SwitchToSlaveModeAsync();
+            Thread.Sleep(1000);
 
             await clockDevice.SendTimeAsync(DateTime.Now);
             clockLogger.LogInformation($"Sent {DateTime.Now}");
             await clockDevice.SwitchToSlaveModeAsync();
-            
+            await threshold.SetOutdoorTemperatureThresholdStateAsync(false);
+            Thread.Sleep(1000);
+            await threshold.SetBrightnessThreshold1StateAsync(false);
+            Thread.Sleep(1000);
+            await threshold.SetBrightnessThreshold2StateAsync(false);
+            await threshold.UnblockBrightnessThresholdMonitoringAsync();
         }
 
         internal override async Task InitializeDevice(string deviceId, bool saveCurrentState = true)
