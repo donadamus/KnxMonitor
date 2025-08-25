@@ -5,6 +5,7 @@ using KnxTest.Integration.Base;
 using KnxTest.Integration.Helpers;
 using KnxTest.Integration.Interfaces;
 using Microsoft.Extensions.Logging;
+using KnxModel.Models;
 using Xunit.Abstractions;
 
 namespace KnxTest.Integration
