@@ -57,7 +57,7 @@ namespace KnxModel
             //{ "R02.2", new("Kitchen", "14") },
             //{ "R03.1", new("Dining Room", "15") },
             //{ "R04.1", new("Living Room", "16") },
-            //{ "R04.2", new("Living Room", "17") },
+            { "R04.2", new("Living Room", "17") },
             { "R05.1", new("Office", "18") }
         };
     }

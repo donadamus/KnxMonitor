@@ -9,7 +9,7 @@ namespace KnxModel.Models.Helpers
     /// </summary>
     public class SunProtectionDeviceHelper<T, TAddress> : DeviceHelperBase<T, TAddress>
         where T : ISunProtectionBlockableDevice, ISunProtectionThresholdCapableDevice, IKnxDeviceBase
-        where TAddress : ISunProtectionThresholdAddresses
+        where TAddress : ISunProtectionThresholdAddresses, ISunProtectionBlockableAddresses
     {
         public SunProtectionDeviceHelper(T owner, TAddress addresses, IKnxService knxService, string deviceId, string deviceType,
             ILogger<T> logger, TimeSpan defaultTimeout) 
@@ -80,5 +80,27 @@ namespace KnxModel.Models.Helpers
                $"sun pritection 1 state {targetState}"
            );
         }
+
+        internal async Task BlockSunProtectionAsync(TimeSpan? timeout)
+        {
+            await SetBlockSunProtectionAsync(true, timeout);
+        }
+
+        internal async Task UnblockSunProtectionAsync(TimeSpan? timeout)
+        {
+            await SetBlockSunProtectionAsync(false, timeout);
+        }
+
+        private async Task SetBlockSunProtectionAsync(bool value, TimeSpan? timeout)
+        {
+            await SetBitFunctionAsync(
+                    address: addresses.SunProtectionBlockControl,
+                    value: value,
+                    condition: () => owner.IsSunProtectionBlocked == value,
+                    timeout: timeout ?? _defaultTimeout
+                    );
+        }
+
+
     }
 }

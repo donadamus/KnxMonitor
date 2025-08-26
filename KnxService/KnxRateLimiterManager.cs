@@ -26,7 +26,7 @@ namespace KnxService
                 KnxOperationType.WriteGroupValue,
                 new SlidingWindowRateLimiter(new SlidingWindowRateLimiterOptions
                 {
-                    PermitLimit = 1,
+                    PermitLimit = 2,
                     Window = TimeSpan.FromSeconds(2),
                     SegmentsPerWindow = 1,
                     QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
@@ -37,9 +37,9 @@ namespace KnxService
                 KnxOperationType.ReadGroupValueAsync,
                 new SlidingWindowRateLimiter(new SlidingWindowRateLimiterOptions
                 {
-                    PermitLimit = 5,
+                    PermitLimit = 10,
                     Window = TimeSpan.FromSeconds(2),
-                    SegmentsPerWindow = 1,
+                    SegmentsPerWindow = 5,
                     QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                     QueueLimit = 20
                 })

@@ -7,4 +7,10 @@ namespace KnxModel.Types
         string OutdoorTemperatureThreshold { get; }
         string SunProtectionStatus { get; }
     }
+    
+    public interface ISunProtectionBlockableAddresses
+    {
+        string SunProtectionBlockControl { get; }
+        string SunProtectionBlockFeedback { get; }
+    }
 }

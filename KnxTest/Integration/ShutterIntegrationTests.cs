@@ -33,7 +33,7 @@ namespace KnxTest.Integration
             get
             {
                 var config = ShutterFactory.ShutterConfigurations;
-                return config.Where(x => x.Value.Name.ToLower().Contains("off"))
+                return config//.Where(x => x.Value.Name.ToLower().Contains("off"))
                             .Select(k => new object[] { k.Key });
             }
         }
@@ -169,6 +169,7 @@ namespace KnxTest.Integration
         [MemberData(nameof(ShutterIdsFromConfig))]
         public async Task TestSunProtection(string deviceId)
         {
+            await InitializeDeviceAndEnsureUnlocked(deviceId);
             var devices = new List<ShutterDevice>();
             foreach (var id in ShutterIdsFromConfig.Select(x => x[0].ToString()).Distinct())
             {
@@ -179,7 +180,6 @@ namespace KnxTest.Integration
                 await device.BlockSunProtectionAsync();
             }
 
-            await InitializeDeviceAndEnsureUnlocked(deviceId);
 
             await Device!.UnblockSunProtectionAsync();
             await Device!.OpenAsync();

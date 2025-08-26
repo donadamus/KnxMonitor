@@ -1,3 +1,4 @@
+using KnxModel.Types;
 using System;
 
 namespace KnxModel
@@ -20,7 +21,7 @@ namespace KnxModel
         string BrightnessThreshold1,   // 0/2/3 - brightness threshold 1 feedback
         string BrightnessThreshold2,   // 0/2/4 - brightness threshold 2 feedback  
         string OutdoorTemperatureThreshold // 0/2/7 - outdoor temperature threshold feedback
-    ) : LockableAddresses(LockControl, LockFeedback), ILockableAddress, IPercentageControllableAddress, IMovementControllableAddress, KnxModel.Types.ISunProtectionThresholdAddresses;
+    ) : LockableAddresses(LockControl, LockFeedback), ILockableAddress, IPercentageControllableAddress, IMovementControllableAddress, ISunProtectionThresholdAddresses, ISunProtectionBlockableAddresses;
 
     /// <summary>
     /// Current state of a shutter

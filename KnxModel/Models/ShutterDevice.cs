@@ -305,13 +305,14 @@ namespace KnxModel
         public async Task BlockSunProtectionAsync(TimeSpan? timeout = null)
         {
             logger.LogInformation("ShutterDevice {DeviceId} blocking sun protection", Id);
-            await _knxService.WriteGroupValueAsync(Addresses.SunProtectionBlockControl, true);
+
+            await _sunProtectionHelper.BlockSunProtectionAsync(timeout);
         }
 
         public async Task UnblockSunProtectionAsync(TimeSpan? timeout = null)
         {
             logger.LogInformation("ShutterDevice {DeviceId} unblocking sun protection", Id);
-            await _knxService.WriteGroupValueAsync(Addresses.SunProtectionBlockControl, false);
+            await _sunProtectionHelper.UnblockSunProtectionAsync(timeout);
         }
 
         public async Task SetSunProtectionBlockStateAsync(bool blocked, TimeSpan? timeout = null)
