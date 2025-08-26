@@ -10,7 +10,6 @@ namespace KnxModel
 
     public class DimmerDevice : LightDeviceBase<DimmerDevice, DimmerAddresses>, IDimmerDevice, IPercentageLockableDevice
     {
-        private readonly ILogger<DimmerDevice> _logger;
         internal float _currentPercentage = -1.0f; // 0% brightness
         private float? _savedPercentage;
 
@@ -21,8 +20,6 @@ namespace KnxModel
         public DimmerDevice(string id, string name, string subGroup, IKnxService knxService, ILogger<DimmerDevice> logger, TimeSpan defaulTimeout)
             : base(id, name, subGroup, KnxAddressConfiguration.CreateDimmerAddresses(subGroup), knxService, logger, defaulTimeout)
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-
             Initialize(this);
 
             _percentageControllableHelper = new PercentageControllableDeviceHelper<DimmerDevice, DimmerAddresses>(this, this.Addresses,
@@ -38,34 +35,21 @@ namespace KnxModel
             _percentageControllableHelper.ProcessSwitchMessage(e);
 
         }
-        /// <summary>
-        /// Waits for the required cooldown period between shutter commands.
-        /// Physical shutters need a minimum 2-second delay between commands to prevent
-        /// timing-based position tracking synchronization issues.
-        /// </summary>
-
 
         public override async Task InitializeAsync()
         {
             _logger.LogInformation("Initializing DimmerDevice {DeviceId} ({DeviceName})", Id, Name);
-            
+            await base.InitializeAsync();
             // Read initial states from KNX bus
-            _currentSwitchState = await ReadSwitchStateAsync();
-            _currentLockState = await ReadLockStateAsync();
             _currentPercentage = await ReadPercentageAsync();
-            _lastUpdated = DateTime.Now;
-
-            _logger.LogInformation("DimmerDevice {DeviceId} initialized - Switch: {SwitchState}, Lock: {LockState}, Brightness: {Brightness}%", 
-                Id, _currentSwitchState, _currentLockState, _currentPercentage);
-
-            Console.WriteLine($"DimmerDevice {Id} initialized - Switch: {_currentSwitchState}, Lock: {_currentLockState}, Brightness: {_currentPercentage}%");
+            LastUpdated = DateTime.Now;
+            _logger.LogInformation("{type} {DeviceId} initialized - Brightness: {Brightness}%", typeof(DimmerDevice).Name, Id, _currentPercentage);
         }
 
         public override void SaveCurrentState()
         {
             base.SaveCurrentState();
             _savedPercentage = _currentPercentage; // Save current brightness percentage
-            Console.WriteLine($"DimmerDevice {Id} state saved - Switch: {_currentSwitchState}, Lock: {_currentLockState}, Brightness: {_savedPercentage}%");
         }
 
         public override async Task RestoreSavedStateAsync(TimeSpan? timeout = null)
@@ -73,15 +57,15 @@ namespace KnxModel
             if (_savedPercentage.HasValue && _savedPercentage.Value != _currentPercentage)
             {
                 // Unlock before changing switch state if necessary
-                if (_currentLockState == Lock.On)
+                if (CurrentLockState == Lock.On)
                 {
-                    await UnlockAsync(timeout ?? _defaulTimeout);
+                    await UnlockAsync(timeout ?? _defaultTimeout);
                 }
 
-                await SetPercentageAsync(_savedPercentage.Value, timeout ?? _defaulTimeout);
+                await SetPercentageAsync(_savedPercentage.Value, timeout ?? _defaultTimeout);
             }
 
-            await base.RestoreSavedStateAsync(timeout ?? _defaulTimeout);
+            await base.RestoreSavedStateAsync(timeout ?? _defaultTimeout);
            Console.WriteLine($"DimmerDevice {Id} state restored - Brightness: {_currentPercentage}%");
         }
 
@@ -118,7 +102,7 @@ namespace KnxModel
         void IPercentageControllable.SetPercentageForTest(float currentPercentage)
         {
             _currentPercentage = currentPercentage;
-            _lastUpdated = DateTime.Now;
+            LastUpdated = DateTime.Now;
         }
         void IPercentageControllable.SetSavedPercentageForTest(float currentPercentage)
         {

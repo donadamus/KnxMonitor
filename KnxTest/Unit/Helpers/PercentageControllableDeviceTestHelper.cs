@@ -148,7 +148,7 @@ namespace KnxTest.Unit.Helpers
                 return;
             }
 
-            switchableDevice!.SetSwitchForTest(switchState);
+            switchableDevice!.CurrentSwitchState = switchState;
             ((IPercentageControllable)_device).SetPercentageForTest(20); // Set initial percentage
             _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, new KnxGroupEventArgs(_addresses.PercentageFeedback, new KnxValue(50)));
             _device.CurrentPercentage.Should().Be(50);

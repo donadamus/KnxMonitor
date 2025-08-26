@@ -50,7 +50,6 @@ namespace KnxTest.Integration
         {
             // Arrange
             await InitializeDevice(deviceId);
-            await _sunProtectionHelper.GenerateThresholdReport(Device!);
 
             Console.WriteLine($"🌅 Simulating morning sunrise scenario for {deviceId}");
 
@@ -79,7 +78,6 @@ namespace KnxTest.Integration
         {
             // Arrange
             await InitializeDevice(deviceId);
-            await _sunProtectionHelper.GenerateThresholdReport(Device!);
             
             Console.WriteLine($"🌅 Simulating morning sunrise scenario for {deviceId}");
             
@@ -283,7 +281,6 @@ namespace KnxTest.Integration
             Console.WriteLine($"🔍 Running complete system validation for {deviceId}");
             
             // Act & Assert - Comprehensive system check
-            await _sunProtectionHelper.GenerateThresholdReport(Device!);
             await _sunProtectionHelper.TestThresholdPersistence(Device!);
             await _sunProtectionHelper.TestThresholdScenarios(Device!);
             

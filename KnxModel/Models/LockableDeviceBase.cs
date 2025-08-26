@@ -4,47 +4,22 @@ using Microsoft.Extensions.Logging;
 namespace KnxModel
 {
 
-    
-
-    public abstract class LockableDeviceBase<TDevice, TAddressess> : ILockableDevice, IDisposable, IIdentifable
+    public abstract class LockableDeviceBase<TDevice, TAddressess> : KnxDeviceBase<TDevice, TAddressess>, ILockableDevice
         where TDevice : IKnxDeviceBase, ILockableDevice
         where TAddressess : ILockableAddress
     {
-        internal readonly KnxEventManager _eventManager;
-        internal readonly IKnxService _knxService;
-        private readonly ILogger<TDevice> _logger;
+        public Lock CurrentLockState { get; private set; }
+        Lock ILockableDevice.CurrentLockState { get => CurrentLockState; set => CurrentLockState = value; }
+        public Lock? SavedLockState { get; private set; }
+        Lock? ILockableDevice.SavedLockState { get => SavedLockState; set => SavedLockState = value; }
 
-        public string Id { get; }
-        public string Name { get; }
-        public string SubGroup { get; }
-        public DateTime LastUpdated => _lastUpdated;
-        internal Lock _currentLockState = Lock.Unknown;
-        internal DateTime _lastUpdated = DateTime.MinValue;
-        internal Lock? _savedLockState;
-        internal TimeSpan _defaulTimeout;
-        public TAddressess Addresses { get; }
-
-        Lock? ILockableDevice.SavedLockState => _savedLockState;
 
         private LockableDeviceHelper<TDevice, TAddressess>? _lockableHelper;
 
-        public LockableDeviceBase(string id, string name, string subGroup, TAddressess addresses, IKnxService knxService, ILogger<TDevice> logger, TimeSpan defaulTimeout)
+        public LockableDeviceBase(string id, string name, string subGroup, TAddressess addresses, IKnxService knxService, ILogger<TDevice> logger, TimeSpan defaultTimeout)
+            :base(id, name, subGroup, addresses, knxService, logger, defaultTimeout)
         {
-            Id = id ?? throw new ArgumentNullException(nameof(id));
-            Name = name ?? throw new ArgumentNullException(nameof(name));
-            SubGroup = subGroup ?? throw new ArgumentNullException(nameof(subGroup));
-            _knxService = knxService ?? throw new ArgumentNullException(nameof(knxService));
-            _logger = logger;
-            Addresses = addresses ?? throw new ArgumentNullException(nameof(addresses));
-            // Initialize event manager
-            _eventManager = new KnxEventManager(_knxService, Id, "LockableDevice");
             _eventManager.MessageReceived += OnKnxMessageReceived;
-
-
-
-            // Start listening to KNX events
-            _eventManager.StartListening();
-            _defaulTimeout = defaulTimeout;
         }
 
         internal virtual void Initialize(TDevice owner)
@@ -53,12 +28,18 @@ namespace KnxModel
                                 Addresses,
                                 _knxService, 
                                 _logger, 
-                                _defaulTimeout);
+                                _defaultTimeout);
+        }
+
+        public override async Task InitializeAsync()
+        {
+            CurrentLockState = await ReadLockStateAsync();
+            LastUpdated = DateTime.Now;
+
+            _logger.LogInformation("{type} {DeviceId} initialized - Lock: {LockState}", typeof(TDevice).Name, Id, CurrentLockState);
         }
 
         #region ILockableDevice Implementation
-
-        public Lock CurrentLockState => _currentLockState;
 
         public async Task LockAsync(TimeSpan? timeout = null)
         {
@@ -94,22 +75,19 @@ namespace KnxModel
         }
 
         #endregion
-
         #region IKnxDeviceBase Implementation
 
-        public abstract Task InitializeAsync();
 
-
-        public virtual void SaveCurrentState()
+        public override void SaveCurrentState()
         {
-            _savedLockState = _currentLockState;
+            SavedLockState = CurrentLockState;
         }
 
-        public virtual async Task RestoreSavedStateAsync(TimeSpan? timeout = null)
+        public override async Task RestoreSavedStateAsync(TimeSpan? timeout = null)
         {
-            if (_savedLockState.HasValue && _savedLockState.Value != CurrentLockState)
+            if (SavedLockState.HasValue && SavedLockState.Value != CurrentLockState)
             {
-                switch (_savedLockState.Value)
+                switch (SavedLockState.Value)
                 {
                     case Lock.On:
                         await LockAsync(timeout);
@@ -121,32 +99,7 @@ namespace KnxModel
             }
         }
 
-        #endregion
-
-
-
-
-        #region IDisposable Implementation
-
-        public void Dispose()
-        {
-            _eventManager?.Dispose();
-            Console.WriteLine($"LightDevice {Id} disposed");
-        }
-
-        /// <summary>
-        /// Internal method for setting only lock state in unit tests
-        /// </summary>
-        void ILockableDevice.SetLockForTest(Lock lockState)
-        {
-            _currentLockState = lockState;
-            _lastUpdated = DateTime.Now;
-        }
-        void ILockableDevice.SetSavedLockForTest(Lock lockState)
-        {
-            _savedLockState = lockState;
-        }
-
+        
         #endregion
     }
 }

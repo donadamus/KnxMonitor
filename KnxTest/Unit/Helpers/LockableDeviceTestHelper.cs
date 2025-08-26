@@ -58,7 +58,7 @@ namespace KnxTest.Unit.Helpers
         internal void OnAnyFeedbackToUnknownAddress_ShouldProcessCorrectlyAndDoesNotChangeState(Lock lockState)
         {
             // Arrange
-            _device.SetLockForTest(lockState);
+            ((ILockableDevice)_device).CurrentLockState = lockState;
             var currentDate = _device.LastUpdated;
             var unknownAddress = "9/9/9";
             var feedbackArgsTrue = new KnxGroupEventArgs(unknownAddress, new KnxValue(true));
@@ -107,8 +107,8 @@ namespace KnxTest.Unit.Helpers
 
         internal async Task RestoreSavedStateAsync_ShouldSendCorrectTelegrams(Lock initialLockState, Lock lockState)
         {
-            _device.SetSavedLockForTest(initialLockState);
-            _device.SetLockForTest(lockState);
+            _device.SavedLockState = initialLockState;
+            _device.CurrentLockState = lockState;
             
             if (initialLockState != lockState && initialLockState != Lock.Unknown)
             {
@@ -123,7 +123,8 @@ namespace KnxTest.Unit.Helpers
         internal void SaveCurrentState_ShouldStoreCurrentValues(Lock lockState)
         {
             // Arrange
-            _device.SetLockForTest(lockState);
+            _device.SavedLockState = lockState;
+            _device.CurrentLockState = lockState;
 
             // Act
             _device.SaveCurrentState();
@@ -156,7 +157,7 @@ namespace KnxTest.Unit.Helpers
         internal async Task WaitForLockAsync_ImmediateReturnTrueWhenAlreadyInState(Lock lockState, int waitingTime, int executionTimeMin, int executionTimeMax)
         {
             // Test WaitForLockStateAsync: immediate return when already in state, timeout when wrong state
-            ((ILockableDevice)_device).SetLockForTest(lockState);
+            _device.CurrentLockState = lockState;
 
             var timer = new System.Diagnostics.Stopwatch();
             timer.Start();
@@ -175,7 +176,7 @@ namespace KnxTest.Unit.Helpers
         internal async Task WaitForLockStateAsync_ShouldReturnCorrectly(Lock initialState, int delayInMs, Lock lockState, int waitingTime, Lock expectedState, bool expectedResult, int executionTimeMin, int executionTimeMax)
         {
             // Test WaitForLockStateAsync: immediate return when already in state, timeout when wrong state
-            _device.SetLockForTest(initialState);
+            _device.CurrentLockState = initialState;
             var timer = new System.Diagnostics.Stopwatch();
             timer.Start();
 
@@ -202,7 +203,7 @@ namespace KnxTest.Unit.Helpers
         internal async Task WaitForLockStateAsync_WhenFeedbackReceived_ShouldReturnTrue(Lock initialState, int delayInMs, Lock lockState, int waitingTime, Lock expectedState, int executionTimeMin, int executionTimeMax)
         {
             // Test that wait method returns true when feedback changes state to target
-            _device.SetLockForTest(initialState);
+            _device.CurrentLockState = initialState;
             var timer = new System.Diagnostics.Stopwatch();
             timer.Start();
 

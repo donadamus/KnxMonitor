@@ -6,31 +6,21 @@ namespace KnxModel
     // Combines basic device functionality with switching and locking capabilities
     /// </summary>
     public abstract class LightDeviceBase<TDevice, TAddressess> : LockableDeviceBase<TDevice, TAddressess>, ILightDevice, ISwitchStateLockableDevice
-        where TDevice : IKnxDeviceBase, ILightDevice, ILockableDevice
+        where TDevice : ILightDevice
         where TAddressess : ISwitchableAddress, ILockableAddress
     {
+        public Switch CurrentSwitchState { get; private set; } = Switch.Unknown;
+        Switch ISwitchable.CurrentSwitchState { get => CurrentSwitchState; set => CurrentSwitchState = value; }
+        public Switch? SavedSwitchState { get; private set; }
+        Switch? ISwitchable.SavedSwitchState { get => SavedSwitchState; set => SavedSwitchState = value; }
 
-        
         private SwitchableDeviceHelper<TDevice, TAddressess>? _switchableHelper;
 
-        
-        internal Switch _currentSwitchState = Switch.Unknown;
-
-        
-        // Saved state for testing
-        private Switch? _savedSwitchState;
-        private readonly ILogger<TDevice> _logger;
-
         public LightDeviceBase(string id, string name, string subGroup, TAddressess addresses, IKnxService knxService, ILogger<TDevice> logger, TimeSpan defaulTimeout)
-            : base(id, name, subGroup, addresses,knxService, logger, defaulTimeout)
+            : base(id, name, subGroup, addresses, knxService, logger, defaulTimeout)
         {
-            
-
-            // Initialize event manager
             _eventManager.MessageReceived += OnKnxMessageReceived;
-            _logger = logger;
         }
-
 
         internal override void Initialize(TDevice owner)
         {
@@ -40,8 +30,21 @@ namespace KnxModel
                 Addresses,
                 _knxService, 
                 _logger, 
-                _defaulTimeout);
+                _defaultTimeout);
         }
+
+
+        public override async Task InitializeAsync()
+        {
+            _logger.LogInformation("Initializing DimmerDevice {DeviceId} ({DeviceName})", Id, Name);
+            await base.InitializeAsync();
+            // Read initial states from KNX bus
+            CurrentSwitchState = await ReadSwitchStateAsync();
+            LastUpdated = DateTime.Now;
+
+            _logger.LogInformation("{type} {DeviceId} initialized - Switch: {SwitchState}", typeof(TDevice).Name, Id, CurrentSwitchState);
+        }
+
 
         #region Event Handling
 
@@ -60,32 +63,32 @@ namespace KnxModel
 
         public override void SaveCurrentState()
         {
-            _savedSwitchState = _currentSwitchState;
+            SavedSwitchState = CurrentSwitchState;
             base.SaveCurrentState(); // Save lock state as well
         }
 
         public override async Task RestoreSavedStateAsync(TimeSpan? timeout = null)
         {
-            if (_savedSwitchState.HasValue && _savedSwitchState.Value != CurrentSwitchState && _savedLockState != Lock.Unknown)
+            if (SavedSwitchState.HasValue && SavedSwitchState.Value != CurrentSwitchState)
             {
                 // Unlock before changing switch state if necessary
-                if (_currentLockState == Lock.On)
+                if (CurrentLockState == Lock.On)
                 {
-                    await UnlockAsync(timeout ?? _defaulTimeout);
+                    await UnlockAsync(timeout ?? _defaultTimeout);
                 }
 
-                switch (_savedSwitchState.Value)
+                switch (SavedSwitchState.Value)
                 {
                     case Switch.On:
-                        await TurnOnAsync(timeout ?? _defaulTimeout);
+                        await TurnOnAsync(timeout ?? _defaultTimeout);
                         break;
                     case Switch.Off:
-                        await TurnOffAsync(timeout ?? _defaulTimeout);
+                        await TurnOffAsync(timeout ?? _defaultTimeout);
                         break;
                 }
             }
 
-            await base.RestoreSavedStateAsync(timeout ?? _defaulTimeout); // Restore lock state as well
+            await base.RestoreSavedStateAsync(timeout ?? _defaultTimeout); // Restore lock state as well
 
             Console.WriteLine($"LightDevice {Id} state restored");
         }
@@ -94,7 +97,7 @@ namespace KnxModel
 
         #region ISwitchable Implementation
 
-        public Switch CurrentSwitchState => _currentSwitchState;
+
 
         public async Task TurnOnAsync(TimeSpan? timeout = null)
         {
@@ -118,7 +121,7 @@ namespace KnxModel
 
         public async Task<bool> WaitForSwitchStateAsync(Switch targetState, TimeSpan? timeout = null)
         {
-            return await (_switchableHelper ?? throw new InvalidOperationException("Helper not initialized")).WaitForSwitchStateAsync(targetState, timeout);
+            return await _switchableHelper!.WaitForSwitchStateAsync(targetState, timeout);
         }
 
         #endregion
@@ -127,48 +130,16 @@ namespace KnxModel
 
         #region Internal Test Helpers
 
-        /// <summary>
-        /// Internal method for setting device state in unit tests
-        /// Bypasses KNX communication for testing scenarios
-        /// </summary>
-        internal void SetStateForTest(Switch switchState, Lock lockState)
-        {
-            _currentSwitchState = switchState;
-            _currentLockState = lockState;
-            _lastUpdated = DateTime.Now;
-        }
-
-        void ISwitchable.SetSavedSwitchForTest(Switch switchState)
-        {
-            _savedSwitchState = switchState;
-        }
-
-
-        /// <summary>
-        /// Internal method for setting only switch state in unit tests
-        /// </summary>
-        void ISwitchable.SetSwitchForTest(Switch switchState)
-        {
-            _currentSwitchState = switchState;
-            _lastUpdated = DateTime.Now;
-        }
-
-        /// <summary>
-        /// Internal property for accessing saved switch state in unit tests
-        /// </summary>
-        Switch? ISwitchable.SavedSwitchState => _savedSwitchState;
 
         /// <summary>
         /// Internal property for accessing saved lock state in unit tests
         /// </summary>
-        internal Lock? SavedLockState => _savedLockState;
 
         public Switch LockedSwitchState => Switch.Off;
 
         public bool IsSwitchLockActive => true;
 
         #endregion
-
 
 
 

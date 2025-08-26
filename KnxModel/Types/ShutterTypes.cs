@@ -22,6 +22,12 @@ namespace KnxModel
         string BrightnessThreshold2,   // 0/2/4 - brightness threshold 2 feedback  
         string OutdoorTemperatureThreshold // 0/2/7 - outdoor temperature threshold feedback
     ) : LockableAddresses(LockControl, LockFeedback), ILockableAddress, IPercentageControllableAddress, IMovementControllableAddress, ISunProtectionThresholdAddresses, ISunProtectionBlockableAddresses;
+ public record SunProtectionThresholdAddresses(
+        string SunProtectionStatus,               // 4/4/{X+100} - current sun protection state
+        string BrightnessThreshold1,   // 0/2/3 - brightness threshold 1 feedback
+        string BrightnessThreshold2,   // 0/2/4 - brightness threshold 2 feedback  
+        string OutdoorTemperatureThreshold // 0/2/7 - outdoor temperature threshold feedback
+    ) : ISunProtectionThresholdAddresses;
 
     /// <summary>
     /// Current state of a shutter

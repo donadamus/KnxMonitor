@@ -31,9 +31,8 @@ namespace KnxModel.Models.Helpers
                 var switchState = isOn ? Switch.On : Switch.Off;
                 
                 // Update state through dynamic access to the device base
-                var deviceBase = owner as dynamic;
-                deviceBase._currentSwitchState = switchState;
-                deviceBase._lastUpdated = DateTime.Now;
+                owner.CurrentSwitchState = switchState;
+                owner.LastUpdated = DateTime.Now;
                 
                 _logger.LogInformation("{DeviceType} {DeviceId} switch state updated via feedback: {SwitchState}", _deviceType, _deviceId, switchState);
             }

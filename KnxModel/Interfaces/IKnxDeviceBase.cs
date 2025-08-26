@@ -21,7 +21,7 @@ namespace KnxModel
         /// <summary>
         /// When was the device state last updated
         /// </summary>
-        DateTime LastUpdated { get; }
+        DateTime LastUpdated { get; set; }
 
         /// <summary>
         /// Initializes the device by reading state from KNX bus

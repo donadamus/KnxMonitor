@@ -7,7 +7,7 @@ namespace KnxModel.Models.Helpers
     /// Handles movement control commands and activity state management
     /// </summary>
     public class MovementControllableDeviceHelper<T, TAddress> : DeviceHelperBase<T, TAddress>
-        where T : IActivityStatusReadable, ILockableDevice, IKnxDeviceBase
+        where T : IActivityStatusReadable, ILockableDevice, IKnxDeviceBase, IMovementControllable
         where TAddress : IMovementControllableAddress
     {
         public MovementControllableDeviceHelper(T owner, TAddress addresses, IKnxService knxService, string deviceId, string deviceType,
@@ -102,7 +102,7 @@ namespace KnxModel.Models.Helpers
         public async Task<bool> WaitForActiveAsync(TimeSpan? timeout = null)
         {
             return await WaitForConditionAsync(
-                () => owner.,
+                () => owner.IsActive,
                 timeout ?? _defaultTimeout,
                 "movement to start"
             );
@@ -114,7 +114,7 @@ namespace KnxModel.Models.Helpers
         public async Task<bool> WaitForInactiveAsync(TimeSpan? timeout = null)
         {
             return await WaitForConditionAsync(
-                () => !ReadActivityStatus(),
+                () => !owner.IsActive,
                 timeout ?? _defaultTimeout,
                 "movement to stop"
             );

@@ -45,7 +45,7 @@ namespace KnxTest.Unit.Helpers
         internal void OnAnyFeedbackToUnknownAddress_ShouldProcessCorrectlyAndDoesNotChangeState(Switch currentSwitchState)
         {
             // Arrange
-            _device.SetSwitchForTest(currentSwitchState);
+            _device.CurrentSwitchState = currentSwitchState;
             var currentDate = _device.LastUpdated;
             var unknownAddress = "9/9/9";
             var feedbackArgsTrue = new KnxGroupEventArgs(unknownAddress, new KnxValue(true));
@@ -94,8 +94,8 @@ namespace KnxTest.Unit.Helpers
 
         internal async Task RestoreSavedStateAsync_ShouldSendCorrectTelegrams(Switch initialSwitchState, Switch switchState)
         {
-            _device.SetSavedSwitchForTest(initialSwitchState);
-            _device.SetSwitchForTest(switchState);
+            _device.SavedSwitchState = initialSwitchState;
+            _device.CurrentSwitchState = switchState;
 
             if (initialSwitchState != switchState && initialSwitchState != Switch.Unknown)
             {
@@ -111,7 +111,7 @@ namespace KnxTest.Unit.Helpers
         internal void SaveCurrentState_ShouldStoreCurrentValues(Switch switchState)
         {
             // Arrange
-            _device.SetSwitchForTest(switchState);
+            _device.CurrentSwitchState = switchState;
 
             // Act
             _device.SaveCurrentState();
@@ -127,7 +127,7 @@ namespace KnxTest.Unit.Helpers
 
             // Arrange
             var address = _addresses.Control;
-            ((ISwitchable) _device).SetSwitchForTest(initialState);
+            _device.CurrentSwitchState = initialState;
             _mockKnxService.Setup(s => s.WriteGroupValueAsync(address, expectedValue))
                           .Returns(Task.CompletedTask)
                           .Verifiable();
@@ -164,7 +164,7 @@ namespace KnxTest.Unit.Helpers
 
         internal async Task WaitForSwitchStateAsync_ImmediateReturnTrueWhenAlreadyInState(Switch switchState, int waitingTime, int executionTimeMin, int executionTimeMax)
         {
-            ((ISwitchable)_device).SetSwitchForTest(switchState);
+            ((ISwitchable)_device).CurrentSwitchState = switchState;
 
             var timer = new System.Diagnostics.Stopwatch();
             timer.Start();
@@ -183,7 +183,7 @@ namespace KnxTest.Unit.Helpers
 
         internal async Task WaitForSwitchStateAsync_ShouldReturnCorrectly(Switch initialState, int delayInMs, Switch switchState, int waitingTime, Switch expectedState, bool expectedResult, int executionTimeMin, int executionTimeMax)
         {
-            ((ISwitchable)_device).SetSwitchForTest(initialState);
+            _device.CurrentSwitchState = initialState;
 
             var timer = new System.Diagnostics.Stopwatch();
             timer.Start();
@@ -212,7 +212,7 @@ namespace KnxTest.Unit.Helpers
 
         internal async Task WaitForSwitchStateAsync_WhenFeedbackReceived_ShouldReturnTrue(Switch initialState, int delayInMs, Switch switchState, int waitingTime, Switch expectedState, int executionTimeMin, int executionTimeMax)
         {
-            ((ISwitchable)_device).SetSwitchForTest(initialState);
+            _device.CurrentSwitchState = initialState;
 
             var timer = new System.Diagnostics.Stopwatch();
             timer.Start();

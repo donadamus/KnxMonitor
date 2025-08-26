@@ -17,15 +17,9 @@ namespace KnxModel
     /// </summary>
     public interface ISwitchable : IIdentifable
     {
+        Switch? SavedSwitchState { get; internal set; }
 
-        internal void SetSwitchForTest(Switch currentSwitchState);
-        internal void SetSavedSwitchForTest(Switch currentSwitchState);
-        internal Switch? SavedSwitchState { get; }
-
-        /// <summary>
-        /// Current switch state
-        /// </summary>
-        Switch CurrentSwitchState { get; }
+        Switch CurrentSwitchState { get; internal set; }
 
         /// <summary>
         /// Turn the device ON

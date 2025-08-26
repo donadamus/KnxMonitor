@@ -75,8 +75,17 @@ public record LockableAddresses(
     }
     public interface IMovementControllableAddress
     {
+        /// <summary>
+        /// Address of the Up/Down command.
+        /// </summary>
         string MovementControl { get; }
+        /// <summary>
+        /// Address of the feedback message related to the movement operation Up/Down.
+        /// </summary>
         string MovementFeedback { get; }
+        /// <summary>
+        /// Address of the feedback message describing the current movement status Inactive/Active.
+        /// </summary>
         string MovementStatusFeedback { get; }
         string StopControl { get; }
     }

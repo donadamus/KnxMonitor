@@ -191,48 +191,5 @@ namespace KnxTest.Integration.Helpers
 
             _logger.LogInformation($"✅ Threshold persistence validated - B1: {secondB1}, B2: {secondB2}, Temp: {secondTemp}");
         }
-
-        /// <summary>
-        /// Generates a comprehensive test report for threshold functionality
-        /// </summary>
-        public async Task GenerateThresholdReport(ShutterDevice device)
-        {
-            _logger.LogInformation($"📋 Generating threshold report for device {device.Id}");
-
-            // Read all current states
-            var b1 = await device.ReadBrightnessThreshold1StateAsync();
-            var b2 = await device.ReadBrightnessThreshold2StateAsync();
-            var temp = await device.ReadOutdoorTemperatureThresholdStateAsync();
-            
-            var position = device.CurrentPercentage;
-            var sunProtectionBlocked = device.IsSunProtectionBlocked;
-
-            // Calculate protection level
-            var activeThresholds = (b1 ? 1 : 0) + (b2 ? 1 : 0) + (temp ? 1 : 0);
-            var protectionLevel = activeThresholds switch
-            {
-                0 => "None",
-                1 => "Low",
-                2 => "Medium", 
-                3 => "High",
-                _ => "Unknown"
-            };
-
-            _logger.LogInformation($"""
-                📊 THRESHOLD REPORT FOR {device.Id}
-                ═══════════════════════════════════════
-                🌞 Brightness Threshold 1:     {(b1 ? "ACTIVE" : "inactive")}
-                🌞 Brightness Threshold 2:     {(b2 ? "ACTIVE" : "inactive")}
-                🌡️ Temperature Threshold:       {(temp ? "ACTIVE" : "inactive")}
-                🛡️ Protection Level:            {protectionLevel} ({activeThresholds}/3)
-                🎚️ Current Position:            {position:F1}%
-                🔒 Sun Protection Blocked:      {(sunProtectionBlocked ? "YES" : "NO")}
-                📍 KNX Addresses:
-                   - B1: {device.Addresses.BrightnessThreshold1}
-                   - B2: {device.Addresses.BrightnessThreshold2}
-                   - Temp: {device.Addresses.OutdoorTemperatureThreshold}
-                ═══════════════════════════════════════
-                """);
-        }
     }
 }

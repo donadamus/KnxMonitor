@@ -31,11 +31,8 @@ namespace KnxModel.Models.Helpers
                 var isLocked = e.Value.AsBoolean();
                 var lockState = isLocked ? Lock.On : Lock.Off;
                 
-                // Update state through internal access to the device base
-                // This requires that TDevice inherits from LockableDeviceBase
-                var deviceBase = owner as dynamic;
-                deviceBase._currentLockState = lockState;
-                deviceBase._lastUpdated = DateTime.Now;
+                owner.CurrentLockState = lockState;
+                owner.LastUpdated = DateTime.Now;
                 
                 _logger.LogInformation("{DeviceType} {DeviceId} lock state updated via feedback: {LockState}", _deviceType, _deviceId, (isLocked ? "LOCKED" : "UNLOCKED"));
             }

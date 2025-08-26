@@ -1,5 +1,6 @@
-using Microsoft.Extensions.Logging;
 using KnxModel.Models;
+using KnxModel.Types;
+using Microsoft.Extensions.Logging;
 
 namespace KnxModel.Models
 {
@@ -8,13 +9,8 @@ namespace KnxModel.Models
     /// threshold conditions by sending appropriate KNX telegrams
     /// Similar to ClockDevice in Master mode but for threshold simulation
     /// </summary>
-    public class ThresholdSimulatorDevice : IKnxDeviceBase, IDisposable
+    public class ThresholdSimulatorDevice : KnxDeviceBase<ThresholdSimulatorDevice, SunProtectionThresholdAddresses>,  IKnxDeviceBase, IDisposable
     {
-        private readonly IKnxService _knxService;
-        private readonly ILogger<ThresholdSimulatorDevice> _logger;
-        private readonly TimeSpan _defaultTimeout;
-        private DateTime _lastUpdated = DateTime.MinValue;
-
         // Threshold addresses - these are the common addresses used by shutters
         private readonly string _brightnessThreshold1Address = KnxAddressConfiguration.CreateBrightnessThreshold1Address();
         private readonly string _brightnessThreshold2Address = KnxAddressConfiguration.CreateBrightnessThreshold2Address();
@@ -40,26 +36,17 @@ namespace KnxModel.Models
             string name, 
             IKnxService knxService, 
             ILogger<ThresholdSimulatorDevice> logger, 
-            TimeSpan defaultTimeout)
+            TimeSpan defaultTimeout) : base(id, name, "TestingDevices", null, knxService, logger, defaultTimeout)
         {
-            Id = id;
-            Name = name;
-            _knxService = knxService ?? throw new ArgumentNullException(nameof(knxService));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _defaultTimeout = defaultTimeout;
 
             _logger.LogInformation("ThresholdSimulatorDevice {DeviceId} created", Id);
         }
 
         #region IKnxDeviceBase Implementation
 
-        public string Id { get; }
-        public string Name { get; }
         public string DeviceType => "ThresholdSimulator";
-        public string SubGroup => "TestingDevices";
-        public DateTime LastUpdated => _lastUpdated;
 
-        public async Task InitializeAsync()
+        public override async Task InitializeAsync()
         {
             _logger.LogInformation("Initializing ThresholdSimulatorDevice {DeviceId} ({DeviceName})", Id, Name);
 
@@ -76,14 +63,14 @@ namespace KnxModel.Models
                 _brightnessThresholdMonitoringBlocked = false;
             }
 
-            _lastUpdated = DateTime.Now;
+            LastUpdated = DateTime.Now;
 
             _logger.LogInformation("ThresholdSimulatorDevice {DeviceId} initialized as threshold Master - BrightnessMonitoringBlocked: {BrightnessMonitoringBlocked}", 
                 Id, _brightnessThresholdMonitoringBlocked ? "BLOCKED" : "UNBLOCKED");
             Console.WriteLine($"ThresholdSimulatorDevice {Id} initialized - ready to simulate thresholds, BrightnessMonitoringBlocked: {(_brightnessThresholdMonitoringBlocked ? "BLOCKED" : "UNBLOCKED")}");
         }
 
-        public void SaveCurrentState()
+        public override void SaveCurrentState()
         {
             _savedBrightnessThreshold1State = _brightnessThreshold1State;
             _savedBrightnessThreshold2State = _brightnessThreshold2State;
@@ -95,7 +82,7 @@ namespace KnxModel.Models
                 _savedBrightnessThresholdMonitoringBlocked);
         }
 
-        public async Task RestoreSavedStateAsync(TimeSpan? timeout = null)
+        public override async Task RestoreSavedStateAsync(TimeSpan? timeout = null)
         {
             var effectiveTimeout = timeout ?? _defaultTimeout;
 
@@ -119,7 +106,7 @@ namespace KnxModel.Models
                 await SetBrightnessThresholdMonitoringBlockStateAsync(_savedBrightnessThresholdMonitoringBlocked.Value);
             }
 
-            _lastUpdated = DateTime.Now;
+            LastUpdated = DateTime.Now;
             _logger.LogDebug("ThresholdSimulatorDevice {DeviceId} state restored", Id);
         }
 
@@ -162,7 +149,7 @@ namespace KnxModel.Models
 
             await _knxService.WriteGroupValueAsync(_brightnessThreshold1Address, exceeded);
             _brightnessThreshold1State = exceeded;
-            _lastUpdated = DateTime.Now;
+            LastUpdated = DateTime.Now;
 
             _logger.LogInformation("ThresholdSimulatorDevice {DeviceId} brightness threshold 1 set to {State}", 
                 Id, exceeded ? "EXCEEDED" : "NOT_EXCEEDED");
@@ -180,7 +167,7 @@ namespace KnxModel.Models
 
             await _knxService.WriteGroupValueAsync(_brightnessThreshold2Address, exceeded);
             _brightnessThreshold2State = exceeded;
-            _lastUpdated = DateTime.Now;
+            LastUpdated = DateTime.Now;
 
             _logger.LogInformation("ThresholdSimulatorDevice {DeviceId} brightness threshold 2 set to {State}", 
                 Id, exceeded ? "EXCEEDED" : "NOT_EXCEEDED");
@@ -198,7 +185,7 @@ namespace KnxModel.Models
 
             await _knxService.WriteGroupValueAsync(_outdoorTemperatureThresholdAddress, exceeded);
             _outdoorTemperatureThresholdState = exceeded;
-            _lastUpdated = DateTime.Now;
+            LastUpdated = DateTime.Now;
 
             _logger.LogInformation("ThresholdSimulatorDevice {DeviceId} temperature threshold set to {State}", 
                 Id, exceeded ? "EXCEEDED" : "NOT_EXCEEDED");
@@ -220,7 +207,7 @@ namespace KnxModel.Models
 
             await _knxService.WriteGroupValueAsync(_brightnessThresholdMonitoringBlockAddress, true);
             _brightnessThresholdMonitoringBlocked = true;
-            _lastUpdated = DateTime.Now;
+            LastUpdated = DateTime.Now;
 
             _logger.LogInformation("ThresholdSimulatorDevice {DeviceId} brightness threshold monitoring blocked", Id);
             Console.WriteLine($"🚫 ThresholdSimulator {Id} brightness threshold monitoring: BLOCKED");
@@ -237,7 +224,7 @@ namespace KnxModel.Models
 
             await _knxService.WriteGroupValueAsync(_brightnessThresholdMonitoringBlockAddress, false);
             _brightnessThresholdMonitoringBlocked = false;
-            _lastUpdated = DateTime.Now;
+            LastUpdated = DateTime.Now;
 
             _logger.LogInformation("ThresholdSimulatorDevice {DeviceId} brightness threshold monitoring unblocked", Id);
             Console.WriteLine($"✅ ThresholdSimulator {Id} brightness threshold monitoring: UNBLOCKED");
@@ -271,7 +258,7 @@ namespace KnxModel.Models
             {
                 var blockState = await _knxService.RequestGroupValue<bool>(_brightnessThresholdMonitoringBlockAddress);
                 _brightnessThresholdMonitoringBlocked = blockState;
-                _lastUpdated = DateTime.Now;
+                LastUpdated = DateTime.Now;
                 
                 _logger.LogInformation("ThresholdSimulatorDevice {DeviceId} brightness threshold monitoring block state: {State}", 
                     Id, blockState ? "BLOCKED" : "UNBLOCKED");

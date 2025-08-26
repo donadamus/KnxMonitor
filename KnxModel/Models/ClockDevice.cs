@@ -14,14 +14,10 @@ namespace KnxModel
     /// Implementation of a Clock device for KNX time synchronization
     /// Supports Master, Slave, and Slave/Master modes with sun position calculation
     /// </summary>
-    public class ClockDevice : IClockDevice, ISunPositionProvider, IDisposable
+    public class ClockDevice : KnxDeviceBase<ClockDevice, ClockAddresses>, IClockDevice, ISunPositionProvider, IDisposable
     {
-        private readonly KnxEventManager _eventManager;
-        private readonly IKnxService _knxService;
-        private readonly ILogger<ClockDevice> _logger;
         private readonly ClockConfiguration _configuration;
         private readonly ClockAddresses _addresses;
-        private readonly TimeSpan _defaultTimeout;
 
         // Device state
         private ClockMode _currentMode;
@@ -46,14 +42,9 @@ namespace KnxModel
         private bool? _savedHasValidTime;
 
         public ClockDevice(string id, string name, ClockConfiguration configuration, IKnxService knxService, ILogger<ClockDevice> logger, TimeSpan defaultTimeout, double latitude = 51.1079, double longitude = 17.0385)
+            : base(id, name, "1", KnxAddressConfiguration.CreateClockAddresses(), knxService, logger, defaultTimeout)
         {
-            Id = id ?? throw new ArgumentNullException(nameof(id));
-            Name = name ?? throw new ArgumentNullException(nameof(name));
-            SubGroup = "1"; // Clock devices use fixed sub group
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-            _knxService = knxService ?? throw new ArgumentNullException(nameof(knxService));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _defaultTimeout = defaultTimeout;
 
             // Set geographic location
             _latitude = latitude;
@@ -67,18 +58,12 @@ namespace KnxModel
             _currentDateTime = DateTime.MinValue;
 
             // Initialize event manager
-            _eventManager = new KnxEventManager(_knxService, Id, "ClockDevice");
             _eventManager.MessageReceived += OnKnxMessageReceived;
         }
 
         #region IKnxDeviceBase Implementation
 
-        public string Id { get; }
-        public string Name { get; }
-        public string SubGroup { get; }
-        public DateTime LastUpdated => _lastUpdated;
-
-        public async Task InitializeAsync()
+        public override async Task InitializeAsync()
         {
             _logger.LogInformation("Initializing ClockDevice {DeviceId} ({DeviceName}) in {Mode} mode", Id, Name, _currentMode);
 
@@ -105,7 +90,7 @@ namespace KnxModel
             Console.WriteLine($"ClockDevice {Id} initialized in {_currentMode} mode");
         }
 
-        public void SaveCurrentState()
+        public override void SaveCurrentState()
         {
             _savedMode = _currentMode;
             _savedDateTime = _currentDateTime;
@@ -115,7 +100,7 @@ namespace KnxModel
                 Id, _savedMode, _savedDateTime, _savedHasValidTime);
         }
 
-        public async Task RestoreSavedStateAsync(TimeSpan? timeout = null)
+        public override async Task RestoreSavedStateAsync(TimeSpan? timeout = null)
         {
             if (_savedMode.HasValue && _savedMode.Value != _currentMode)
             {
@@ -573,11 +558,10 @@ namespace KnxModel
 
         #region IDisposable Implementation
 
-        public void Dispose()
+        public override void Dispose()
         {
             StopAllTimers();
-            _eventManager?.Dispose();
-
+            base.Dispose();
             _logger.LogInformation("ClockDevice {DeviceId} disposed", Id);
             Console.WriteLine($"ClockDevice {Id} disposed");
         }

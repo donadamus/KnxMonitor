@@ -9,14 +9,11 @@ namespace KnxModel
     public interface ILockableDevice :IIdentifable
     {
 
-        internal void SetLockForTest(Lock lockState);
-        internal void SetSavedLockForTest(Lock lockState);
         /// <summary>
         /// Current lock state
         /// </summary>
-        Lock CurrentLockState { get; }
-        internal Lock? SavedLockState { get; }
-
+        Lock CurrentLockState { get; internal set; }
+        Lock? SavedLockState { get; internal set; }
 
         /// <summary>
         /// Sets the lock state asynchronously with an optional timeout.
