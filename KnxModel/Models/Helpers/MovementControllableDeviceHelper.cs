@@ -102,7 +102,7 @@ namespace KnxModel.Models.Helpers
         public async Task<bool> WaitForActiveAsync(TimeSpan? timeout = null)
         {
             return await WaitForConditionAsync(
-                () => ReadActivityStatus(),
+                () => owner.,
                 timeout ?? _defaultTimeout,
                 "movement to start"
             );
@@ -118,14 +118,6 @@ namespace KnxModel.Models.Helpers
                 timeout ?? _defaultTimeout,
                 "movement to stop"
             );
-        }
-
-        /// <summary>
-        /// Reads current activity status from owner device
-        /// </summary>
-        private bool ReadActivityStatus()
-        {
-            return owner.IsActive;
         }
 
         internal async Task<bool> ReadActivityStatusAsync()

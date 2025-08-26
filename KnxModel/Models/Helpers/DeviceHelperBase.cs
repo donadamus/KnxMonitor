@@ -44,16 +44,6 @@ namespace KnxModel.Models.Helpers
                 }
                 return true;
             });
-            //// Create a task that completes when condition is met
-            //var logTask = Task.Run(async () =>
-            //{
-            //    while (!condition())
-            //    {
-            //        await Task.Delay(1000);
-            //        _logger.LogInformation($"Device {_deviceType} {_deviceId} still waiting for {description}");
-            //    }
-            //    return true;
-            //});
 
             // Create timeout task
             var timeoutTask = Task.Delay(effectiveTimeout);
