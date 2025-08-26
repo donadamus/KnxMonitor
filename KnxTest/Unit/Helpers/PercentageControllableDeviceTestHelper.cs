@@ -46,7 +46,7 @@ namespace KnxTest.Unit.Helpers
                               _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, new KnxGroupEventArgs(_addresses.PercentageFeedback, new KnxValue(expectedResult)));
                           })
                           .Verifiable();
-            ((IPercentageControllable)_device).SetPercentageForTest(currentPercentage);
+            _device.CurrentPercentage = currentPercentage;
 
             await _device.AdjustPercentageAsync(decrement, TimeSpan.FromMilliseconds(100));
 
@@ -60,7 +60,7 @@ namespace KnxTest.Unit.Helpers
             _mockKnxService.Setup(s => s.WriteGroupValueAsync(_addresses.PercentageControl, expectedResult))
                           .Returns(Task.CompletedTask)
                           .Verifiable();
-            ((IPercentageControllable)_device).SetPercentageForTest(currentPercentage);
+            _device.CurrentPercentage = currentPercentage;
 
             await _device.AdjustPercentageAsync(decrement, TimeSpan.Zero);
         }
@@ -81,7 +81,7 @@ namespace KnxTest.Unit.Helpers
                  _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, new KnxGroupEventArgs(_addresses.PercentageFeedback, new KnxValue(expectedResult)));
              })
              .Verifiable();
-            ((IPercentageControllable)_device).SetPercentageForTest(currentPercentage);
+            _device.CurrentPercentage = currentPercentage;
 
             await _device.AdjustPercentageAsync(increment, TimeSpan.FromMilliseconds(100));
 
@@ -95,7 +95,7 @@ namespace KnxTest.Unit.Helpers
             _mockKnxService.Setup(s => s.WriteGroupValueAsync(_addresses.PercentageControl, expectedResult))
                           .Returns(Task.CompletedTask)
                           .Verifiable();
-            ((IPercentageControllable)_device).SetPercentageForTest(currentPercentage);
+            _device.CurrentPercentage = currentPercentage;
 
             await _device.AdjustPercentageAsync(increment, TimeSpan.Zero);
 
@@ -123,7 +123,7 @@ namespace KnxTest.Unit.Helpers
 
         internal void OnAnyFeedbackToUnknownAddress_ShouldProcessCorrectlyAndDoesNotChangeState(float percentage)
         {
-            _device.SetPercentageForTest(percentage);
+            _device.CurrentPercentage = percentage;
             var currentDate = _device.LastUpdated;
             var unknownAddress = "9/9/9";
             var feedbackArgsTrue = new KnxGroupEventArgs(unknownAddress, new KnxValue(true));
@@ -149,7 +149,7 @@ namespace KnxTest.Unit.Helpers
             }
 
             switchableDevice!.CurrentSwitchState = switchState;
-            ((IPercentageControllable)_device).SetPercentageForTest(20); // Set initial percentage
+            _device.CurrentPercentage = 20; // Set initial percentage
             _mockKnxService.Raise(s => s.GroupMessageReceived += null, _mockKnxService.Object, new KnxGroupEventArgs(_addresses.PercentageFeedback, new KnxValue(50)));
             _device.CurrentPercentage.Should().Be(50);
             switchableDevice.CurrentSwitchState.Should().Be(switchState);
@@ -209,8 +209,8 @@ namespace KnxTest.Unit.Helpers
         internal async Task RestoreSavedStateAsync_ShouldSendCorrectTelegrams(float initialPercentage, float percentage)
         {
             // Arrange
-            _device.SetSavedPercentageForTest(initialPercentage);
-            _device.SetPercentageForTest(percentage);
+            _device.SavedPercentage = initialPercentage;
+            _device.CurrentPercentage = percentage;
 
             if (initialPercentage != percentage)
             {
@@ -224,7 +224,7 @@ namespace KnxTest.Unit.Helpers
         internal void SaveCurrentState_ShouldStoreCurrentValues(float percentage)
         {
             // Arrange
-            _device.SetPercentageForTest(percentage);
+            _device.CurrentPercentage = percentage;
 
             // Act
             _device.SaveCurrentState();
@@ -254,7 +254,7 @@ namespace KnxTest.Unit.Helpers
 
         internal async Task WaitForPercentageAsync_ImmediateReturnTrueWhenAlreadyInState(float percentage, int waitingTime, int executionTimeMin, int executionTimeMax)
         {
-            ((IPercentageControllable)_device).SetPercentageForTest(percentage);
+            _device.CurrentPercentage = percentage;
             var timer = new System.Diagnostics.Stopwatch();
             timer.Start();
             var result = await _device.WaitForPercentageAsync(percentage, 0.1, TimeSpan.FromMilliseconds(waitingTime));
@@ -268,7 +268,7 @@ namespace KnxTest.Unit.Helpers
         internal async Task WaitForPercentageAsync_ShouldReturnCorrectly(byte initialPercentage, byte targetPercentage, byte feedbackPercentage, int waitingTime, byte expectedPercentage, bool expectedResult, int executionTimeMin, int executionTimeMax)
         {
             // Arrange
-            _device.SetPercentageForTest(initialPercentage);
+            _device.CurrentPercentage = initialPercentage;
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
             _ = Task.Run(async () =>
@@ -292,7 +292,7 @@ namespace KnxTest.Unit.Helpers
         internal async Task WaitForPercentageAsync_WhenFeedbackReceived_ShouldReturnTrue(byte initialPercentage, byte targetPercentage, int delayInMs, int waitingTime, byte expectedPercentage, int executionTimeMin, int executionTimeMax)
         {
             // Arrange
-            ((IPercentageControllable)_device).SetPercentageForTest(initialPercentage);
+            _device.CurrentPercentage = initialPercentage;
             var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
             // Schedule feedback after delay

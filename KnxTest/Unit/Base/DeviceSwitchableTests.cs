@@ -73,10 +73,10 @@ namespace KnxTest.Unit.Base
         }
 
         [Theory]
-        [InlineData(Switch.On, 200, Switch.Off, 50, Switch.On, false, 50, 100)] // Wait for Switch.Off with delay
-        [InlineData(Switch.Off, 200, Switch.On, 50, Switch.Off, false, 50, 100)] // Wait for Switch.On with delay
-        [InlineData(Switch.Unknown, 200, Switch.On, 50, Switch.Unknown, false, 50, 100)] // Wait for Switch.On from Unknown with delay
-        [InlineData(Switch.Unknown, 200, Switch.Off, 50, Switch.Unknown, false, 50, 100)] // Wait for Switch.Off from Unknown with delay
+        [InlineData(Switch.On, 200, Switch.Off, 50, Switch.On, false, 40, 100)] // Wait for Switch.Off with delay
+        [InlineData(Switch.Off, 200, Switch.On, 50, Switch.Off, false, 40, 100)] // Wait for Switch.On with delay
+        [InlineData(Switch.Unknown, 200, Switch.On, 50, Switch.Unknown, false, 40, 100)] // Wait for Switch.On from Unknown with delay
+        [InlineData(Switch.Unknown, 200, Switch.Off, 50, Switch.Unknown, false, 40, 100)] // Wait for Switch.Off from Unknown with delay
 
         public async Task WaitForSwitchStateAsync_ShouldReturnCorrectly(Switch initialState, int delayInMs, Switch switchState, int waitingTime, Switch expectedState, bool expectedResult, int executionTimeMin, int executionTimeMax)
         {

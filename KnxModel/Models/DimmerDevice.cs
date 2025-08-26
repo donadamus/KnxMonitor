@@ -10,10 +10,12 @@ namespace KnxModel
 
     public class DimmerDevice : LightDeviceBase<DimmerDevice, DimmerAddresses>, IDimmerDevice, IPercentageLockableDevice
     {
-        internal float _currentPercentage = -1.0f; // 0% brightness
-        private float? _savedPercentage;
+        public float CurrentPercentage { get; private set; } = -1.0f;
+        float IPercentageControllable.CurrentPercentage { get => CurrentPercentage; set => CurrentPercentage = value; }
 
-        float? IPercentageControllable.SavedPercentage => _savedPercentage;
+        public float? SavedPercentage { get; private set; }
+        float? IPercentageControllable.SavedPercentage { get => SavedPercentage; set => SavedPercentage = value; }
+
 
         private readonly PercentageControllableDeviceHelper<DimmerDevice, DimmerAddresses> _percentageControllableHelper;
 
@@ -41,20 +43,20 @@ namespace KnxModel
             _logger.LogInformation("Initializing DimmerDevice {DeviceId} ({DeviceName})", Id, Name);
             await base.InitializeAsync();
             // Read initial states from KNX bus
-            _currentPercentage = await ReadPercentageAsync();
+            CurrentPercentage = await ReadPercentageAsync();
             LastUpdated = DateTime.Now;
-            _logger.LogInformation("{type} {DeviceId} initialized - Brightness: {Brightness}%", typeof(DimmerDevice).Name, Id, _currentPercentage);
+            _logger.LogInformation("{type} {DeviceId} initialized - Brightness: {Brightness}%", typeof(DimmerDevice).Name, Id, CurrentPercentage);
         }
 
         public override void SaveCurrentState()
         {
             base.SaveCurrentState();
-            _savedPercentage = _currentPercentage; // Save current brightness percentage
+            SavedPercentage = CurrentPercentage; // Save current brightness percentage
         }
 
         public override async Task RestoreSavedStateAsync(TimeSpan? timeout = null)
         {
-            if (_savedPercentage.HasValue && _savedPercentage.Value != _currentPercentage)
+            if (SavedPercentage.HasValue && SavedPercentage.Value != CurrentPercentage)
             {
                 // Unlock before changing switch state if necessary
                 if (CurrentLockState == Lock.On)
@@ -62,18 +64,16 @@ namespace KnxModel
                     await UnlockAsync(timeout ?? _defaultTimeout);
                 }
 
-                await SetPercentageAsync(_savedPercentage.Value, timeout ?? _defaultTimeout);
+                await SetPercentageAsync(SavedPercentage.Value, timeout ?? _defaultTimeout);
             }
 
             await base.RestoreSavedStateAsync(timeout ?? _defaultTimeout);
-           Console.WriteLine($"DimmerDevice {Id} state restored - Brightness: {_currentPercentage}%");
+           Console.WriteLine($"DimmerDevice {Id} state restored - Brightness: {CurrentPercentage}%");
         }
 
 
 
         #region IPercentageControllable Implementation
-
-        public float CurrentPercentage => _currentPercentage;
 
         public float LockedPercentage => 0;
 
@@ -96,17 +96,6 @@ namespace KnxModel
         public async Task AdjustPercentageAsync(float increment, TimeSpan? timeout = null)
         {
             await _percentageControllableHelper.AdjustPercentageAsync(increment, timeout);
-        }
-
-
-        void IPercentageControllable.SetPercentageForTest(float currentPercentage)
-        {
-            _currentPercentage = currentPercentage;
-            LastUpdated = DateTime.Now;
-        }
-        void IPercentageControllable.SetSavedPercentageForTest(float currentPercentage)
-        {
-            _savedPercentage = currentPercentage;
         }
 
         #endregion

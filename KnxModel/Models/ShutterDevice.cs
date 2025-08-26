@@ -13,10 +13,15 @@ namespace KnxModel
     /// </summary>
     public class ShutterDevice : LockableDeviceBase<ShutterDevice, ShutterAddresses>, IShutterDevice
     {
+
+        public float CurrentPercentage { get; private set; } = -1.0f;
+        float IPercentageControllable.CurrentPercentage { get => CurrentPercentage; set => CurrentPercentage = value; }
+        public float? SavedPercentage { get; private set; }
+        float? IPercentageControllable.SavedPercentage { get => SavedPercentage; set => SavedPercentage = value; }
+
         private readonly PercentageControllableDeviceHelper<ShutterDevice, ShutterAddresses> _shutterHelper;
         private readonly MovementControllableDeviceHelper<ShutterDevice, ShutterAddresses> _shutterMovementHelper;
         private readonly SunProtectionDeviceHelper<ShutterDevice, ShutterAddresses> _sunProtectionHelper;
-        internal float _currentPercentage = 0.0f; // Start fully open
         private TimeSpan _cooldown = TimeSpan.FromSeconds(2);
         private bool _isActive = false; // Movement status: true = moving, false = stopped
         private bool _isSunProtectionBlocked = false; // Sun protection block status
@@ -27,9 +32,7 @@ namespace KnxModel
         private bool _outdoorTemperatureThresholdActive = false;
         
         // Saved state for testing
-        private float? _savedPercentage;
         private bool? _savedSunProtectionBlocked;
-        float? IPercentageControllable.SavedPercentage => _savedPercentage;
 
         /// <summary>
         /// Convenience constructor that automatically creates addresses based on subGroup
@@ -162,7 +165,7 @@ namespace KnxModel
             
             await base.InitializeAsync();
             // Read initial states from KNX bus
-            _currentPercentage = await ReadPercentageAsync();
+            CurrentPercentage = await ReadPercentageAsync();
             _isSunProtectionBlocked = await ReadSunProtectionBlockStateAsync();
             
             // Read initial threshold states
@@ -175,21 +178,21 @@ namespace KnxModel
             LastUpdated = DateTime.Now;
             
             _logger.LogInformation("ShutterDevice {DeviceId} initialized - Position: {Position}%, SunProtectionBlocked: {SunProtectionBlocked}, Thresholds: B1={BrightThreshold1}, B2={BrightThreshold2}, Temp={TempThreshold}", 
-                Id, _currentPercentage, _isSunProtectionBlocked, _brightnessThreshold1Active, _brightnessThreshold2Active, _outdoorTemperatureThresholdActive);
+                Id, CurrentPercentage, _isSunProtectionBlocked, _brightnessThreshold1Active, _brightnessThreshold2Active, _outdoorTemperatureThresholdActive);
             
         }
 
         public override void SaveCurrentState()
         {
             base.SaveCurrentState();
-            _savedPercentage = _currentPercentage;
+            SavedPercentage = CurrentPercentage;
             _savedSunProtectionBlocked = _isSunProtectionBlocked;
-            Console.WriteLine($"ShutterDevice {Id} state saved - Position: {_savedPercentage}%, SunProtectionBlocked: {_savedSunProtectionBlocked}");
+            Console.WriteLine($"ShutterDevice {Id} state saved - Position: {SavedPercentage}%, SunProtectionBlocked: {_savedSunProtectionBlocked}");
         }
 
         public override async Task RestoreSavedStateAsync(TimeSpan? timeout = null)
         {
-            if (_savedPercentage.HasValue && _savedPercentage.Value != _currentPercentage)
+            if (SavedPercentage.HasValue && SavedPercentage.Value != CurrentPercentage)
             {
                 // Unlock before changing switch state if necessary
                 if (CurrentLockState == Lock.On)
@@ -197,7 +200,7 @@ namespace KnxModel
                     await UnlockAsync(timeout ?? _defaultTimeout);
                 }
 
-                await SetPercentageAsync(_savedPercentage.Value, timeout ?? _defaultTimeout);
+                await SetPercentageAsync(SavedPercentage.Value, timeout ?? _defaultTimeout);
             }
 
             // Restore sun protection block state if it was saved and is different
@@ -208,22 +211,21 @@ namespace KnxModel
 
             await base.RestoreSavedStateAsync(timeout ?? _defaultTimeout);
             _logger.LogInformation("ShutterDevice {DeviceId} initialized - Position: {Position}%, Lock: {LockState}, SunProtectionBlocked: {SunProtectionBlocked}",
-    Id, _currentPercentage, CurrentLockState, _isSunProtectionBlocked);
-            Console.WriteLine($"ShutterDevice {Id} state restored - Position: {_savedPercentage}%, SunProtectionBlocked: {_savedSunProtectionBlocked}");
+    Id, CurrentPercentage, CurrentLockState, _isSunProtectionBlocked);
+            Console.WriteLine($"ShutterDevice {Id} state restored - Position: {SavedPercentage}%, SunProtectionBlocked: {_savedSunProtectionBlocked}");
         }
 
         #endregion
 
         #region IPercentageControllable Implementation
 
-        public float CurrentPercentage => _currentPercentage;
 
         public async Task SetPercentageAsync(float percentage, TimeSpan? timeout = null)
         {
             await WaitForCooldownAsync();
             _logger.LogInformation($"ShutterDevice {Id} set percentage to {percentage}%");
             await _shutterHelper.SetPercentageAsync(percentage, timeout);
-            _logger.LogInformation($"ShutterDevice {Id} current percentage is now {_currentPercentage}%");
+            _logger.LogInformation($"ShutterDevice {Id} current percentage is now {CurrentPercentage}%");
         }
 
         public async Task<float> ReadPercentageAsync()
@@ -242,7 +244,7 @@ namespace KnxModel
             await WaitForCooldownAsync();
             _logger.LogInformation($"ShutterDevice {Id} adjusting percentage by {delta}%, timeout: {timeout?.TotalSeconds ?? 0}s");
             await _shutterHelper.AdjustPercentageAsync(delta, timeout);
-            _logger.LogInformation($"ShutterDevice {Id} adjusted percentage by {delta}%, new value: {_currentPercentage}%");
+            _logger.LogInformation($"ShutterDevice {Id} adjusted percentage by {delta}%, new value: {CurrentPercentage}%");
         }
 
         #endregion
@@ -392,16 +394,6 @@ namespace KnxModel
         public async Task<bool> WaitForOutdoorTemperatureThresholdStateAsync(bool targetState, TimeSpan? timeout = null)
         {
             return await _sunProtectionHelper.WaitForOutdoorTemperatureThresholdStateAsync(targetState, timeout);
-        }
-
-        void IPercentageControllable.SetPercentageForTest(float currentPercentage)
-        {
-            _currentPercentage = currentPercentage;
-            LastUpdated = DateTime.Now;
-        }
-        void IPercentageControllable.SetSavedPercentageForTest(float currentPercentage)
-        {
-            _savedPercentage = currentPercentage;
         }
 
         public async Task<bool> ReadSunProtectionStateAsync()

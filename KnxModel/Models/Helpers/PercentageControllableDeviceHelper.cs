@@ -28,9 +28,8 @@ namespace KnxModel.Models.Helpers
                 var brightness = e.Value.AsPercentageValue();
                 
                 // Update state through dynamic access to the device base
-                var deviceBase = owner as dynamic;
-                deviceBase._currentPercentage = brightness;
-                deviceBase._lastUpdated = DateTime.Now;
+                owner.CurrentPercentage = brightness;
+                owner.LastUpdated = DateTime.Now;
                 
                 _logger.LogInformation("{DeviceType} {DeviceId} brightness updated via feedback: {Brightness}%", _deviceType, _deviceId, brightness);
             }

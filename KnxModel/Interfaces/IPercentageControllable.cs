@@ -3,30 +3,6 @@ using System.Threading.Tasks;
 
 namespace KnxModel
 {
-    public interface IMovementControllable : IIdentifable
-    {
-        /// <summary>
-        /// Open shutter completely using UP command (MovementControl = 1)
-        /// More reliable than SetPercentageAsync(0) due to timing-based position tracking
-        /// </summary>
-        Task OpenAsync(TimeSpan? timeout = null);
-
-        /// <summary>
-        /// Close shutter completely using DOWN command (MovementControl = 0)
-        /// More reliable than SetPercentageAsync(100) due to timing-based position tracking
-        /// </summary>
-        Task CloseAsync(TimeSpan? timeout = null);
-
-        /// <summary>
-        /// Stop shutter movement
-        /// </summary>
-        Task StopAsync(TimeSpan? timeout = null);
-    }
-
-
-
-
-
     /// <summary>
     /// Interface for devices that can be controlled with percentage values (0-100%)
     /// Used by dimmers for brightness and shutters for position
@@ -34,13 +10,11 @@ namespace KnxModel
     public interface IPercentageControllable : IIdentifable
     {
 
-        internal void SetPercentageForTest(float currentPercentage);
-        internal void SetSavedPercentageForTest(float currentPercentage);
-        internal float? SavedPercentage { get; }
+        float? SavedPercentage { get; internal set; }
         /// <summary>
         /// Current percentage value (0.0-100.0)
         /// </summary>
-        float CurrentPercentage { get; }
+        float CurrentPercentage { get; internal set; }
 
         /// <summary>
         /// Set percentage value (0.0-100.0)
