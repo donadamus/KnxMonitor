@@ -5,7 +5,8 @@ namespace KnxModel
         /// <summary>
         /// Indicates whether sun protection control is currently locked.
         /// </summary>
-        bool IsSunProtectionBlocked { get; }
+        bool SunProtectionBlocked { get; internal set; }
+        bool? SavedSunProtectionBlocked { get; internal set; }
 
         /// <summary>
         /// Block sun protection control (prevent changes).

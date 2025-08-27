@@ -94,12 +94,12 @@ namespace KnxTest.Integration
     //        device..Should().NotBe(Lock.Unknown,
     //"Device lock state should be known before test");
 
-            if (!device.IsSunProtectionBlocked)
+            if (!device.SunProtectionBlocked)
             {
                 await BlockSunProtection(device);
             }
 
-            device.IsSunProtectionBlocked.Should().BeTrue(
+            device.SunProtectionBlocked.Should().BeTrue(
                 $"Device {device.Id} should have sun protection blocked before test");
             Console.WriteLine($"✅ Device {device.Id} is now unlocked");
 
@@ -107,8 +107,9 @@ namespace KnxTest.Integration
 
         private async Task BlockSunProtection(ShutterDevice device)
         {
-            await device.BlockSunProtectionAsync();
-            device.IsSunProtectionBlocked.Should().BeTrue(
+            await device.BlockSunProtectionAsync(TimeSpan.Zero);
+            await device.ReadSunProtectionBlockStateAsync();
+            device.SunProtectionBlocked.Should().BeTrue(
                 $"Device {device.Id} should have sun protection blocked after blocking");
         }
 
@@ -174,7 +175,8 @@ namespace KnxTest.Integration
             foreach (var id in ShutterIdsFromConfig.Select(x => x[0].ToString()).Distinct())
             {
                 var device = ShutterFactory.CreateShutter(id!, _knxService, _logger);
-                await device.ReadSunProtectionBlockStateAsync();
+                await device.InitializeAsync();
+                //await device.ReadSunProtectionBlockStateAsync();
                 device.SaveCurrentState();
                 devices.Add(device);
                 await device.BlockSunProtectionAsync();

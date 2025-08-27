@@ -72,10 +72,10 @@ namespace KnxModel.Models.Helpers
             {
                 var movementDirection = e.Value.AsBoolean();
                 // This is just confirmation echo, device will send actual status on MovementStatusFeedback
-                
+
                 // Update last updated through dynamic access
-                var deviceBase = owner as dynamic;
-                deviceBase._lastUpdated = DateTime.Now;
+                owner.CurrentDirection = movementDirection;
+                owner.LastUpdated = DateTime.Now;
                 
                 _logger.LogInformation("{DeviceType} {DeviceId} movement command confirmed: {Direction}", 
                     _deviceType, _deviceId, movementDirection ? "UP(1)" : "DOWN(0)");
@@ -87,9 +87,8 @@ namespace KnxModel.Models.Helpers
                 var isMoving = e.Value.AsBoolean();
                 
                 // Update activity state through dynamic access
-                var deviceBase = owner as dynamic;
-                deviceBase._isActive = isMoving;
-                deviceBase._lastUpdated = DateTime.Now;
+                owner.IsActive = isMoving;
+                owner.LastUpdated = DateTime.Now;
                 
                 _logger.LogInformation("{DeviceType} {DeviceId} movement status changed: {Status}", 
                     _deviceType, _deviceId, isMoving ? "STARTED" : "STOPPED");

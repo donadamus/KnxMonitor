@@ -13,7 +13,7 @@ namespace KnxModel
         /// <summary>
         /// Current activity status (true = active/moving/running, false = inactive/stopped)
         /// </summary>
-        bool IsActive { get; }
+        bool IsActive { get; internal set; }
         
         /// <summary>
         /// Read current activity status from KNX bus

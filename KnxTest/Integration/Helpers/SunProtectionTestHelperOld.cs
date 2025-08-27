@@ -46,7 +46,7 @@ namespace KnxTest.Integration.Helpers
             _logger.LogInformation($"🔢 Testing configuration with {activeCount} active thresholds");
 
             // Ensure sun protection is unblocked for testing
-            if (device.IsSunProtectionBlocked)
+            if (device.SunProtectionBlocked)
             {
                 await device.UnblockSunProtectionAsync();
                 await Task.Delay(_adjustmentWaitTime);
@@ -137,7 +137,7 @@ namespace KnxTest.Integration.Helpers
             await device.BlockSunProtectionAsync();
             await Task.Delay(_adjustmentWaitTime);
 
-            device.IsSunProtectionBlocked.Should().BeTrue(
+            device.SunProtectionBlocked.Should().BeTrue(
                 "Sun protection should be blocked for manual override test");
 
             // Test manual positioning

@@ -11,11 +11,6 @@ namespace KnxModel.Models
     /// </summary>
     public class ThresholdSimulatorDevice : KnxDeviceBase<ThresholdSimulatorDevice, SunProtectionThresholdAddresses>,  IKnxDeviceBase, IDisposable
     {
-        // Threshold addresses - these are the common addresses used by shutters
-        private readonly string _brightnessThreshold1Address = KnxAddressConfiguration.CreateBrightnessThreshold1Address();
-        private readonly string _brightnessThreshold2Address = KnxAddressConfiguration.CreateBrightnessThreshold2Address();
-        private readonly string _outdoorTemperatureThresholdAddress = KnxAddressConfiguration.CreateOutdoorTemperatureThresholdAddress();
-        
         // Brightness threshold monitoring device block address
         private readonly string _brightnessThresholdMonitoringBlockAddress = KnxAddressConfiguration.CreateBrightnessThresholdMonitoringBlockAddress();
 
@@ -36,7 +31,7 @@ namespace KnxModel.Models
             string name, 
             IKnxService knxService, 
             ILogger<ThresholdSimulatorDevice> logger, 
-            TimeSpan defaultTimeout) : base(id, name, "TestingDevices", null, knxService, logger, defaultTimeout)
+            TimeSpan defaultTimeout) : base(id, name, "TestingDevices", KnxAddressConfiguration.CreateSunProtectionThresholdAddresses(), knxService, logger, defaultTimeout)
         {
 
             _logger.LogInformation("ThresholdSimulatorDevice {DeviceId} created", Id);
@@ -147,7 +142,7 @@ namespace KnxModel.Models
             _logger.LogInformation("ThresholdSimulatorDevice {DeviceId} setting brightness threshold 1 to {State}", 
                 Id, exceeded ? "EXCEEDED" : "NOT_EXCEEDED");
 
-            await _knxService.WriteGroupValueAsync(_brightnessThreshold1Address, exceeded);
+            await _knxService.WriteGroupValueAsync(Addresses.BrightnessThreshold1, exceeded);
             _brightnessThreshold1State = exceeded;
             LastUpdated = DateTime.Now;
 
@@ -165,7 +160,7 @@ namespace KnxModel.Models
             _logger.LogInformation("ThresholdSimulatorDevice {DeviceId} setting brightness threshold 2 to {State}", 
                 Id, exceeded ? "EXCEEDED" : "NOT_EXCEEDED");
 
-            await _knxService.WriteGroupValueAsync(_brightnessThreshold2Address, exceeded);
+            await _knxService.WriteGroupValueAsync(Addresses.BrightnessThreshold2, exceeded);
             _brightnessThreshold2State = exceeded;
             LastUpdated = DateTime.Now;
 
@@ -183,7 +178,7 @@ namespace KnxModel.Models
             _logger.LogInformation("ThresholdSimulatorDevice {DeviceId} setting temperature threshold to {State}", 
                 Id, exceeded ? "EXCEEDED" : "NOT_EXCEEDED");
 
-            await _knxService.WriteGroupValueAsync(_outdoorTemperatureThresholdAddress, exceeded);
+            await _knxService.WriteGroupValueAsync(Addresses.OutdoorTemperatureThreshold, exceeded);
             _outdoorTemperatureThresholdState = exceeded;
             LastUpdated = DateTime.Now;
 

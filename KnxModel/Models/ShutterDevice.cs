@@ -19,20 +19,37 @@ namespace KnxModel
         public float? SavedPercentage { get; private set; }
         float? IPercentageControllable.SavedPercentage { get => SavedPercentage; set => SavedPercentage = value; }
 
-        private readonly PercentageControllableDeviceHelper<ShutterDevice, ShutterAddresses> _shutterHelper;
-        private readonly MovementControllableDeviceHelper<ShutterDevice, ShutterAddresses> _shutterMovementHelper;
+        public bool SunProtectionBlocked { get; private set; }
+        bool ISunProtectionBlockableDevice.SunProtectionBlocked { get => SunProtectionBlocked; set => SunProtectionBlocked = value; }
+        public bool? SavedSunProtectionBlocked { get; private set; }
+        bool? ISunProtectionBlockableDevice.SavedSunProtectionBlocked { get => SavedSunProtectionBlocked; set => SavedSunProtectionBlocked = value; }
+        
+        private readonly PercentageControllableDeviceHelper<ShutterDevice, ShutterAddresses> _percentageHelper;
+        private readonly MovementControllableDeviceHelper<ShutterDevice, ShutterAddresses> _movementHelper;
         private readonly SunProtectionDeviceHelper<ShutterDevice, ShutterAddresses> _sunProtectionHelper;
         private TimeSpan _cooldown = TimeSpan.FromSeconds(2);
-        private bool _isActive = false; // Movement status: true = moving, false = stopped
-        private bool _isSunProtectionBlocked = false; // Sun protection block status
-        
+
+        public bool CurrentMovementOrientation { get; private set; }
+        bool IMovementControllable.CurrentDirection { get => CurrentMovementOrientation; set => CurrentMovementOrientation = value; }
         // Sun protection threshold states
-        private bool _brightnessThreshold1Active = false;
-        private bool _brightnessThreshold2Active = false;
-        private bool _outdoorTemperatureThresholdActive = false;
-        
-        // Saved state for testing
-        private bool? _savedSunProtectionBlocked;
+
+        public bool BrightnessThreshold1Active { get; private set; }
+        bool ISunProtectionThresholdCapableDevice.BrightnessThreshold1Active { get => BrightnessThreshold1Active; set => BrightnessThreshold1Active = value; }
+
+        public bool BrightnessThreshold2Active { get; private set; }
+        bool ISunProtectionThresholdCapableDevice.BrightnessThreshold2Active { get => BrightnessThreshold2Active; set => BrightnessThreshold2Active = value; }
+
+        public bool OutdoorTemperatureThresholdActive { get; private set; }
+        bool ISunProtectionThresholdCapableDevice.OutdoorTemperatureThresholdActive { get => OutdoorTemperatureThresholdActive; set => OutdoorTemperatureThresholdActive = value; }
+
+        public bool SunProtectionActive { get; private set; }
+        bool ISunProtectionThresholdCapableDevice.SunProtectionActive { get => SunProtectionActive; set => SunProtectionActive = value; }
+
+
+        public bool IsActive { get; private set; }
+        bool IActivityStatusReadable.IsActive { get => IsActive; set => IsActive = value; }
+
+
 
         /// <summary>
         /// Convenience constructor that automatically creates addresses based on subGroup
@@ -40,12 +57,12 @@ namespace KnxModel
         public ShutterDevice(string id, string name, string subGroup, IKnxService knxService, ILogger<ShutterDevice> logger, TimeSpan defaulTimeout, TimeSpan? cooldown = null)
             : base(id, name, subGroup, KnxAddressConfiguration.CreateShutterAddresses(subGroup), knxService, logger, defaulTimeout)
         {
-            _shutterHelper = new PercentageControllableDeviceHelper<ShutterDevice, ShutterAddresses>(this, this.Addresses,
+            _percentageHelper = new PercentageControllableDeviceHelper<ShutterDevice, ShutterAddresses>(this, this.Addresses,
                             _knxService, Id, "ShutterDevice",
                             logger, defaulTimeout
                             );
 
-            _shutterMovementHelper = new MovementControllableDeviceHelper<ShutterDevice, ShutterAddresses>(this, this.Addresses,
+            _movementHelper = new MovementControllableDeviceHelper<ShutterDevice, ShutterAddresses>(this, this.Addresses,
                             _knxService, Id, "ShutterDevice",
                             logger, defaulTimeout
                             );
@@ -64,86 +81,16 @@ namespace KnxModel
         private void OnKnxMessageReceived(object? sender, KnxGroupEventArgs e)
         {
             // Process percentage control messages
-            _shutterHelper.ProcessSwitchMessage(e);
+            _percentageHelper.ProcessSwitchMessage(e);
             
             // Process movement feedback messages
-            _shutterMovementHelper.ProcessMovementMessage(e);
-            
+            _movementHelper.ProcessMovementMessage(e);
+
             // Process sun protection block feedback
-            ProcessSunProtectionFeedback(e);
-            
+            _sunProtectionHelper.ProcessSunProtectionMessage(e);
+
             // Process threshold feedback
-            ProcessThresholdFeedback(e);
-        }
-
-        /// <summary>
-        /// Processes sun protection block feedback messages
-        /// </summary>
-        private void ProcessSunProtectionFeedback(KnxGroupEventArgs e)
-        {
-            // Process sun protection block feedback (same address as control)
-            if (e.Destination == Addresses.SunProtectionBlockFeedback)
-            {
-                var blockState = e.Value.AsBoolean();
-                _isSunProtectionBlocked = blockState;
-                LastUpdated = DateTime.Now;
-                
-                _logger.LogInformation("ShutterDevice {DeviceId} sun protection block feedback: {BlockState}", 
-                    Id, blockState ? "BLOCKED" : "UNBLOCKED");
-                Console.WriteLine($"ShutterDevice {Id} sun protection block: {(blockState ? "BLOCKED" : "UNBLOCKED")}");
-            }
-            
-            // Process sun protection status feedback (offset +100)
-            if (e.Destination == Addresses.SunProtectionStatus)
-            {
-                var isActive = e.Value.AsBoolean();
-                // This is the actual sun protection state (1=Active), but for now we use block state
-               _logger.LogInformation("ShutterDevice {DeviceId} sun protection status: {Status}", 
-                    Id, isActive ? "ACTIVE" : "INACTIVE");
-                Console.WriteLine($"ShutterDevice {Id} sun protection status: {(isActive ? "ACTIVE" : "INACTIVE")}");
-            }
-        }
-
-        /// <summary>
-        /// Processes threshold feedback messages for sun protection
-        /// </summary>
-        private void ProcessThresholdFeedback(KnxGroupEventArgs e)
-        {
-            // Process brightness threshold 1 feedback
-            if (e.Destination == Addresses.BrightnessThreshold1)
-            {
-                var thresholdActive = e.Value.AsBoolean();
-                _brightnessThreshold1Active = thresholdActive;
-                LastUpdated = DateTime.Now;
-                
-                _logger.LogInformation("ShutterDevice {DeviceId} brightness threshold 1: {State}", 
-                    Id, thresholdActive ? "ACTIVE" : "INACTIVE");
-                Console.WriteLine($"ShutterDevice {Id} brightness threshold 1: {(thresholdActive ? "ACTIVE" : "INACTIVE")}");
-            }
-            
-            // Process brightness threshold 2 feedback
-            if (e.Destination == Addresses.BrightnessThreshold2)
-            {
-                var thresholdActive = e.Value.AsBoolean();
-                _brightnessThreshold2Active = thresholdActive;
-                LastUpdated = DateTime.Now;
-                
-                _logger.LogInformation("ShutterDevice {DeviceId} brightness threshold 2: {State}", 
-                    Id, thresholdActive ? "ACTIVE" : "INACTIVE");
-                Console.WriteLine($"ShutterDevice {Id} brightness threshold 2: {(thresholdActive ? "ACTIVE" : "INACTIVE")}");
-            }
-            
-            // Process outdoor temperature threshold feedback
-            if (e.Destination == Addresses.OutdoorTemperatureThreshold)
-            {
-                var thresholdActive = e.Value.AsBoolean();
-                _outdoorTemperatureThresholdActive = thresholdActive;
-                LastUpdated = DateTime.Now;
-                
-                _logger.LogInformation("ShutterDevice {DeviceId} outdoor temperature threshold: {State}", 
-                    Id, thresholdActive ? "ACTIVE" : "INACTIVE");
-                Console.WriteLine($"ShutterDevice {Id} outdoor temperature threshold: {(thresholdActive ? "ACTIVE" : "INACTIVE")}");
-            }
+            _sunProtectionHelper.ProcessThresholdMessage(e);
         }
 
         private async Task WaitForCooldownAsync()
@@ -166,19 +113,19 @@ namespace KnxModel
             await base.InitializeAsync();
             // Read initial states from KNX bus
             CurrentPercentage = await ReadPercentageAsync();
-            _isSunProtectionBlocked = await ReadSunProtectionBlockStateAsync();
+            SunProtectionBlocked = await ReadSunProtectionBlockStateAsync();
             
             // Read initial threshold states
-            _brightnessThreshold1Active = await ReadBrightnessThreshold1StateAsync();
-            _brightnessThreshold2Active = await ReadBrightnessThreshold2StateAsync();
-            _outdoorTemperatureThresholdActive = await ReadOutdoorTemperatureThresholdStateAsync();
+            BrightnessThreshold1Active = await ReadBrightnessThreshold1StateAsync();
+            BrightnessThreshold2Active = await ReadBrightnessThreshold2StateAsync();
+            OutdoorTemperatureThresholdActive = await ReadOutdoorTemperatureThresholdStateAsync();
 
-            _isActive = await ReadActivityStatusAsync();
+            IsActive = await ReadActivityStatusAsync();
 
             LastUpdated = DateTime.Now;
             
             _logger.LogInformation("ShutterDevice {DeviceId} initialized - Position: {Position}%, SunProtectionBlocked: {SunProtectionBlocked}, Thresholds: B1={BrightThreshold1}, B2={BrightThreshold2}, Temp={TempThreshold}", 
-                Id, CurrentPercentage, _isSunProtectionBlocked, _brightnessThreshold1Active, _brightnessThreshold2Active, _outdoorTemperatureThresholdActive);
+                Id, CurrentPercentage, SunProtectionBlocked, BrightnessThreshold1Active, BrightnessThreshold2Active, OutdoorTemperatureThresholdActive);
             
         }
 
@@ -186,8 +133,8 @@ namespace KnxModel
         {
             base.SaveCurrentState();
             SavedPercentage = CurrentPercentage;
-            _savedSunProtectionBlocked = _isSunProtectionBlocked;
-            Console.WriteLine($"ShutterDevice {Id} state saved - Position: {SavedPercentage}%, SunProtectionBlocked: {_savedSunProtectionBlocked}");
+            SavedSunProtectionBlocked = SunProtectionBlocked;
+            Console.WriteLine($"ShutterDevice {Id} state saved - Position: {SavedPercentage}%, SunProtectionBlocked: {SavedSunProtectionBlocked}");
         }
 
         public override async Task RestoreSavedStateAsync(TimeSpan? timeout = null)
@@ -204,15 +151,15 @@ namespace KnxModel
             }
 
             // Restore sun protection block state if it was saved and is different
-            if (_savedSunProtectionBlocked.HasValue && _savedSunProtectionBlocked.Value != _isSunProtectionBlocked)
+            if (SavedSunProtectionBlocked.HasValue && SavedSunProtectionBlocked.Value != SunProtectionBlocked)
             {
-                await SetSunProtectionBlockStateAsync(_savedSunProtectionBlocked.Value, timeout ?? _defaultTimeout);
+                await SetSunProtectionBlockStateAsync(SavedSunProtectionBlocked.Value, timeout ?? _defaultTimeout);
             }
 
             await base.RestoreSavedStateAsync(timeout ?? _defaultTimeout);
             _logger.LogInformation("ShutterDevice {DeviceId} initialized - Position: {Position}%, Lock: {LockState}, SunProtectionBlocked: {SunProtectionBlocked}",
-    Id, CurrentPercentage, CurrentLockState, _isSunProtectionBlocked);
-            Console.WriteLine($"ShutterDevice {Id} state restored - Position: {SavedPercentage}%, SunProtectionBlocked: {_savedSunProtectionBlocked}");
+    Id, CurrentPercentage, CurrentLockState, SunProtectionBlocked);
+            Console.WriteLine($"ShutterDevice {Id} state restored - Position: {SavedPercentage}%, SunProtectionBlocked: {SavedSunProtectionBlocked}");
         }
 
         #endregion
@@ -223,27 +170,25 @@ namespace KnxModel
         public async Task SetPercentageAsync(float percentage, TimeSpan? timeout = null)
         {
             await WaitForCooldownAsync();
-            _logger.LogInformation($"ShutterDevice {Id} set percentage to {percentage}%");
-            await _shutterHelper.SetPercentageAsync(percentage, timeout);
+            await _percentageHelper.SetPercentageAsync(percentage, timeout);
             _logger.LogInformation($"ShutterDevice {Id} current percentage is now {CurrentPercentage}%");
         }
 
         public async Task<float> ReadPercentageAsync()
         {
-            return await _shutterHelper.ReadPercentageAsync();
+            return await _percentageHelper.ReadPercentageAsync();
         }
 
         public async Task<bool> WaitForPercentageAsync(float targetPercentage, double tolerance = 2.0, TimeSpan? timeout = null)
         {
-            return await _shutterHelper.WaitForPercentageAsync(targetPercentage, tolerance, timeout);
+            return await _percentageHelper.WaitForPercentageAsync(targetPercentage, tolerance, timeout);
 
         }
 
         public async Task AdjustPercentageAsync(float delta, TimeSpan? timeout = null)
         {
             await WaitForCooldownAsync();
-            _logger.LogInformation($"ShutterDevice {Id} adjusting percentage by {delta}%, timeout: {timeout?.TotalSeconds ?? 0}s");
-            await _shutterHelper.AdjustPercentageAsync(delta, timeout);
+            await _percentageHelper.AdjustPercentageAsync(delta, timeout);
             _logger.LogInformation($"ShutterDevice {Id} adjusted percentage by {delta}%, new value: {CurrentPercentage}%");
         }
 
@@ -251,27 +196,26 @@ namespace KnxModel
 
         #region IActivityStatusReadable Implementation
 
-        public bool IsActive => _isActive;
 
-        public bool IsSunProtectionBlocked => _isSunProtectionBlocked;
-
+        
         public float LockedPercentage => 100;
 
         public bool IsPercentageLockActive => true;
 
+
         public async Task<bool> ReadActivityStatusAsync()
         {
-            return await _shutterMovementHelper.ReadActivityStatusAsync();
+            return await _movementHelper.ReadActivityStatusAsync();
         }
 
         public async Task<bool> WaitForInactiveAsync(TimeSpan? timeout = null)
         {
-            return await _shutterMovementHelper.WaitForInactiveAsync(timeout);
+            return await _movementHelper.WaitForInactiveAsync(timeout);
         }
 
         public async Task<bool> WaitForActiveAsync(TimeSpan? timeout = null)
         {
-            return await _shutterMovementHelper.WaitForActiveAsync(timeout);
+            return await _movementHelper.WaitForActiveAsync(timeout);
         }
 
         #endregion
@@ -281,18 +225,18 @@ namespace KnxModel
         public async Task OpenAsync(TimeSpan? timeout = null)
         {
             await WaitForCooldownAsync();
-            await _shutterMovementHelper.OpenAsync(timeout);
+            await _movementHelper.OpenAsync(timeout);
         }
 
         public async Task CloseAsync(TimeSpan? timeout = null)
         {
             await WaitForCooldownAsync();
-            await _shutterMovementHelper.CloseAsync(timeout);
+            await _movementHelper.CloseAsync(timeout);
         }
 
         public async Task StopAsync(TimeSpan? timeout = null)
         {
-            await _shutterMovementHelper.StopAsync(timeout);
+            await _movementHelper.StopAsync(timeout);
             
             // Wait for confirmation that movement actually stopped
             if (timeout.HasValue)
@@ -345,11 +289,7 @@ namespace KnxModel
 
         #region ISunProtectionThresholdCapableDevice Implementation
 
-        public bool BrightnessThreshold1Active => _brightnessThreshold1Active;
-        public bool BrightnessThreshold2Active => _brightnessThreshold2Active;
-        public bool OutdoorTemperatureThresholdActive => _outdoorTemperatureThresholdActive;
 
-        public bool SunProtectionActive => throw new NotImplementedException();
 
         public async Task<bool> ReadBrightnessThreshold1StateAsync()
         {

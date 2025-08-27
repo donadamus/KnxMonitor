@@ -23,7 +23,7 @@ namespace KnxModel.Models.Helpers
         public async Task<bool> WaitForSunProtectionBlockStateAsync(bool targetState, TimeSpan? timeout = null)
         {
             return await WaitForConditionAsync(
-                () => owner.IsSunProtectionBlocked == targetState,
+                () => owner.SunProtectionBlocked == targetState,
                 timeout ?? _defaultTimeout,
                 $"sun protection block state {targetState}"
             );
@@ -67,7 +67,7 @@ namespace KnxModel.Models.Helpers
 
         internal async Task<bool> ReadSunProtectionStateAsync()
         {
-            var thresholdState = await _knxService.RequestGroupValue<bool>(addresses.SunProtectionStatus);
+            var thresholdState = await _knxService.RequestGroupValue<bool>(addresses.SunProtectionActive);
 
             return thresholdState;
         }
@@ -96,11 +96,72 @@ namespace KnxModel.Models.Helpers
             await SetBitFunctionAsync(
                     address: addresses.SunProtectionBlockControl,
                     value: value,
-                    condition: () => owner.IsSunProtectionBlocked == value,
+                    condition: () => owner.SunProtectionBlocked == value,
                     timeout: timeout ?? _defaultTimeout
                     );
         }
 
+        internal void ProcessSunProtectionMessage(KnxGroupEventArgs e)
+        {
+            // Process sun protection block feedback (same address as control)
+            if (e.Destination == addresses.SunProtectionBlockFeedback)
+            {
+                var blockState = e.Value.AsBoolean();
+                owner.SunProtectionBlocked = blockState;
+                owner.LastUpdated = DateTime.Now;
 
+                _logger.LogInformation("ShutterDevice {DeviceId} sun protection block feedback: {BlockState}",
+                    _deviceId, blockState ? "BLOCKED" : "UNBLOCKED");
+                Console.WriteLine($"ShutterDevice {_deviceId} sun protection block: {(blockState ? "BLOCKED" : "UNBLOCKED")}");
+            }
+
+        }
+
+        internal void ProcessThresholdMessage(KnxGroupEventArgs e)
+        {
+            // Process brightness threshold 1 feedback
+            if (e.Destination == addresses.BrightnessThreshold1)
+            {
+                var thresholdActive = e.Value.AsBoolean();
+                owner.BrightnessThreshold1Active = thresholdActive;
+                owner.LastUpdated = DateTime.Now;
+
+                _logger.LogInformation("ShutterDevice {DeviceId} brightness threshold 1: {State}",
+                    _deviceId, thresholdActive ? "ACTIVE" : "INACTIVE");
+            }
+
+            // Process brightness threshold 2 feedback
+            if (e.Destination == addresses.BrightnessThreshold2)
+            {
+                var thresholdActive = e.Value.AsBoolean();
+                owner.BrightnessThreshold2Active = thresholdActive;
+                owner.LastUpdated = DateTime.Now;
+
+                _logger.LogInformation("ShutterDevice {DeviceId} brightness threshold 2: {State}",
+                    _deviceId, thresholdActive ? "ACTIVE" : "INACTIVE");
+            }
+
+            // Process outdoor temperature threshold feedback
+            if (e.Destination == addresses.OutdoorTemperatureThreshold)
+            {
+                var thresholdActive = e.Value.AsBoolean();
+                owner.OutdoorTemperatureThresholdActive = thresholdActive;
+                owner.LastUpdated = DateTime.Now;
+
+                _logger.LogInformation("ShutterDevice {DeviceId} outdoor temperature threshold: {State}",
+                    _deviceId, thresholdActive ? "ACTIVE" : "INACTIVE");
+            }
+
+            // Process sun protection status feedback (offset +100)
+            if (e.Destination == addresses.SunProtectionActive)
+            {
+                var isActive = e.Value.AsBoolean();
+                owner.SunProtectionActive = isActive;
+                owner.LastUpdated = DateTime.Now;
+                _logger.LogInformation("ShutterDevice {DeviceId} sun protection status: {Status}",
+                     _deviceId, isActive ? "ACTIVE" : "INACTIVE");
+            }
+
+        }
     }
 }

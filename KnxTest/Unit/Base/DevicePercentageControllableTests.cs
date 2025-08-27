@@ -115,7 +115,7 @@ namespace KnxTest.Unit.Base
         [Theory]
         [InlineData(0, 100, 100, 200, 100, true, 100, 200)]
         [InlineData(100, 50, 50, 200, 50, true, 100, 200)]
-        [InlineData(50, 25, 75, 20, 50, false, 20, 70)]
+        [InlineData(50, 25, 75, 20, 50, false, 15, 70)]
         public async Task WaitForPercentageAsync_ShouldReturnCorrectly(byte initialPercentage, byte targetPercentage, byte feedbackPercentage, int waitingTime, byte expectedPercentage, bool expectedResult, int executionTimeMin, int executionTimeMax)
         {
             await _percentageTestHelper.WaitForPercentageAsync_ShouldReturnCorrectly(

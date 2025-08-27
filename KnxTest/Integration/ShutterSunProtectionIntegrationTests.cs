@@ -278,7 +278,7 @@ namespace KnxTest.Integration
             await Task.Delay(3000);
             
             // Assert
-            Device.IsSunProtectionBlocked.Should().BeTrue(
+            Device.SunProtectionBlocked.Should().BeTrue(
                 "Sun protection should be blocked");
             Device.CurrentPercentage.Should().Be(25,
                 "Shutter should maintain manual position when sun protection is blocked");
@@ -336,13 +336,13 @@ namespace KnxTest.Integration
 
         private async Task EnsureSunProtectionUnblocked(ShutterDevice device)
         {
-            if (device.IsSunProtectionBlocked)
+            if (device.SunProtectionBlocked)
             {
                 await device.UnblockSunProtectionAsync();
                 await device.WaitForSunProtectionBlockStateAsync(false, _defaultTimeout);
             }
 
-            device.IsSunProtectionBlocked.Should().BeFalse(
+            device.SunProtectionBlocked.Should().BeFalse(
                 $"Device {device.Id} should have sun protection unblocked for threshold tests");
             Console.WriteLine($"✅ Device {device.Id} sun protection is unblocked");
         }
@@ -363,7 +363,7 @@ namespace KnxTest.Integration
             }
             Console.WriteLine($"🌞 Shutter {deviceId} initialized - Position: {Device.CurrentPercentage}%, " +
                             $"Thresholds: B1={Device.BrightnessThreshold1Active}, B2={Device.BrightnessThreshold2Active}, " +
-                            $"Temp={Device.OutdoorTemperatureThresholdActive}, SunProtection={Device.IsSunProtectionBlocked}");
+                            $"Temp={Device.OutdoorTemperatureThresholdActive}, SunProtection={Device.SunProtectionBlocked}");
         }
 
         #endregion

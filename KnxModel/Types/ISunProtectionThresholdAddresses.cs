@@ -5,7 +5,7 @@ namespace KnxModel.Types
         string BrightnessThreshold1 { get; }
         string BrightnessThreshold2 { get; }
         string OutdoorTemperatureThreshold { get; }
-        string SunProtectionStatus { get; }
+        string SunProtectionActive { get; }
     }
     
     public interface ISunProtectionBlockableAddresses

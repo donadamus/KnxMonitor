@@ -8,20 +8,20 @@ namespace KnxModel
         /// <summary>
         /// Current state of brightness threshold 1
         /// </summary>
-        bool BrightnessThreshold1Active { get; }
+        bool BrightnessThreshold1Active { get; internal set; }
 
         /// <summary>
         /// Current state of brightness threshold 2
         /// </summary>
-        bool BrightnessThreshold2Active { get; }
+        bool BrightnessThreshold2Active { get; internal set; }
 
         /// <summary>
         /// Current state of outdoor temperature threshold
         /// </summary>
-        bool OutdoorTemperatureThresholdActive { get; }
+        bool OutdoorTemperatureThresholdActive { get; internal set; }
 
 
-        bool SunProtectionActive { get; }
+        bool SunProtectionActive { get; internal set; }
 
         Task<bool> ReadSunProtectionStateAsync();
 

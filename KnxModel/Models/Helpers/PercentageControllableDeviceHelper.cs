@@ -50,6 +50,7 @@ namespace KnxModel.Models.Helpers
 
         internal async Task SetPercentageAsync(float percentage, TimeSpan? timeout)
         {
+            _logger.LogInformation("{DeviceType} {DeviceId} percentage: {percentage}%", _deviceType, _deviceId, percentage);
             if (percentage < 0.0f || percentage > 100.0f)
             {
                 throw new ArgumentOutOfRangeException(nameof(percentage), "Percentage must be between 0 and 100");

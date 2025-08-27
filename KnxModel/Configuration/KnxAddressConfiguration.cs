@@ -424,7 +424,7 @@ namespace KnxModel
         /// </summary>
         /// <param name="subGroup">Sub group number</param>
         /// <returns>Complete KNX address for shutter sun protection status</returns>
-        public static string CreateShutterSunProtectionStatusAddress(string subGroup)
+        public static string CreateShutterSunProtectionActiveAddress(string subGroup)
         {
             var statusSubGroup = (int.Parse(subGroup) + SHUTTER_FEEDBACK_OFFSET).ToString();
             return $"{SHUTTERS_MAIN_GROUP}/{SHUTTERS_SUN_PROTECTION_STATUS_MIDDLE_GROUP}/{statusSubGroup}";
@@ -474,7 +474,7 @@ namespace KnxModel
                 LockFeedback: CreateShutterLockFeedbackAddress(subGroup),
                 SunProtectionBlockControl: CreateShutterSunProtectionBlockAddress(subGroup),
                 SunProtectionBlockFeedback: CreateShutterSunProtectionBlockFeedbackAddress(subGroup),
-                SunProtectionStatus: CreateShutterSunProtectionStatusAddress(subGroup),
+                SunProtectionActive: CreateShutterSunProtectionActiveAddress(subGroup),
                 StopControl: CreateShutterStopAddress(subGroup),
                 MovementStatusFeedback: CreateShutterMovementStatusFeedbackAddress(subGroup),
                 BrightnessThreshold1: CreateBrightnessThreshold1Address(),
@@ -519,6 +519,20 @@ namespace KnxModel
         {
             return new ClockAddresses(
                 TimeControl: CreateClockTimeAddress()
+            );
+        }
+
+        /// <summary>
+        /// Creates a complete SunProtectionThresholdAddresses object for sun protection threshold simulation
+        /// </summary>
+        /// <returns>Complete SunProtectionThresholdAddresses object</returns>
+        public static SunProtectionThresholdAddresses CreateSunProtectionThresholdAddresses()
+        {
+            return new SunProtectionThresholdAddresses(
+                BrightnessThreshold1: CreateBrightnessThreshold1Address(),
+                BrightnessThreshold2: CreateBrightnessThreshold2Address(),
+                OutdoorTemperatureThreshold: CreateOutdoorTemperatureThresholdAddress(),
+                SunProtectionActive: "" // Uzupe?nij, je?li masz adres aktywacji ochrony przeciws?onecznej
             );
         }
 

@@ -220,14 +220,14 @@ namespace KnxTest.Integration
             // Assert
             Device.CurrentPercentage.Should().BeApproximately(75, 5,
                 "Device should respect user manual override");
-            Device.IsSunProtectionBlocked.Should().BeTrue(
+            Device.SunProtectionBlocked.Should().BeTrue(
                 "Sun protection should remain blocked during manual control");
             
             // Test that user can re-enable automatic protection
             await Device.UnblockSunProtectionAsync();
             await Task.Delay(_scenarioTransitionTime);
             
-            Device.IsSunProtectionBlocked.Should().BeFalse(
+            Device.SunProtectionBlocked.Should().BeFalse(
                 "Sun protection should be unblocked when user re-enables it");
             
             Console.WriteLine($"✅ User manual override scenario completed for {deviceId}");
@@ -243,7 +243,7 @@ namespace KnxTest.Integration
             
             // Record automatic position
             var automaticPosition = Device!.CurrentPercentage;
-            var sunProtectionWasBlocked = Device.IsSunProtectionBlocked;
+            var sunProtectionWasBlocked = Device.SunProtectionBlocked;
             
             // Act - User makes temporary adjustment without blocking sun protection
             if (!sunProtectionWasBlocked)
@@ -258,7 +258,7 @@ namespace KnxTest.Integration
                 // After some time, automatic system might readjust
                 // (This would depend on system configuration)
                 Console.WriteLine($"✅ User temporary adjustment accepted: {Device.CurrentPercentage}%");
-                Console.WriteLine($"📋 Sun protection remains: {(Device.IsSunProtectionBlocked ? "BLOCKED" : "ACTIVE")}");
+                Console.WriteLine($"📋 Sun protection remains: {(Device.SunProtectionBlocked ? "BLOCKED" : "ACTIVE")}");
             }
             else
             {
